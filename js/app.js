@@ -705,7 +705,7 @@ function openCoordPopup(latlng) {
   const acts = document.createElement('div'); acts.className = 'acts';
   acts.append(
     button('コピー', () => copyText(coordText(x, z)), 'copy'),
-    button('ここに印をつける', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'pin'),
+    button('ピン', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -899,9 +899,12 @@ function setupTools() {
   map.on('pm:drawend', () => { if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   map.on('pm:remove', (e) => { if (e.layer._annId) deleteAnn(e.layer._annId); });
 
+  // A tap while a bubble is open just closes it; the next tap shows coordinates again.
+  let popupWasOpen = false;
+  map.on('preclick', () => { popupWasOpen = !!map._popup && map.hasLayer(map._popup); });
   map.on('click', (e) => {
     const { x, z } = block(e.latlng);
-    if (state.mode === 'none') openCoordPopup(e.latlng);
+    if (state.mode === 'none') { if (!popupWasOpen) openCoordPopup(e.latlng); }
     else if (state.mode === 'waypoint') createWaypoint(x, z);
     else if (state.mode === 'text') createText(x, z);
   });
