@@ -373,7 +373,7 @@ def main():
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
     if block_colors.unknown:
-        names = ', '.join(sorted(block_colors.unknown)[:40])
+        names = ', '.join(sorted(block_colors.unknown))
         print(f'色が未登録で灰色になったブロック({len(block_colors.unknown)}種類): {names}')
     if os.path.isdir(out_root):
         shutil.rmtree(out_root)

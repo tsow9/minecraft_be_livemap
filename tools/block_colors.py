@@ -77,6 +77,59 @@ KEYWORDS = [
     ('sculk', (12, 29, 36)), ('amethyst', (133, 97, 191)), ('rail', (125, 110, 90)),
 ]
 
+GRASS = (95, 159, 53)
+
+
+def _on_grass(petal, share=0.45):
+    """Small plants seen from above: mostly the grass around them, tinted by the flower."""
+    return tuple(int(g * (1 - share) + p * share) for g, p in zip(GRASS, petal))
+
+
+EXACT.update({
+    # flowers and small plants
+    'allium': _on_grass((180, 110, 220)), 'azure_bluet': _on_grass((230, 235, 240)),
+    'dandelion': _on_grass((250, 220, 40)), 'golden_dandelion': _on_grass((255, 200, 30)),
+    'poppy': _on_grass((220, 30, 30)), 'red_flower': _on_grass((220, 30, 30)), 'yellow_flower': _on_grass((250, 220, 40)),
+    'cornflower': _on_grass((70, 100, 220)), 'lily_of_the_valley': _on_grass((240, 240, 240)),
+    'oxeye_daisy': _on_grass((240, 240, 220)), 'sunflower': _on_grass((250, 200, 30)), 'lilac': _on_grass((200, 150, 200)),
+    'rose_bush': _on_grass((200, 40, 40)), 'peony': _on_grass((230, 170, 200)), 'pink_petals': _on_grass((240, 160, 200)),
+    'wildflowers': _on_grass((240, 220, 120)), 'wither_rose': _on_grass((40, 30, 30)), 'torchflower': _on_grass((230, 120, 40)),
+    'pitcher_plant': _on_grass((100, 140, 200)), 'open_eyeblossom': _on_grass((240, 150, 60)),
+    'closed_eyeblossom': _on_grass((110, 110, 120)), 'cactus_flower': _on_grass((240, 120, 160)),
+    'bush': (80, 130, 45), 'firefly_bush': (70, 110, 50), 'leaf_litter': (150, 110, 60), 'deadbush': (140, 105, 60),
+    'short_dry_grass': (190, 170, 100), 'tall_dry_grass': (190, 170, 100), 'azalea': (95, 125, 45),
+    'flowering_azalea': (120, 120, 80), 'big_dripleaf': (100, 150, 50), 'small_dripleaf_block': (100, 150, 50),
+    'glow_lichen': (110, 130, 115), 'hanging_roots': (160, 115, 90), 'spore_blossom': (210, 110, 180),
+    'cave_vines': (90, 110, 40), 'cave_vines_body_with_berries': (170, 140, 50), 'cave_vines_head_with_berries': (170, 140, 50),
+    'sea_pickle': (100, 120, 50), 'dirt_with_roots': (144, 103, 76), 'pale_moss_block': (105, 115, 100),
+    'pale_moss_carpet': (105, 115, 100), 'pale_hanging_moss': (105, 115, 100), 'resin_clump': (220, 110, 30),
+    'resin_block': (220, 110, 30), 'creaking_heart': (90, 80, 75), 'dried_ghast': (180, 160, 150),
+    # workstations, decorations, redstone
+    'bed': (160, 40, 40), 'bell': (240, 200, 60), 'blast_furnace': (100, 100, 105), 'smoker': (95, 85, 75),
+    'bone_block': (225, 220, 200), 'brewing_stand': (120, 110, 90), 'candle': (230, 210, 160),
+    'cartography_table': (100, 80, 60), 'cauldron': (60, 60, 65), 'anvil': (70, 70, 70), 'chipped_anvil': (70, 70, 70),
+    'damaged_anvil': (70, 70, 70), 'chiseled_bookshelf': (150, 115, 70), 'decorated_pot': (140, 80, 60),
+    'dispenser': (110, 110, 110), 'dropper': (110, 110, 110), 'enchanting_table': (120, 40, 50), 'fence_gate': (162, 130, 78),
+    'fence': (162, 130, 78), 'fire': (230, 130, 30), 'soul_fire': (60, 190, 200), 'frame': (140, 100, 60),
+    'glow_frame': (140, 100, 60), 'hopper': (70, 70, 75), 'iron_chain': (60, 65, 75), 'chain': (60, 65, 75),
+    'ladder': (150, 115, 70), 'lantern': (200, 150, 70), 'soul_lantern': (80, 160, 170), 'lectern': (170, 135, 85),
+    'loom': (160, 130, 100), 'grindstone': (140, 140, 140), 'stonecutter_block': (120, 120, 120),
+    'smithing_table': (60, 50, 50), 'fletching_table': (190, 170, 120), 'scaffolding': (200, 170, 100),
+    'beacon': (120, 220, 215), 'conduit': (160, 140, 110), 'lightning_rod': (192, 107, 79), 'flower_pot': (120, 70, 50),
+    'skull': (200, 200, 200), 'standing_banner': (220, 220, 220), 'wall_banner': (220, 220, 220),
+    'standing_sign': (162, 130, 78), 'wall_sign': (162, 130, 78), 'trapdoor': (162, 130, 78), 'wooden_door': (162, 130, 78),
+    'iron_door': (200, 200, 200), 'iron_trapdoor': (200, 200, 200), 'iron_bars': (150, 150, 150),
+    'wooden_button': (162, 130, 78), 'wooden_pressure_plate': (162, 130, 78), 'lever': (120, 110, 100),
+    'redstone_wire': (170, 20, 10), 'redstone_torch': (200, 40, 20), 'unlit_redstone_torch': (120, 30, 20),
+    'redstone_lamp': (150, 100, 60), 'lit_redstone_lamp': (240, 200, 120), 'observer': (90, 90, 90),
+    'piston': (150, 130, 100), 'sticky_piston': (130, 150, 100), 'unpowered_repeater': (160, 160, 160),
+    'powered_repeater': (180, 150, 150), 'unpowered_comparator': (160, 160, 160), 'powered_comparator': (180, 150, 150),
+    'daylight_detector': (190, 170, 130), 'target': (220, 190, 170), 'respawn_anchor': (60, 30, 90),
+    'lodestone': (140, 140, 145), 'crafter': (110, 100, 100), 'trial_spawner': (60, 70, 80), 'vault': (60, 70, 80),
+    'mob_spawner': (40, 50, 60), 'ender_chest': (40, 50, 50), 'trapped_chest': (165, 117, 40), 'jukebox': (110, 75, 55),
+    'noteblock': (110, 75, 55), 'end_portal_frame': (90, 120, 100), 'cinnabar': (170, 50, 40),
+})
+
 # name: (young color, ripe color, max growth). Color shifts with the growth/age state.
 CROPS = {
     'wheat': ((88, 140, 40), (220, 190, 80), 7),
