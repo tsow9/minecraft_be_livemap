@@ -11,6 +11,7 @@
 <body>
 <div id="map"></div>
 <div id="crosshair" aria-hidden="true"></div>
+<div id="past-banner" hidden><span id="past-text"></span> <button id="past-back" class="mini">最新に戻る</button></div>
 
 <header id="topbar">
   <div class="search">
@@ -99,8 +100,10 @@
 </section>
 
 <section id="panel-time" class="panel" hidden>
-  <h2>タイムラプス <button class="close">×</button></h2>
-  <p class="help">ワールドを保存した日ごとに地図を切り替えて、建築の変化を見られます。</p>
+  <h2>過去の地図 <button class="close">×</button></h2>
+  <p class="help">日付を選ぶと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。</p>
+  <label class="datepick">日付を選ぶ <input id="time-date" type="date"></label>
+  <div id="time-chips" class="chips"></div>
   <div class="time">
     <button id="time-play" class="mini">▶ 再生</button>
     <input id="time-range" type="range" min="0" max="0" value="0">

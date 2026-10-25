@@ -240,11 +240,28 @@ function makeBaseLayer() {
   }
   const snap = snapshots()[state.snapshotIndex];
   const url = state.config.tileUrl.replace('{snapshot}', encodeURIComponent(snap.id)).replace('{dim}', state.dim);
-  return L.tileLayer(url, {
-    ...opts, tileSize: 256,
+  return new HistoryTileLayer(url, {
+    ...opts, tileSize: 256, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom, maxNativeZoom: state.config.maxNativeZoom,
     attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
   });
+}
+
+// Each day's manifest says which day's folder holds each tile (unchanged tiles are stored only once).
+const EMPTY_TILE = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+const manifests = new Map();
+const HistoryTileLayer = L.TileLayer.extend({
+  getTileUrl(coords) {
+    const m = this.options.manifest;
+    if (!m) return L.TileLayer.prototype.getTileUrl.call(this, coords);
+    const key = `${this.options.dim}/${this._getZoomForUrl()}/${coords.x}/${coords.y}`;
+    const hit = m[key];
+    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png` : EMPTY_TILE;
+  },
+});
+
+async function loadManifest(id) {
+  if (!manifests.has(id)) manifests.set(id, (await fetchJson(`manifests/${encodeURIComponent(id)}.json`))?.tiles || null);
 }
 
 function updatedText() {
@@ -254,7 +271,12 @@ function updatedText() {
   return ` ・最終更新 ${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 }
 
-function refreshBase() {
+let baseToken = 0;
+async function refreshBase() {
+  const token = ++baseToken;
+  if (!state.demo) await loadManifest(snapshots()[state.snapshotIndex].id);
+  if (token !== baseToken) return;
+  updatePastBanner();
   const next = makeBaseLayer();
   const prev = state.baseLayer;
   next.addTo(map).bringToBack();
@@ -625,8 +647,18 @@ function goTo(x, z, dim, zoom) {
   map.setView(ll(x + 0.5, z + 0.5), Math.max(map.getZoom(), zoom ?? 0));
 }
 
+function updatePastBanner() {
+  const snaps = snapshots();
+  const past = !state.demo && state.snapshotIndex < snaps.length - 1;
+  $('#past-banner').hidden = !past;
+  if (past) $('#past-text').textContent = `📅 ${snaps[state.snapshotIndex].label || snaps[state.snapshotIndex].id}の地図を表示中`;
+}
+
+let setSnapshotIndex = () => {};
+
 // ---------- panels ----------
 function setupPanels() {
+  $('#past-back').addEventListener('click', () => setSnapshotIndex(snapshots().length - 1));
   const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-data': 'panel-data' };
   const close = () => Object.entries(panels).forEach(([b, p]) => { $('#' + p).hidden = true; $('#' + b).classList.remove('on'); });
   for (const [b, p] of Object.entries(panels)) {
@@ -661,14 +693,45 @@ function setupPanels() {
   $('#ow-go').addEventListener('click', () => { if (owX.value !== '' && owZ.value !== '') goTo(Number(owX.value), Number(owZ.value), 'overworld'); });
   $('#ne-go').addEventListener('click', () => { if (neX.value !== '' && neZ.value !== '') goTo(Number(neX.value), Number(neZ.value), 'nether'); });
 
-  // timelapse
+  // past maps
   const range = $('#time-range');
   const snaps = snapshots();
   range.max = Math.max(0, snaps.length - 1);
   range.value = state.snapshotIndex;
-  const label = () => { const s = snaps[state.snapshotIndex]; $('#time-label').textContent = s ? (s.label || s.id) : 'なし'; };
+  const dateInput = $('#time-date');
+  const isDate = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
+  const dated = snaps.filter((s) => isDate(s.id));
+  if (dated.length) { dateInput.min = dated[0].id; dateInput.max = dated[dated.length - 1].id; }
+  const chips = $('#time-chips');
+  let month = '';
+  for (let i = snaps.length - 1; i >= 0; i--) {
+    const s = snaps[i];
+    const m = isDate(s.id) ? `${Number(s.id.slice(0, 4))}年${Number(s.id.slice(5, 7))}月` : '';
+    if (m && m !== month) { month = m; chips.insertAdjacentHTML('beforeend', `<div class="month">${m}</div>`); }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = i === snaps.length - 1 ? `${s.label || s.id}(最新)` : (s.label || s.id);
+    b.dataset.index = i;
+    b.addEventListener('click', () => setSnap(i));
+    chips.append(b);
+  }
+  const label = () => {
+    const s = snaps[state.snapshotIndex];
+    $('#time-label').textContent = s ? (s.label || s.id) : 'なし';
+    if (s && isDate(s.id)) dateInput.value = s.id;
+    chips.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
+  };
   label();
   const setSnap = (i) => { state.snapshotIndex = i; range.value = i; label(); refreshBase(); };
+  setSnapshotIndex = setSnap;
+  dateInput.addEventListener('change', () => {
+    const want = dateInput.value;
+    if (!want || !snaps.length) return;
+    let i = snaps.map((s) => s.id).filter((id) => id <= want).length - 1;
+    if (i < 0) i = 0;
+    setSnap(i);
+    if (snaps[i].id !== want) toast(`その日の地図はないので、${snaps[i].label || snaps[i].id}の地図を表示しています`);
+  });
   range.addEventListener('input', () => setSnap(Number(range.value)));
   let timer = null;
   const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = '▶ 再生'; };

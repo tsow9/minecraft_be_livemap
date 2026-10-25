@@ -1,6 +1,6 @@
 """Render a Minecraft Bedrock world into map tiles for the mc-map site.
 
-Usage: python render_map.py --world PATH [--site PATH] [--snapshot ID] [--keep N] [--dims overworld,nether,end]
+Usage: python render_map.py --world PATH [--site PATH] [--snapshot ID] [--live LIVE_JSON] [--dims overworld,nether,end]
 """
 import argparse
 import datetime
@@ -20,6 +20,7 @@ from PIL import Image
 import bedrock_db
 from nbt import root_compound
 import block_colors
+import history
 from block_colors import color_of
 
 DIM_IDS = {'overworld': 0, 'nether': 1, 'end': 2}
@@ -270,21 +271,19 @@ def snapshot_label(snap_id):
     return f'{d.month}月{d.day}日'
 
 
-def update_config(site, snap_id, keep):
+def update_config(site, snap_id, staging):
+    """Save the rendered tiles as this day's map and thin out old days."""
     path = os.path.join(site, 'config.json')
     cfg = {}
     if os.path.exists(path):
         with open(path, encoding='utf-8') as f:
             cfg = json.load(f)
-    snaps = [s for s in cfg.get('snapshots', []) if s.get('id') != snap_id]
-    snaps.append({'id': snap_id, 'label': snapshot_label(snap_id)})
-    snaps.sort(key=lambda s: s['id'])
-    if keep and len(snaps) > keep:
-        for old in snaps[:-keep]:
-            shutil.rmtree(os.path.join(site, 'tiles', old['id']), ignore_errors=True)
-            print(f'古い地図 {old["id"]} を削除しました')
-        snaps = snaps[-keep:]
-    cfg['snapshots'] = snaps
+    ids = sorted(s['id'] for s in cfg.get('snapshots', []) if s.get('id') and s['id'] != snap_id)
+    history.migrate(site, ids)
+    changed, total = history.store(site, snap_id, staging, ids)
+    print(f'  保存: 地図画像 {total} 枚のうち、前回から変わった {changed} 枚')
+    ids = history.prune(site, sorted(ids + [snap_id]), datetime.date.today())
+    cfg['snapshots'] = [{'id': i, 'label': snapshot_label(i)} for i in ids]
     cfg['updatedAt'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
     cfg['minNativeZoom'] = MIN_ZOOM
     cfg['maxNativeZoom'] = 0
@@ -300,7 +299,6 @@ def main():
     ap.add_argument('--site', default=os.path.dirname(here), help='地図サイトのフォルダ')
     ap.add_argument('--snapshot', help='保存名(省略すると今日の日付)')
     ap.add_argument('--dims', default='overworld,nether,end')
-    ap.add_argument('--keep', type=int, default=0, help='残す地図の数(0なら全部残す)')
     ap.add_argument('--live', help='live.json(開拓者の推定に使う足跡)。空文字なら足跡なしで記録だけ始める')
     args = ap.parse_args()
 
@@ -319,7 +317,6 @@ def main():
         sys.exit(f'ワールドのデータ(db フォルダ)が見つかりません: {world}')
 
     snap_id = args.snapshot or datetime.date.today().isoformat()
-    out_root = os.path.join(args.site, 'tiles', snap_id)
 
     print(f'ワールド「{world_name(world)}」を読み込みます。大きいワールドだと数分かかります。')
     started = time.time()
@@ -341,20 +338,22 @@ def main():
     if block_colors.unknown:
         names = ', '.join(sorted(block_colors.unknown))
         print(f'色が未登録で灰色になったブロック({len(block_colors.unknown)}種類): {names}')
-    if os.path.isdir(out_root):
-        shutil.rmtree(out_root)
-    total = 0
-    for name in dims:
-        chunks = surfaces[DIM_IDS[name]]
-        if not chunks:
-            print(f'  {name}: データなし')
-            continue
-        n = write_tiles(chunks, os.path.join(out_root, name))
-        total += n
-        print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
-    if total == 0:
-        sys.exit('地図にできるデータがありませんでした。')
-    update_config(args.site, snap_id, args.keep)
+    staging = tempfile.mkdtemp(prefix='mcmap-tiles-')
+    try:
+        total = 0
+        for name in dims:
+            chunks = surfaces[DIM_IDS[name]]
+            if not chunks:
+                print(f'  {name}: データなし')
+                continue
+            n = write_tiles(chunks, os.path.join(staging, name))
+            total += n
+            print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
+        if total == 0:
+            sys.exit('地図にできるデータがありませんでした。')
+        update_config(args.site, snap_id, staging)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     print(f'完了しました({time.time() - started:.0f}秒)。保存名: {snap_id}')
 
 

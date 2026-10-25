@@ -29,9 +29,9 @@ def main():
         with open(data_cfg, encoding='utf-8') as f:
             generated = json.load(f)
         cfg.update({k: generated[k] for k in MAP_KEYS if k in generated})
-        tiles = os.path.join(data, 'tiles')
-        if os.path.isdir(tiles):
-            shutil.copytree(tiles, os.path.join(out, 'tiles'))
+        for folder in ('tiles', 'manifests'):
+            if os.path.isdir(os.path.join(data, folder)):
+                shutil.copytree(os.path.join(data, folder), os.path.join(out, folder))
     for name in ('explore.json',):
         if os.path.exists(os.path.join(data, name)):
             shutil.copy2(os.path.join(data, name), out)
