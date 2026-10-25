@@ -235,13 +235,16 @@ def build_tile(chunks, tx, tz):
 
 
 def build_ground_tile(chunks, tx, tz):
-    """Ground height without trees and plants (for contour lines): value = Y + 65 in R/G, 0 = no data."""
+    """Ground height without trees and plants (for contour lines): value = Y + 65 in R/G, 0 = no data.
+    B = 1 where water covers the top, so the site can skip it without loading other tiles."""
     v = np.zeros((256, 256), np.uint32)
+    wet = np.zeros((256, 256), np.uint8)
     for (cx, cz), surf in chunks:
         ox, oz = (cx - tx * 16) * 16, (cz - tz * 16) * 16
         g = surf.ground_y.T.astype(np.int32)
         v[oz:oz + 16, ox:ox + 16] = np.where(g > UNSET, np.clip(g + 65, 1, 65535), 0)
-    rgb = np.dstack([(v >> 8) & 255, v & 255, np.zeros_like(v)]).astype(np.uint8)
+        wet[oz:oz + 16, ox:ox + 16] = surf.water_y.T > surf.top_y.T
+    rgb = np.dstack([(v >> 8) & 255, v & 255, wet]).astype(np.uint8)
     return Image.fromarray(rgb, 'RGB')
 
 

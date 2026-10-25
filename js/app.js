@@ -679,90 +679,146 @@ function blockAtNow(x, z) {
   return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y }, raw: { id, y } };
 }
 
-// ---------- contour lines (drawn from the heights stored in the info tiles) ----------
+// ---------- contour lines (drawn from the ground heights stored in the ground tiles) ----------
 let contourLayer = null;
+const NO_GROUND = -32768;
+const groundGrids = new Map();
 
 function contourStep(zoom) {
   if (zoom >= 0) return 4;
   return zoom >= -1 ? 8 : 16;
 }
 
+// One ground tile as plain heights (R/G = Y + 65, B = 1 under water), kept small and decoded once.
+function loadGroundGrid(url) {
+  if (groundGrids.has(url)) return groundGrids.get(url);
+  const p = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, c.width, c.height).data;
+      const grid = new Int16Array(c.width * c.height);
+      for (let k = 0, i = 0; k < grid.length; k++, i += 4) {
+        const v = (d[i] << 8) | d[i + 1];
+        grid[k] = v && !d[i + 2] ? v - 65 : NO_GROUND;
+      }
+      resolve(grid);
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+  groundGrids.set(url, p);
+  if (groundGrids.size > 200) groundGrids.delete(groundGrids.keys().next().value);
+  return p;
+}
+
+const nextTask = () => new Promise((r) => setTimeout(r, 0));
+
 const ContourLayer = L.GridLayer.extend({
   createTile(coords, done) {
     const tile = document.createElement('canvas');
-    tile.width = tile.height = 256;
-    this._draw(tile, coords).then(() => done(null, tile), () => done(null, tile));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    tile.width = tile.height = 256 * dpr;
+    this._draw(tile, coords, dpr).then(() => done(null, tile), () => done(null, tile));
     return tile;
   },
-  async _draw(tile, coords) {
+  async _draw(tile, coords, dpr) {
     const scale = Math.pow(2, coords.z);
     const bx = coords.x * 256 / scale, bz = coords.y * 256 / scale;
     const cell = Math.max(1, scale);
     const stride = Math.max(1, 1 / scale);
     const n = 256 / cell;
-    const urls = new Set();
-    for (let tx = Math.floor(bx / 256); tx <= Math.floor((bx + (n + 1) * stride) / 256); tx++) {
-      for (let tz = Math.floor(bz / 256); tz <= Math.floor((bz + (n + 1) * stride) / 256); tz++) {
-        for (const kind of ['info', 'ground']) {
-          const u = infoUrl(tx, tz, kind);
-          if (u) urls.add(u);
-        }
+    const tx0 = Math.floor(bx / 256), tz0 = Math.floor(bz / 256);
+    const tx1 = Math.floor((bx + n * stride) / 256), tz1 = Math.floor((bz + n * stride) / 256);
+    const grids = [];
+    const loads = [];
+    for (let tz = tz0; tz <= tz1; tz++) {
+      for (let tx = tx0; tx <= tx1; tx++) {
+        const u = infoUrl(tx, tz, 'ground');
+        const slot = grids.push(null) - 1;
+        if (u) loads.push(loadGroundGrid(u).then((g) => { grids[slot] = g; }));
       }
     }
-    if (!urls.size) return;
-    await Promise.all([...urls].map(loadInfoTile));
-    const water = blockNames.indexOf('water');
+    if (!loads.length) return;
+    await Promise.all(loads);
+    // Spread the work over several moments so scrolling stays smooth.
+    await nextTask();
+    const cols = tx1 - tx0 + 1;
     const step = contourStep(coords.z);
-    const level = new Float64Array((n + 1) * (n + 1)).fill(NaN);
+    const level = new Int32Array((n + 1) * (n + 1)).fill(NO_GROUND);
+    const colTile = new Int32Array(n + 1), colOff = new Int32Array(n + 1);
+    for (let i = 0; i <= n; i++) {
+      const x = Math.floor(bx + i * stride);
+      colTile[i] = Math.floor(x / 256) - tx0; colOff[i] = x - Math.floor(x / 256) * 256;
+    }
     for (let j = 0; j <= n; j++) {
+      const z = Math.floor(bz + j * stride);
+      const rowTile = (Math.floor(z / 256) - tz0) * cols, rowOff = (z - Math.floor(z / 256) * 256) * 256;
       for (let i = 0; i <= n; i++) {
-        const x = Math.floor(bx + i * stride), z = Math.floor(bz + j * stride);
-        const top = blockAtNow(x, z);
-        if (!top.raw || top.raw.id === water) continue;
-        const g = groundAt(x, z);
-        if (g !== null) level[j * (n + 1) + i] = Math.floor(g / step);
+        const g = grids[rowTile + colTile[i]];
+        if (!g) continue;
+        const h = g[rowOff + colOff[i]];
+        if (h !== NO_GROUND) level[j * (n + 1) + i] = Math.floor(h / step);
       }
     }
-    const ctx = tile.getContext('2d');
-    const draw = (bold) => {
-      ctx.beginPath();
-      for (let j = 0; j < n; j++) {
-        for (let i = 0; i < n; i++) {
-          const a = level[j * (n + 1) + i];
-          if (Number.isNaN(a)) continue;
-          const right = level[j * (n + 1) + i + 1];
-          const below = level[(j + 1) * (n + 1) + i];
-          // Draw on the edge between two cells whose height band differs; bold every 4th band.
-          if (!Number.isNaN(right) && right !== a && (Math.max(a, right) % 4 === 0) === bold) {
-            ctx.moveTo((i + 1) * cell, j * cell); ctx.lineTo((i + 1) * cell, (j + 1) * cell);
-          }
-          if (!Number.isNaN(below) && below !== a && (Math.max(a, below) % 4 === 0) === bold) {
-            ctx.moveTo(i * cell, (j + 1) * cell); ctx.lineTo((i + 1) * cell, (j + 1) * cell);
-          }
-        }
-      }
-      ctx.stroke();
+
+    // Lines go on the edge between two cells whose height band differs; every 4th band is bold.
+    const thin = [], bold = [];
+    const labels = [null, null, null, null];
+    const consider = (a, b, x0, y0, x1, y1) => {
+      if (a === NO_GROUND || b === NO_GROUND || a === b) return;
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      const b4 = Math.floor(hi / 4) * 4;
+      const isBold = b4 > lo;
+      (isBold ? bold : thin).push(x0, y0, x1, y1);
+      // Remember one good spot per quarter of the tile for a height label.
+      const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      if (mx < 24 || mx > 232 || my < 16 || my > 240) return;
+      const q = (mx >= 128 ? 1 : 0) + (my >= 128 ? 2 : 0);
+      const cx = mx >= 128 ? 192 : 64, cy = my >= 128 ? 192 : 64;
+      const score = (isBold ? 0 : 1e6) + (hi - lo > 1 ? 1e5 : 0) + (mx - cx) ** 2 + (my - cy) ** 2;
+      if (!labels[q] || score < labels[q].score) labels[q] = { score, mx, my, y: (isBold ? b4 : hi) * step };
     };
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        const a = level[j * (n + 1) + i];
+        if (a === NO_GROUND) continue;
+        consider(a, level[j * (n + 1) + i + 1], (i + 1) * cell, j * cell, (i + 1) * cell, (j + 1) * cell);
+        consider(a, level[(j + 1) * (n + 1) + i], i * cell, (j + 1) * cell, (i + 1) * cell, (j + 1) * cell);
+      }
+    }
+    if (!this._map) return;
+    const ctx = tile.getContext('2d');
+    ctx.scale(dpr, dpr);
     ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(60, 35, 10, 0.55)'; ctx.lineWidth = 1; draw(false);
-    ctx.strokeStyle = 'rgba(60, 35, 10, 0.9)'; ctx.lineWidth = 2; draw(true);
+    const stroke = (segs, color, width) => {
+      ctx.beginPath();
+      for (let k = 0; k < segs.length; k += 4) { ctx.moveTo(segs[k], segs[k + 1]); ctx.lineTo(segs[k + 2], segs[k + 3]); }
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+    };
+    stroke(thin, 'rgba(60, 35, 10, 0.55)', 1);
+    stroke(bold, 'rgba(60, 35, 10, 0.9)', 2);
+
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const l of labels) {
+      if (!l) continue;
+      const text = `Y${l.y}`;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 250, 235, 0.95)'; ctx.strokeText(text, l.mx, l.my);
+      ctx.fillStyle = 'rgb(70, 40, 10)'; ctx.fillText(text, l.mx, l.my);
+    }
   },
 });
-
-// Ground height with trees and plants left out (R/G = Y + 65, 0 = no data).
-function groundAt(x, z) {
-  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
-  const data = infoData.get(infoUrl(tx, tz, 'ground'));
-  if (!data) return null;
-  const i = ((z - tz * 256) * data.width + (x - tx * 256)) * 4;
-  const v = (data.data[i] << 8) | data.data[i + 1];
-  return v ? v - 65 : null;
-}
 
 function refreshContours() {
   if (contourLayer) { map.removeLayer(contourLayer); contourLayer = null; }
   if ($('#btn-contour').classList.contains('on') && !state.demo) {
-    contourLayer = new ContourLayer({ minZoom: -2, maxZoom: 4, pmIgnore: true, zIndex: 3 }).addTo(map);
+    contourLayer = new ContourLayer({ minZoom: -2, maxZoom: 4, pmIgnore: true, zIndex: 3,
+      updateWhenZooming: false, keepBuffer: 1 }).addTo(map);
   }
 }
 
