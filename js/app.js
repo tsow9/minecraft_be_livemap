@@ -136,7 +136,7 @@ async function pushChanges() {
     if (res.status === 401) {
       setPass('');
       retry = 0;
-      toast('合言葉が違うようです。もう一度入れてください');
+      toast('書き込みの許可が切れました。新しい招待リンクを開いてください');
       askPass();
     } else if (res.ok) {
       retry = 0;
@@ -219,7 +219,7 @@ function askPass() {
     const onSubmit = async (e) => {
       if (e.submitter?.value !== 'ok') return;
       e.preventDefault();
-      const pass = $('#pass-input').value.trim();
+      const pass = passFromText($('#pass-input').value);
       if (!pass) return;
       $('#pass-error').textContent = '確認中…';
       try {
@@ -232,7 +232,7 @@ function askPass() {
           pushChanges();
           return;
         }
-        $('#pass-error').textContent = res.status === 401 ? '合言葉が違います(何度も間違えると1時間入れなくなります)' : 'うまく確認できませんでした';
+        $('#pass-error').textContent = res.status === 401 ? 'このリンクは使えません。新しい招待リンクをもらってください' : 'うまく確認できませんでした';
       } catch {
         $('#pass-error').textContent = '通信できませんでした。電波のよいところでもう一度';
       }
@@ -243,6 +243,40 @@ function askPass() {
     setTimeout(() => $('#pass-input').focus(), 50);
   });
   return passAsk;
+}
+
+// The invite link carries the passphrase after # (that part never leaves this device's browser).
+function passFromText(text) {
+  const t = String(text || '').trim();
+  const m = t.match(/[#&]join=([^&\s]+)/);
+  if (m) { try { return decodeURIComponent(m[1]); } catch { return m[1]; } }
+  return t;
+}
+function inviteLink() {
+  return `${location.origin}${location.pathname}#join=${encodeURIComponent(getPass())}`;
+}
+
+// Opening an invite link: remember the passphrase on this device and take it out of the address bar.
+async function joinFromLink() {
+  const m = location.hash.match(/[#&]join=([^&]+)/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  let pass;
+  try { pass = decodeURIComponent(m[1]); } catch { pass = m[1]; }
+  if (!sharing()) { setPass(pass); return; }
+  try {
+    const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
+    if (res.ok) {
+      setPass(pass);
+      toast('招待リンクを確認しました。ピンや図形を書き込めます');
+      renderShareStatus();
+      pushChanges();
+    } else if (res.status === 401) {
+      toast('この招待リンクは使えません。新しいリンクをもらってください');
+    }
+  } catch {
+    toast('通信できませんでした。もう一度リンクを開いてください');
+  }
 }
 
 // Call before anything that changes pins or drawings.
@@ -256,9 +290,10 @@ function renderShareStatus() {
   const st = $('#share-status');
   st.textContent = getPass()
     ? (share.pending.size ? `送信待ち ${share.pending.size}件(つながると自動で送ります)` : 'みんなと共有中・書き込めます')
-    : '見るだけ(合言葉を入れると書き込めます)';
+    : '見るだけ(招待リンクを開くと書き込めます)';
   $('#share-login').hidden = !!getPass();
   $('#share-logout').hidden = !getPass();
+  $('#share-invite').hidden = !getPass();
   const lo = $('#local-only');
   lo.hidden = !share.localOnly.length;
   $('#local-only-count').textContent = share.localOnly.length;
@@ -284,16 +319,17 @@ function renderShareStatus() {
 }
 
 function setupShare() {
-  if (!sharing()) return;
+  if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
   loadSyncState();
   renderAll();
   $('#share-login').addEventListener('click', () => askPass());
   $('#share-logout').addEventListener('click', () => {
     setPass('');
-    toast('この端末の合言葉を消しました');
+    toast('この端末では書き込めないようにしました');
     renderShareStatus();
   });
+  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '招待リンクをコピーしました。仲間にだけ送ってください'));
   $('#local-only-send').addEventListener('click', async () => {
     if (!(await ensureWriter())) return;
     const ids = new Set(state.annotations.map((a) => a.id));
@@ -306,6 +342,7 @@ function setupShare() {
     toast(`${n}件をみんなと共有しました`);
   });
   renderShareStatus();
+  joinFromLink();
   pullChanges(true).then(() => { if (share.pending.size && getPass()) pushChanges(); });
   setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullChanges(); });
@@ -354,7 +391,7 @@ function toast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
 }
 
-async function copyText(text) {
+async function copyText(text, message) {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
@@ -362,7 +399,7 @@ async function copyText(text) {
     ta.value = text; document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); } finally { ta.remove(); }
   }
-  toast(`コピーしました: ${text}`);
+  toast(message || `コピーしました: ${text}`);
 }
 
 // "~" lets the copied text work directly in /tp when Y is unknown.
