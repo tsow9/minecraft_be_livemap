@@ -305,7 +305,7 @@ function styleOf(a) {
 }
 
 // Pins are game-style checkpoint flags; the foot of the pole marks the spot.
-const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="22" height="30"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
+const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="26" height="36"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
   + `<g class="gm-body"><path d="M7 31V5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/><path d="M7 31V5" stroke="#f4f1ea" stroke-width="2" stroke-linecap="round"/>`
   + `<path d="M8.5 5.5h13l-3.5 5 3.5 5h-13z" fill="${c}" stroke="#1b1d22" stroke-width="2.6" stroke-linejoin="round"/></g></svg>`;
 
@@ -316,7 +316,7 @@ function makeLayer(a) {
       return L.marker(ll(a.x + 0.5, a.z + 0.5), {
         icon: L.divIcon({
           className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div style="transform:translate(-50%,-27.5px)" class="wp-icon gm">${flagSvg(a.color)}${a.name ? `<span class="nm" style="--c:${a.color}">${esc(a.name)}</span>` : ''}</div>`,
+          html: `<div style="transform:translate(-50%,-33px)" class="wp-icon gm">${flagSvg(a.color)}${a.name ? `<span class="nm" style="--c:${a.color}">${esc(a.name)}</span>` : ''}</div>`,
         }),
       });
     case 'text':
@@ -624,7 +624,6 @@ function setupCancel() {
   const cancel = () => {
     if (state.mode === 'none') return false;
     setMode('none');
-    toast('作成をやめました');
     return true;
   };
   document.addEventListener('keydown', (e) => {
@@ -814,16 +813,11 @@ function blockAtNow(x, z) {
 }
 
 // ---------- contour lines (drawn from the ground heights stored in the ground tiles) ----------
+// The drawing itself lives in contour-core.js and normally runs in a background worker.
 let contourLayer = null;
-const NO_GROUND = -32768;
 const groundGrids = new Map();
 
-function contourStep(zoom) {
-  if (zoom >= 0) return 4;
-  return zoom >= -1 ? 8 : 16;
-}
-
-// One ground tile as plain heights (R/G = Y + 65, B = 1 under water), kept small and decoded once.
+// Fallback for browsers without background drawing: decode a ground tile on the page.
 function loadGroundGrid(url) {
   if (groundGrids.has(url)) return groundGrids.get(url);
   const p = new Promise((resolve) => {
@@ -833,13 +827,7 @@ function loadGroundGrid(url) {
       c.width = img.width; c.height = img.height;
       const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0);
-      const d = ctx.getImageData(0, 0, c.width, c.height).data;
-      const grid = new Int16Array(c.width * c.height);
-      for (let k = 0, i = 0; k < grid.length; k++, i += 4) {
-        const v = (d[i] << 8) | d[i + 1];
-        grid[k] = v && !d[i + 2] ? v - 65 : NO_GROUND;
-      }
-      resolve(grid);
+      resolve(decodeGround(ctx.getImageData(0, 0, c.width, c.height).data, c.width * c.height));
     };
     img.onerror = () => resolve(null);
     img.src = url;
@@ -849,17 +837,31 @@ function loadGroundGrid(url) {
   return p;
 }
 
-const nextTask = () => new Promise((r) => setTimeout(r, 0));
+let contourWorker = null;
+const contourJobs = new Map();
+let contourJobId = 0;
+function getContourWorker() {
+  if (contourWorker !== null) return contourWorker;
+  contourWorker = false;
+  if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') return false;
+  try {
+    const v = (document.querySelector('script[src*="contour-core.js"]')?.src.split('?')[1]) || '';
+    contourWorker = new Worker(`js/contour-worker.js${v ? `?${v}` : ''}`);
+    contourWorker.onmessage = (e) => {
+      const job = contourJobs.get(e.data.id);
+      contourJobs.delete(e.data.id);
+      if (job) job(e.data.bitmap);
+    };
+    contourWorker.onerror = () => { contourWorker = false; };
+  } catch { contourWorker = false; }
+  return contourWorker;
+}
 
 const ContourLayer = L.GridLayer.extend({
   createTile(coords, done) {
     const tile = document.createElement('canvas');
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     tile.width = tile.height = 256 * dpr;
-    this._draw(tile, coords, dpr).then(() => done(null, tile), () => done(null, tile));
-    return tile;
-  },
-  async _draw(tile, coords, dpr) {
     const scale = Math.pow(2, coords.z);
     const bx = coords.x * 256 / scale, bz = coords.y * 256 / scale;
     const cell = Math.max(1, scale);
@@ -867,144 +869,44 @@ const ContourLayer = L.GridLayer.extend({
     const n = 256 / cell;
     const tx0 = Math.floor(bx / 256), tz0 = Math.floor(bz / 256);
     const tx1 = Math.floor((bx + n * stride) / 256), tz1 = Math.floor((bz + n * stride) / 256);
-    const grids = [];
-    const loads = [];
+    const urls = [];
     for (let tz = tz0; tz <= tz1; tz++) {
       for (let tx = tx0; tx <= tx1; tx++) {
         const u = infoUrl(tx, tz, 'ground');
-        const slot = grids.push(null) - 1;
-        if (u) loads.push(loadGroundGrid(u).then((g) => { grids[slot] = g; }));
+        urls.push(u ? new URL(u, location.href).href : null);
       }
     }
-    if (!loads.length) return;
-    await Promise.all(loads);
-    // Spread the work over several moments so scrolling stays smooth.
-    await nextTask();
-    const cols = tx1 - tx0 + 1;
-    const step = contourStep(coords.z);
-    const level = new Int32Array((n + 1) * (n + 1)).fill(NO_GROUND);
-    const colTile = new Int32Array(n + 1), colOff = new Int32Array(n + 1);
-    for (let i = 0; i <= n; i++) {
-      const x = Math.floor(bx + i * stride);
-      colTile[i] = Math.floor(x / 256) - tx0; colOff[i] = x - Math.floor(x / 256) * 256;
+    const p = { bx, bz, n, cell, stride, tx0, tz0, cols: tx1 - tx0 + 1, dpr };
+    if (!urls.some(Boolean)) { setTimeout(() => done(null, tile)); return tile; }
+    const worker = getContourWorker();
+    if (worker) {
+      const id = ++contourJobId;
+      tile._contourJob = id;
+      contourJobs.set(id, (bitmap) => {
+        if (bitmap) { tile.getContext('2d').drawImage(bitmap, 0, 0); bitmap.close(); }
+        done(null, tile);
+      });
+      worker.postMessage({ id, urls, z: coords.z, p });
+    } else {
+      Promise.all(urls.map((u) => (u ? loadGroundGrid(u) : null))).then((grids) => {
+        if (grids.some(Boolean)) drawContour(tile.getContext('2d'), grids, { ...p, step: contourStep(coords.z) });
+        done(null, tile);
+      }, () => done(null, tile));
     }
-    for (let j = 0; j <= n; j++) {
-      const z = Math.floor(bz + j * stride);
-      const rowTile = (Math.floor(z / 256) - tz0) * cols, rowOff = (z - Math.floor(z / 256) * 256) * 256;
-      for (let i = 0; i <= n; i++) {
-        const g = grids[rowTile + colTile[i]];
-        if (!g) continue;
-        const h = g[rowOff + colOff[i]];
-        if (h !== NO_GROUND) level[j * (n + 1) + i] = Math.floor(h / step);
-      }
-    }
-
-    // Lines go on the edge between two cells whose height band differs; every 4th band is bold.
-    const thin = [], bold = [];
-    const marks = [];  // [x, y, height, bold] for every piece of line, to place the height labels
-    const consider = (a, b, x0, y0, x1, y1) => {
-      if (a === NO_GROUND || b === NO_GROUND || a === b) return;
-      const lo = Math.min(a, b), hi = Math.max(a, b);
-      const b4 = Math.floor(hi / 4) * 4;
-      const isBold = b4 > lo;
-      (isBold ? bold : thin).push(x0, y0, x1, y1);
-      // Only the bold lines get numbers, so the map stays easy to read.
-      if (isBold) marks.push([(x0 + x1) / 2, (y0 + y1) / 2, b4 * step, true]);
-    };
-    for (let j = 0; j < n; j++) {
-      for (let i = 0; i < n; i++) {
-        const a = level[j * (n + 1) + i];
-        if (a === NO_GROUND) continue;
-        consider(a, level[j * (n + 1) + i + 1], (i + 1) * cell, j * cell, (i + 1) * cell, (j + 1) * cell);
-        consider(a, level[(j + 1) * (n + 1) + i], i * cell, (j + 1) * cell, (i + 1) * cell, (j + 1) * cell);
-      }
-    }
-    const labels = placeContourLabels(marks);
-    if (!this._map) return;
-    const ctx = tile.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.lineCap = 'round';
-    const stroke = (segs, color, width) => {
-      ctx.beginPath();
-      for (let k = 0; k < segs.length; k += 4) { ctx.moveTo(segs[k], segs[k + 1]); ctx.lineTo(segs[k + 2], segs[k + 3]); }
-      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
-    };
-    stroke(thin, 'rgba(60, 35, 10, 0.55)', 1);
-    stroke(bold, 'rgba(60, 35, 10, 0.9)', 2);
-
-    // Like a paper map: the number sits in a gap of its own line, turned to follow it.
-    ctx.font = 'bold 11px system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    for (const l of labels) {
-      const text = `Y${l.y}`;
-      const w = ctx.measureText(text).width;
-      ctx.save();
-      ctx.translate(l.x, l.y0);
-      ctx.rotate(l.angle);
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillRect(-w / 2 - 3, -5, w + 6, 10);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 250, 235, 0.85)'; ctx.strokeText(text, 0, 0.5);
-      ctx.fillStyle = 'rgb(70, 40, 10)'; ctx.fillText(text, 0, 0.5);
-      ctx.restore();
-    }
+    return tile;
   },
 });
-
-// Picks up to one spot per quarter of a tile where a line runs fairly straight, and the direction it runs there.
-function placeContourLabels(marks) {
-  const cells = new Map();
-  for (const m of marks) {
-    const k = `${Math.floor(m[0] / 16)},${Math.floor(m[1] / 16)}`;
-    if (!cells.has(k)) cells.set(k, []);
-    cells.get(k).push(m);
-  }
-  const near = (m) => {
-    const out = [];
-    const ci = Math.floor(m[0] / 16), cj = Math.floor(m[1] / 16);
-    for (let di = -1; di <= 1; di++) {
-      for (let dj = -1; dj <= 1; dj++) {
-        for (const o of cells.get(`${ci + di},${cj + dj}`) || []) {
-          if (o[2] === m[2] && (o[0] - m[0]) ** 2 + (o[1] - m[1]) ** 2 <= 14 * 14) out.push(o);
-        }
-      }
-    }
-    return out;
-  };
-  const labels = [];
-  for (let q = 0; q < 4; q++) {
-    const cx = q % 2 ? 192 : 64, cy = q >= 2 ? 192 : 64;
-    const mine = marks.filter((m) => m[0] >= 26 && m[0] <= 230 && m[1] >= 14 && m[1] <= 242 &&
-      (m[0] >= 128) === (q % 2 === 1) && (m[1] >= 128) === (q >= 2));
-    mine.sort((a, b) => ((a[0] - cx) ** 2 + (a[1] - cy) ** 2) - ((b[0] - cx) ** 2 + (b[1] - cy) ** 2));
-    for (const m of mine.slice(0, 60)) {
-      const pts = near(m);
-      if (pts.length < 6) continue;
-      // Direction of the line from the spread of nearby pieces (principal axis).
-      let mx = 0, my = 0;
-      for (const p of pts) { mx += p[0]; my += p[1]; }
-      mx /= pts.length; my /= pts.length;
-      let sxx = 0, syy = 0, sxy = 0;
-      for (const p of pts) { const dx = p[0] - mx, dy = p[1] - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
-      const tr = sxx + syy, det = sxx * syy - sxy * sxy;
-      const l1 = tr / 2 + Math.sqrt(Math.max(0, tr * tr / 4 - det)), l2 = tr - l1;
-      if (l1 <= 0 || l2 / l1 > 0.12) continue;
-      let angle = 0.5 * Math.atan2(2 * sxy, sxx - syy);
-      if (angle > Math.PI / 2) angle -= Math.PI;
-      if (angle < -Math.PI / 2) angle += Math.PI;
-      labels.push({ x: mx, y0: my, angle, y: m[2] });
-      break;
-    }
-  }
-  return labels;
-}
 
 function refreshContours() {
   if (contourLayer) { map.removeLayer(contourLayer); contourLayer = null; }
   if ($('#btn-contour').classList.contains('on') && !state.demo) {
     contourLayer = new ContourLayer({ minZoom: -2, maxZoom: 4, pmIgnore: true, zIndex: 3,
       updateWhenZooming: false, keepBuffer: 1 }).addTo(map);
+    // Tiles that scroll away before they are drawn are dropped from the worker's queue.
+    contourLayer.on('tileunload', (e) => {
+      const id = e.tile._contourJob;
+      if (id && contourJobs.has(id) && contourWorker) contourWorker.postMessage({ cancel: id });
+    });
   }
 }
 
@@ -1344,7 +1246,7 @@ const DEATH_SVG = `<svg class="gm-svg" viewBox="0 0 24 34" width="20" height="28
   + '<path d="M12 4.5v21M5 11.5h14" stroke="#f4f1ea" stroke-width="3.5" stroke-linecap="round"/></g></svg>';
 let exploreLayer = null;
 
-const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="14" height="17"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
+const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="17" height="20.4"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
   + `<g class="gm-body"><circle cx="10" cy="9" r="6.5" fill="${c}" stroke="#1b1d22" stroke-width="2.6"/><circle cx="10" cy="9" r="2.2" fill="#f4f1ea"/></g></svg>`;
 
 // Each person keeps the same color: it comes from their ID, not from where they are in the list
@@ -1410,7 +1312,7 @@ function renderPlayers() {
       const m = L.marker(ll(p.x + 0.5, p.z + 0.5), {
         pmIgnore: true, zIndexOffset: off ? 900 : 1000,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-15px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
+          html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-18px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
       m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div></div>`);
       playerGroup.addLayer(m);
