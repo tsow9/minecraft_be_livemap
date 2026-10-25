@@ -35,6 +35,11 @@
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11"/><path d="M5.6 14.4l8.3-8.3a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L13 19.1a3 3 0 0 1-2.1.9H9.4a3 3 0 0 1-2.1-.9l-1.7-1.7a2 2 0 0 1 0-3z"/><path d="M10 10l6 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-wp-pin" viewBox="0 0 24 30">
+      <path d="M12 29s-10-8.6-10-17a10 10 0 0 1 20 0c0 8.4-10 17-10 17z" style="fill: var(--c, #3ecf8e)" stroke="#fff" stroke-width="2"/>
+      <circle cx="12" cy="12" r="4" fill="#fff"/>
+    </symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
@@ -53,9 +58,14 @@
 
 <header id="topbar">
   <div class="search">
-    <input id="search" type="search" placeholder="座標(例: 120 -340)か名前で検索" autocomplete="off">
+    <input id="search" type="search" placeholder="ピンの名前で検索" autocomplete="off">
     <ul id="search-results" hidden></ul>
   </div>
+  <form id="find" class="coordfind" onsubmit="return false">
+    <label><span>X</span><input id="find-x" type="text" inputmode="numeric" pattern="-?[0-9]*" placeholder="0" autocomplete="off" aria-label="X座標"></label>
+    <label><span>Z</span><input id="find-z" type="text" inputmode="numeric" pattern="-?[0-9]*" placeholder="0" autocomplete="off" aria-label="Z座標"></label>
+    <button id="find-go" type="button" title="この座標へ移動"><svg class="ic"><use href="#i-arrow"/></svg></button>
+  </form>
   <div id="dims" class="seg" role="group" aria-label="ディメンション">
     <button data-dim="overworld" class="on">地上</button>
     <button data-dim="nether">ネザー</button>
@@ -167,10 +177,8 @@
     <h2 id="ed-title">編集</h2>
     <label id="ed-name-row">名前 <input id="ed-name" maxlength="60"></label>
     <label id="ed-text-row">文字 <textarea id="ed-text" rows="2" maxlength="200"></textarea></label>
-    <label id="ed-icon-row">種類 <select id="ed-icon"></select></label>
-    <label id="ed-y-row">高さ Y(わかれば) <input id="ed-y" type="number" inputmode="numeric"></label>
-    <label id="ed-note-row">メモ <textarea id="ed-note" rows="2" maxlength="500"></textarea></label>
     <div class="ed-colors" id="ed-colors"></div>
+    <p id="ed-error" class="error" role="alert"></p>
     <div class="btns">
       <button value="delete" id="ed-delete" class="danger">削除</button>
       <span class="grow"></span>

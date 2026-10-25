@@ -44,7 +44,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #toast,
 .leaflet-control-zoom { background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
   border: 1px solid var(--line); box-shadow: var(--shadow); }
-.search { position: relative; flex: 1 1 260px; max-width: 420px; }
+.search { position: relative; z-index: 2; flex: 1 1 260px; max-width: 420px; }
 #search { width: 100%; height: 42px; padding: 0 14px 0 40px; border-radius: 999px; outline: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: 14px center; background-size: 18px; transition: border-color .15s; }
@@ -52,10 +52,25 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #search::placeholder { color: var(--sub); }
 #search-results { position: absolute; left: 0; right: 0; top: 100%; margin: 6px 0 0; padding: 6px; list-style: none;
   background: var(--glass-strong); border-radius: var(--radius); max-height: 50vh; overflow: auto; }
-#search-results li { padding: 9px 12px; border-radius: 10px; cursor: pointer; }
+#search-results li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
+#search-results .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+#search-results .grow { min-width: 0; }
 #search-results li:hover, #search-results li.active { background: var(--hover); }
 #search-results .meta { color: var(--sub); font-size: 12px; }
 
+.coordfind { display: flex; align-items: center; gap: 4px; height: 42px; padding: 3px 3px 3px 12px; border-radius: 999px;
+  background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--line); box-shadow: var(--shadow); margin: 0; }
+.coordfind label { display: flex; align-items: center; gap: 5px; }
+.coordfind span { color: var(--sub); font-size: 12px; font-weight: 700; }
+.coordfind input { width: 64px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid transparent; background: var(--field);
+  color: var(--fg); outline: none; font-variant-numeric: tabular-nums; }
+.coordfind input:focus { border-color: var(--accent); }
+.coordfind input::placeholder { color: rgba(255,255,255,.25); }
+.coordfind button { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: var(--accent); color: #06130d; transition: opacity .15s; }
+.coordfind button:disabled { background: var(--field); color: var(--sub); cursor: default; }
+#editor .error { margin: -6px 0 12px; color: #ff8a86; font-size: 12px; }
+#editor .error:empty { display: none; }
 .seg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; height: 42px; }
 .seg button { border: 0; background: transparent; padding: 0 14px; border-radius: 999px; color: var(--sub);
   font-weight: 600; transition: background .15s, color .15s; }
@@ -195,10 +210,11 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
 #toast { position: absolute; z-index: 2000; left: 50%; top: 72px; transform: translateX(-50%); background: var(--glass-strong);
   padding: 9px 16px; border-radius: 999px; pointer-events: none; font-weight: 500; }
 
-.wp-icon { display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
-.wp-icon .em { font-size: 22px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
-.wp-icon .nm { margin-top: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 2px 8px; border-radius: 999px;
-  background: rgba(14, 16, 20, .82); box-shadow: inset 0 -2px 0 var(--c, #fff), 0 2px 8px rgba(0,0,0,.4); }
+.wp-icon { display: flex; flex-direction: column; align-items: center; pointer-events: auto; cursor: pointer; }
+.wp-icon .pin { width: 24px; height: 30px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); transition: transform .12s; transform-origin: 50% 100%; }
+.wp-icon:hover .pin { transform: scale(1.12); }
+.wp-icon .nm { margin-top: 2px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 2px 8px; border-radius: 999px;
+  background: rgba(14, 16, 20, .85); box-shadow: 0 2px 8px rgba(0,0,0,.4); border: 1px solid color-mix(in srgb, var(--c, #fff) 60%, transparent); }
 .txt-icon { white-space: pre; font-weight: 700; font-size: 15px; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 6px #000; }
 
 .leaflet-popup-content-wrapper { background: var(--glass-strong); color: var(--fg); border-radius: 14px;
@@ -223,8 +239,12 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
   #tools { left: 248px; right: 72px; transform: none; max-width: none; }
 }
 @media (max-width: 700px) {
+  .search { flex-basis: 100%; max-width: none; }
+  .coordfind { flex: 1 1 0; min-width: 0; padding-left: 10px; }
+  .coordfind label { flex: 1; min-width: 0; gap: 4px; }
+  .coordfind input { width: 100%; min-width: 0; padding: 0 6px; }
+  .seg button { padding: 0 9px; font-size: 13px; }
   #topbar { padding: 10px; padding-top: max(10px, env(safe-area-inset-top)); }
-  .seg button { padding: 0 11px; }
   #sidebuttons { top: 112px; right: 10px; padding: 4px; }
   #sidebuttons button { width: 38px; height: 38px; }
   .panel { left: 10px; right: 10px; top: auto; bottom: 16px; width: auto; max-width: none; max-height: 60vh; z-index: 1200;

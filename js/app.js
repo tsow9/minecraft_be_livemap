@@ -307,8 +307,8 @@ function makeLayer(a) {
     case 'waypoint':
       return L.marker(ll(a.x + 0.5, a.z + 0.5), {
         icon: L.divIcon({
-          className: 'wp-icon', iconSize: null, iconAnchor: [0, 0],
-          html: `<div style="transform:translate(-50%,-11px);--c:${a.color}" class="wp-icon"><span class="em">${ICONS[a.icon][0]}</span>${a.name ? `<span class="nm">${esc(a.name)}</span>` : ''}</div>`,
+          className: '', iconSize: null, iconAnchor: [0, 0],
+          html: `<div style="transform:translate(-50%,-30px);--c:${a.color}" class="wp-icon"><svg class="pin" viewBox="0 0 24 30"><use href="#i-wp-pin"/></svg>${a.name ? `<span class="nm">${esc(a.name)}</span>` : ''}</div>`,
         }),
       });
     case 'text':
@@ -420,7 +420,7 @@ function openAnnPopup(id, at) {
   const c = annCenter(a);
   const el = document.createElement('div'); el.className = 'pop';
   const head = document.createElement('h4');
-  if (a.type === 'waypoint') head.textContent = `${ICONS[a.icon][0]} ${a.name || ICONS[a.icon][1]}`;
+  if (a.type === 'waypoint') head.textContent = a.name || 'ピン';
   else if (a.type === 'text') head.textContent = a.text;
   else head.textContent = a.name || { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
   const isPoint = a.type === 'waypoint' || a.type === 'text';
@@ -441,7 +441,6 @@ function openAnnPopup(id, at) {
 // ---------- editor dialog ----------
 const editor = $('#editor');
 let editing = null;
-for (const [key, [em, label]] of Object.entries(ICONS)) $('#ed-icon').add(new Option(`${em} ${label}`, key));
 
 function fillSwatches(container, current, onPick) {
   container.innerHTML = '';
@@ -459,18 +458,14 @@ function fillSwatches(container, current, onPick) {
 function openEditor(a, isNew) {
   editing = { a, isNew, color: a.color };
   const isWp = a.type === 'waypoint', isText = a.type === 'text';
-  $('#ed-title').textContent = isNew ? '新しく追加' : '編集';
+  $('#ed-title').textContent = isWp ? (isNew ? '新しいピン' : 'ピンの編集') : (isNew ? '新しく追加' : '編集');
+  $('#ed-name').placeholder = isWp ? nextPinName() : '';
   $('#ed-name-row').hidden = isText;
   $('#ed-text-row').hidden = !isText;
-  $('#ed-icon-row').hidden = !isWp;
-  $('#ed-y-row').hidden = !isWp;
-  $('#ed-note-row').hidden = !isWp && !isText;
+  $('#ed-error').textContent = '';
   $('#ed-delete').hidden = isNew;
   $('#ed-name').value = a.name || '';
   $('#ed-text').value = a.text || '';
-  $('#ed-icon').value = a.icon || 'pin';
-  $('#ed-y').value = a.y ?? '';
-  $('#ed-note').value = a.note || '';
   fillSwatches($('#ed-colors'), a.color, (c) => { editing.color = c; });
   editor.showModal();
   setTimeout(() => (isText ? $('#ed-text') : $('#ed-name')).focus(), 50);
@@ -484,17 +479,13 @@ editor.addEventListener('close', () => {
   if (action === 'delete') { deleteAnn(a.id); toast('削除しました'); return; }
   if (action !== 'save') return;
   const next = { ...a, color, updatedAt: Date.now() };
-  if (a.type === 'waypoint' || a.type === 'text') next.note = $('#ed-note').value.trim();
   if (a.type === 'text') {
     next.text = $('#ed-text').value.trim();
     if (!next.text) { if (!isNew) deleteAnn(a.id); return; }
   } else {
     next.name = $('#ed-name').value.trim();
   }
-  if (a.type === 'waypoint') {
-    next.icon = $('#ed-icon').value;
-    next.y = $('#ed-y').value === '' ? null : Number($('#ed-y').value);
-  }
+  if (a.type === 'waypoint') next.name = next.name || nextPinName();
   if (isNew) { addAnn(next); return; }
   const clean = sanitize(next);
   if (!clean) return;
@@ -502,6 +493,35 @@ editor.addEventListener('close', () => {
   state.annotations[i] = clean;
   store.save();
   renderAnn(clean);
+});
+
+// Every pin has its own name, so it can be found by searching.
+function pinNameTaken(name, exceptId) {
+  const key = name.trim().toLowerCase();
+  return state.annotations.some((v) => v.type === 'waypoint' && v.id !== exceptId && (v.name || '').trim().toLowerCase() === key);
+}
+function nextPinName() {
+  let n = 1;
+  while (pinNameTaken(`ピン${n}`)) n++;
+  return `ピン${n}`;
+}
+
+// Enter in a one-line box saves (instead of pressing the first button in the form, which is 削除).
+$('#editor-form').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !e.isComposing) {
+    e.preventDefault();
+    $('#editor-form button[value="save"]').click();
+  }
+});
+
+$('#editor-form').addEventListener('submit', (e) => {
+  if (!editing || e.submitter?.value !== 'save' || editing.a.type !== 'waypoint') return;
+  const name = $('#ed-name').value.trim();
+  if (name && pinNameTaken(name, editing.a.id)) {
+    e.preventDefault();
+    $('#ed-error').textContent = `「${name}」はもう使われています。別の名前にしてください`;
+    $('#ed-name').focus();
+  }
 });
 
 function createWaypoint(x, z) {
@@ -1146,7 +1166,7 @@ function setupSearch() {
     items.forEach((it, i) => {
       const li = document.createElement('li');
       if (i === active) li.className = 'active';
-      li.innerHTML = `<div>${esc(it.title)}</div><div class="meta">${esc(it.meta)}</div>`;
+      li.innerHTML = `<span class="dot" style="background:${esc(it.color)}"></span><div class="grow"><div>${esc(it.title)}</div><div class="meta">${esc(it.kind)} ・ ${esc(it.meta)}</div></div>`;
       li.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(i); });
       list.append(li);
     });
@@ -1156,19 +1176,16 @@ function setupSearch() {
     const q = input.value.trim();
     items = []; active = 0;
     if (!q) { render(); return; }
-    const m = q.match(/^(-?\d+)[\s,、]+(-?\d+)(?:[\s,、]+(-?\d+))?$/);
-    if (m) {
-      const x = Number(m[1]), z = Number(m[3] ?? m[2]);
-      items.push({ title: `X ${x} / Z ${z} へ移動`, meta: `${DIMS[state.dim].name}`, go: () => { goTo(x, z, null, 1); openCoordPopup(ll(x + 0.5, z + 0.5)); } });
-    }
     const lq = q.toLowerCase();
-    for (const a of state.annotations) {
-      const hay = `${a.name || ''} ${a.text || ''} ${a.note || ''} ${a.type === 'waypoint' ? ICONS[a.icon][1] : ''}`.toLowerCase();
+    const order = [...state.annotations].sort((p, q2) => (p.type !== 'waypoint') - (q2.type !== 'waypoint'));
+    for (const a of order) {
+      const hay = `${a.name || ''} ${a.text || ''} ${a.note || ''}`.toLowerCase();
       if (!hay.includes(lq)) continue;
       const c = annCenter(a);
-      const icon = a.type === 'waypoint' ? ICONS[a.icon][0] + ' ' : a.type === 'text' ? 'T ' : '◇ ';
       items.push({
-        title: icon + (a.name || a.text || '(名前なし)'),
+        color: a.color,
+        kind: { waypoint: 'ピン', text: '文字' }[a.type] || '図形',
+        title: a.name || a.text || '(名前なし)',
         meta: `${DIMS[a.dim].name}  X ${c.x} / Z ${c.z}`,
         go: () => { goTo(c.x, c.z, a.dim, 0); openAnnPopup(a.id); },
       });
@@ -1185,6 +1202,28 @@ function setupSearch() {
   });
   input.addEventListener('blur', () => setTimeout(hide, 150));
   input.addEventListener('focus', () => { if (items.length) list.hidden = false; });
+
+  // Coordinates: type X and Z, then jump there.
+  const cx = $('#find-x'), cz = $('#find-z'), go = $('#find-go');
+  const ready = () => cx.value.trim() !== '' && cz.value.trim() !== '' && Number.isFinite(Number(cx.value)) && Number.isFinite(Number(cz.value));
+  const update = () => { go.disabled = !ready(); };
+  const jump = () => {
+    if (!ready()) return;
+    const x = Math.floor(Number(cx.value)), z = Math.floor(Number(cz.value));
+    cx.blur(); cz.blur();
+    goTo(x, z, null, 1);
+    openCoordPopup(ll(x + 0.5, z + 0.5));
+  };
+  for (const el of [cx, cz]) {
+    el.addEventListener('input', update);
+    el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (el === cx && cz.value.trim() === '') cz.focus(); else jump();
+    });
+  }
+  go.addEventListener('click', jump);
+  update();
 }
 
 // ---------- players, deaths, explorers, who's online ----------
