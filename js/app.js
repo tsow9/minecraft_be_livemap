@@ -263,7 +263,7 @@ async function joinFromLink() {
   history.replaceState(null, '', location.pathname + location.search);
   let pass;
   try { pass = decodeURIComponent(m[1]); } catch { pass = m[1]; }
-  if (!sharing()) { setPass(pass); return; }
+  if (!sharing()) { setPass(pass); toast('招待リンクを受け取りました(共有の準備ができると書き込めます)'); return; }
   try {
     const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
     if (res.ok) {
@@ -272,7 +272,9 @@ async function joinFromLink() {
       renderShareStatus();
       pushChanges();
     } else if (res.status === 401) {
-      toast('この招待リンクは使えません。新しいリンクをもらってください');
+      toast('この招待リンクは使えません。合言葉が合っているか確かめてください');
+    } else {
+      toast(`共有サーバーがうまく答えませんでした(${res.status})`);
     }
   } catch {
     toast('通信できませんでした。もう一度リンクを開いてください');
@@ -319,6 +321,8 @@ function renderShareStatus() {
 }
 
 function setupShare() {
+  // Pasting the link into the address bar of an open page only changes the part after #, so watch for that too.
+  window.addEventListener('hashchange', joinFromLink);
   if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
   loadSyncState();
