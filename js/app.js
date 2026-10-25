@@ -1751,32 +1751,20 @@ async function setupPlayers() {
 }
 
 // ---------- staying on the newest version of the site ----------
-// When a new version is published, open pages switch to it by themselves, but only while nobody is
-// in the middle of something (drawing, typing, unsent pins), and they come back to the same spot.
+// When a new version is published, a small bar offers to switch; the page comes back to the same spot.
 const APP_VERSION = (document.querySelector('script[src*="js/app.js"]')?.src.match(/[?&]v=([\w-]+)/) || [])[1] || '';
 let newVersion = null;
-let lastInput = Date.now();
 
 function noteVersion(v) {
-  if (!APP_VERSION || typeof v !== 'string' || !v || v === APP_VERSION) return;
-  let tried = null;
-  try { tried = JSON.parse(sessionStorage.getItem('mcmap.reloadedFor') || 'null'); } catch { /* ignore */ }
-  // Just reloaded for this version but still got the old page (the file server's cache): try again later.
-  if (tried && tried.v === v && Date.now() - tried.at < 5 * 60000) return;
+  if (!APP_VERSION || typeof v !== 'string' || !v || v === APP_VERSION || v === newVersion) return;
   newVersion = v;
-  maybeUpdate();
+  $('#update-bar').hidden = false;
 }
 
-function busyForUpdate() {
-  return state.mode !== 'none' || editor.open || $('#pass-dialog').open || share.pending.size > 0
-    || !!document.activeElement?.matches?.('input, textarea');
-}
-
-function maybeUpdate() {
-  if (!newVersion || busyForUpdate()) return;
-  if (document.visibilityState === 'visible' && Date.now() - lastInput < 15000) return;
+function applyUpdate() {
+  if (!newVersion) return;
   try {
-    sessionStorage.setItem('mcmap.reloadedFor', JSON.stringify({ v: newVersion, at: Date.now() }));
+    sessionStorage.setItem('mcmap.updated', '1');
     sessionStorage.setItem('mcmap.view', JSON.stringify({ ...block(map.getCenter()), zoom: map.getZoom(), dim: state.dim }));
   } catch { /* the view just starts over */ }
   // A new address skips the file server's cached copy of the page.
@@ -1784,16 +1772,19 @@ function maybeUpdate() {
 }
 
 function setupUpdates() {
-  for (const t of ['pointerdown', 'keydown', 'wheel']) addEventListener(t, () => { lastInput = Date.now(); }, { capture: true, passive: true });
-  setInterval(maybeUpdate, 5000);
-  document.addEventListener('visibilitychange', maybeUpdate);
+  $('#update-go').addEventListener('click', applyUpdate);
   if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
-  let view = null;
-  try { view = JSON.parse(sessionStorage.getItem('mcmap.view') || 'null'); sessionStorage.removeItem('mcmap.view'); } catch { /* ignore */ }
+  let view = null, updated = false;
+  try {
+    view = JSON.parse(sessionStorage.getItem('mcmap.view') || 'null');
+    updated = sessionStorage.getItem('mcmap.updated') === '1';
+    sessionStorage.removeItem('mcmap.view'); sessionStorage.removeItem('mcmap.updated');
+  } catch { /* ignore */ }
   if (view && Number.isFinite(view.x) && Number.isFinite(view.z)) {
     if (DIMS[view.dim]) setDim(view.dim);
     map.setView(ll(view.x + 0.5, view.z + 0.5), Number.isFinite(view.zoom) ? view.zoom : map.getZoom(), { animate: false });
   }
+  if (updated) toast('最新版に更新しました');
 }
 
 // ---------- boot ----------

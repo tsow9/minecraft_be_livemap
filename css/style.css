@@ -197,6 +197,11 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   padding: 6px 6px 6px 16px; border-radius: 999px; background: rgba(60, 46, 12, .85); border-color: rgba(240, 190, 70, .55);
   color: #ffe2a0; font-weight: 600; white-space: nowrap; }
 #past-banner[hidden] { display: none; }
+#update-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 10px; align-items: center;
+  padding: 6px 6px 6px 16px; border-radius: 999px; background: var(--glass-strong); border: 1px solid rgba(62, 207, 142, .5);
+  box-shadow: var(--shadow); font-weight: 600; white-space: nowrap; }
+#update-bar .mini { background: var(--accent); border-color: var(--accent); color: #06130d; }
+body.tools-open #update-bar { bottom: 160px; }
 .time { display: flex; gap: 10px; align-items: center; }
 .time input { flex: 1; }
 #time-label { min-width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
