@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 
 import bedrock_db
+import block_colors
 from block_colors import color_of
 
 DIM_IDS = {'overworld': 0, 'nether': 1, 'end': 2}
@@ -371,6 +372,9 @@ def main():
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
+    if block_colors.unknown:
+        names = ', '.join(sorted(block_colors.unknown)[:40])
+        print(f'色が未登録で灰色になったブロック({len(block_colors.unknown)}種類): {names}')
     if os.path.isdir(out_root):
         shutil.rmtree(out_root)
     total = 0

@@ -82,10 +82,12 @@ jobs:
         run: |
           mkdir -p data
           if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
-      - name: ワールドが変わったか確認
+      - name: ワールドか地図の描き方が変わったか確認
         id: compare
+        # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played.
         run: |
-          if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "${{ steps.download.outputs.world_hash }}" ]; then
+          echo "${{ steps.download.outputs.world_hash }}-$(cat tools/*.py | sha256sum | cut -c1-64)" > fingerprint.txt
+          if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "$(cat fingerprint.txt)" ]; then
             echo "前回から変化なし"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -100,7 +102,7 @@ jobs:
         run: |
           pip install --quiet numpy pillow
           python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30
-          echo "${{ steps.download.outputs.world_hash }}" > data/world.sha256
+          cp fingerprint.txt data/world.sha256
       - name: 地図データを保存
         if: steps.compare.outputs.changed == 'true'
         # map-data keeps a single commit so the repository does not grow with every hourly update.

@@ -77,8 +77,34 @@ KEYWORDS = [
     ('sculk', (12, 29, 36)), ('amethyst', (133, 97, 191)), ('rail', (125, 110, 90)),
 ]
 
+# name: (young color, ripe color, max growth). Color shifts with the growth/age state.
+CROPS = {
+    'wheat': ((88, 140, 40), (220, 190, 80), 7),
+    'carrots': ((88, 140, 40), (150, 150, 50), 7),
+    'potatoes': ((88, 140, 40), (120, 160, 60), 7),
+    'beetroot': ((88, 140, 40), (160, 80, 70), 7),
+    'nether_wart': ((110, 30, 30), (170, 40, 40), 3),
+    'sweet_berry_bush': ((60, 100, 40), (150, 40, 50), 3),
+    'cocoa': ((120, 140, 60), (150, 90, 40), 2),
+    'melon_stem': ((88, 140, 40), (150, 150, 60), 7),
+    'pumpkin_stem': ((88, 140, 40), (150, 150, 60), 7),
+    'torchflower_crop': ((88, 140, 40), (200, 120, 60), 1),
+    'pitcher_crop': ((88, 140, 40), (90, 120, 160), 4),
+}
+
 FALLBACK = (128, 128, 128)
+unknown = set()
 _cache = {}
+
+
+def _crop_color(name, states):
+    crop = CROPS.get(name)
+    if crop is None:
+        return None
+    young, ripe, top = crop
+    stage = states.get('growth', states.get('age', top))
+    t = min(max(stage, 0), top) / top if isinstance(stage, (int, float)) and top else 1.0
+    return tuple(int(a + (b - a) * t) for a, b in zip(young, ripe))
 
 
 def _wood_color(name):
@@ -113,7 +139,8 @@ def color_of(name, states=None):
     states = states or {}
     simple = name.split(':', 1)[-1]
     cache_key = (simple, states.get('color'), states.get('wood_type'), states.get('old_log_type'),
-                 states.get('new_log_type'), states.get('old_leaf_type'), states.get('new_leaf_type'))
+                 states.get('new_log_type'), states.get('old_leaf_type'), states.get('new_leaf_type'),
+                 states.get('growth'), states.get('age'))
     if cache_key in _cache:
         return _cache[cache_key]
     if simple in AIR or simple.startswith('light_block'):
@@ -121,7 +148,7 @@ def color_of(name, states=None):
     elif simple in WATER:
         result = ((63, 118, 228), 'water')
     else:
-        rgb = _state_color(simple, states) or EXACT.get(simple)
+        rgb = _crop_color(simple, states) or _state_color(simple, states) or EXACT.get(simple)
         if rgb is None:
             for dye, base in sorted(DYES.items(), key=lambda kv: -len(kv[0])):
                 if simple.startswith(dye + '_'):
@@ -132,7 +159,10 @@ def color_of(name, states=None):
         if rgb is None and 'leaves' in simple:
             rgb = (72, 120, 40)
         if rgb is None:
-            rgb = next((c for kw, c in KEYWORDS if kw in simple), FALLBACK)
+            rgb = next((c for kw, c in KEYWORDS if kw in simple), None)
+        if rgb is None:
+            unknown.add(simple)
+            rgb = FALLBACK
         result = (rgb, 'solid')
     _cache[cache_key] = result
     return result
