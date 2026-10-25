@@ -261,7 +261,8 @@ const HistoryTileLayer = L.TileLayer.extend({
 });
 
 async function loadManifest(id) {
-  if (!manifests.has(id)) manifests.set(id, (await fetchJson(`manifests/${encodeURIComponent(id)}.json`))?.tiles || null);
+  const v = encodeURIComponent(state.config.updatedAt || '');
+  if (!manifests.has(id)) manifests.set(id, (await fetchJson(`manifests/${encodeURIComponent(id)}.json?v=${v}`))?.tiles || null);
 }
 
 function updatedText() {
@@ -981,7 +982,7 @@ async function fetchLive() {
 }
 
 async function refreshConfig() {
-  const cfg = await fetchJson('config.json');
+  const cfg = await fetchJson(`config.json?t=${Date.now()}`);
   if (!cfg || !Array.isArray(cfg.snapshots) || cfg.updatedAt === state.config.updatedAt) return;
   const before = snapshots();
   const wasLatest = state.snapshotIndex >= before.length - 1;
@@ -996,7 +997,7 @@ async function refreshConfig() {
   state.snapshotIndex = wasLatest || keep < 0 ? state.config.snapshots.length - 1 : keep;
   renderTimeline();
   refreshBase();
-  state.explore = await fetchJson('explore.json');
+  state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   refreshExplore();
 }
 
@@ -1037,7 +1038,7 @@ async function refreshLive() {
 }
 
 async function setupPlayers() {
-  state.explore = await fetchJson('explore.json');
+  state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   playerGroup.addTo(map);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
@@ -1046,13 +1047,13 @@ async function setupPlayers() {
   });
   await refreshLive();
   setInterval(refreshLive, 60000);
-  setInterval(refreshConfig, 180000);
+  setInterval(refreshConfig, 60000);
 }
 
 // ---------- boot ----------
 async function loadConfig() {
   try {
-    const res = await fetch('config.json', { cache: 'no-cache' });
+    const res = await fetch(`config.json?t=${Date.now()}`, { cache: 'no-cache' });
     if (res.ok) return await res.json();
   } catch { /* fall through to demo */ }
   return {};
