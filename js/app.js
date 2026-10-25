@@ -279,6 +279,7 @@ async function refreshBase() {
   if (token !== baseToken) return;
   updatePastBanner();
   updateCenterInfo();
+  prefetchInfo();
   const next = makeBaseLayer();
   const prev = state.baseLayer;
   next.addTo(map).bringToBack();
@@ -626,6 +627,8 @@ async function loadBlockNames() {
   blockNamesJa = Array.isArray(data?.ja) ? data.ja : [];
 }
 
+const infoData = new Map();
+
 function loadInfoTile(url) {
   if (infoCache.has(url)) return infoCache.get(url);
   const p = new Promise((resolve) => {
@@ -635,57 +638,89 @@ function loadInfoTile(url) {
       c.width = img.width; c.height = img.height;
       const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, c.width, c.height));
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      infoData.set(url, data);
+      resolve(data);
     };
-    img.onerror = () => resolve(null);
+    img.onerror = () => { infoData.set(url, null); resolve(null); };
     img.src = url;
   });
   infoCache.set(url, p);
-  if (infoCache.size > 40) infoCache.delete(infoCache.keys().next().value);
+  if (infoCache.size > 80) {
+    const old = infoCache.keys().next().value;
+    infoCache.delete(old);
+    infoData.delete(old);
+  }
   return p;
 }
 
-async function blockAt(x, z) {
+function infoUrl(tx, tz) {
   if (state.demo) return null;
-  const snap = snapshots()[state.snapshotIndex];
-  const m = manifests.get(snap?.id);
-  if (!m) return null;
-  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
+  const m = manifests.get(snapshots()[state.snapshotIndex]?.id);
   const key = `info/${state.dim}/${tx}/${tz}`;
-  const hit = m[key];
-  if (!hit) return null;
-  const data = await loadInfoTile(`tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}`);
-  if (!data) return null;
+  const hit = m && m[key];
+  return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
+}
+
+// Answers right away when the tile is already loaded; otherwise starts loading it.
+function blockAtNow(x, z) {
+  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
+  const url = infoUrl(tx, tz);
+  if (!url) return { info: null };
+  if (!infoData.has(url)) return { pending: loadInfoTile(url) };
+  const data = infoData.get(url);
+  if (!data) return { info: null };
   const i = ((z - tz * 256) * data.width + (x - tx * 256)) * 4;
   const v = (data.data[i] << 16) | (data.data[i + 1] << 8) | data.data[i + 2];
   const id = v >> 9;
-  if (!id) return null;
-  return { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y: (v & 511) - 64 };
+  if (!id) return { info: null };
+  return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y: (v & 511) - 64 } };
 }
 
-let infoTimer = null;
+// Load the block info for everything on screen plus a margin, so moving around answers instantly.
+function prefetchInfo() {
+  if (state.demo || map.getZoom() < -3) return;
+  const b = map.getBounds();
+  const x0 = Math.floor(b.getWest() / 256) - 1, x1 = Math.floor(b.getEast() / 256) + 1;
+  const z0 = Math.floor(-b.getNorth() / 256) - 1, z1 = Math.floor(-b.getSouth() / 256) + 1;
+  for (let tx = x0; tx <= x1; tx++) {
+    for (let tz = z0; tz <= z1; tz++) {
+      const url = infoUrl(tx, tz);
+      if (url) loadInfoTile(url);
+    }
+  }
+}
+
+function showCenterInfo(x, z, info) {
+  centerInfo = info;
+  $('#c-center').textContent = info ? `X ${x} / Y ${info.y} / Z ${z}` : `X ${x} / Z ${z}`;
+  $('#c-block').textContent = info ? `🧱 ${info.ja || BLOCK_JA(info.name)}` : '';
+}
+
 function updateCenterInfo() {
-  clearTimeout(infoTimer);
-  infoTimer = setTimeout(async () => {
-    const { x, z } = block(map.getCenter());
-    const info = await blockAt(x, z);
+  const { x, z } = block(map.getCenter());
+  const r = blockAtNow(x, z);
+  if (!r.pending) { showCenterInfo(x, z, r.info); return; }
+  showCenterInfo(x, z, null);
+  r.pending.then(() => {
     const now = block(map.getCenter());
-    if (now.x !== x || now.z !== z) return;
-    centerInfo = info;
-    $('#c-center').textContent = info ? `X ${x} / Y ${info.y} / Z ${z}` : `X ${x} / Z ${z}`;
-    $('#c-block').textContent = info ? `🧱 ${info.ja || BLOCK_JA(info.name)}` : '';
-  }, 120);
+    if (now.x === x && now.z === z) showCenterInfo(x, z, blockAtNow(x, z).info);
+  });
 }
 
 function setupCoords() {
+  let frame = 0;
   const update = () => {
-    const { x, z } = block(map.getCenter());
-    centerInfo = null;
-    $('#c-center').textContent = `X ${x} / Z ${z}`;
-    $('#c-center-other').textContent = otherDimLine(x, z);
-    updateCenterInfo();
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      const { x, z } = block(map.getCenter());
+      $('#c-center-other').textContent = otherDimLine(x, z);
+      updateCenterInfo();
+    });
   };
   map.on('move', update);
+  map.on('moveend', prefetchInfo);
   update();
   $('#copy-center').addEventListener('click', () => {
     const { x, z } = block(map.getCenter());
