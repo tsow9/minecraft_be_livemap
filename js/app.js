@@ -305,7 +305,7 @@ function styleOf(a) {
 }
 
 // Pins are game-style checkpoint flags; the foot of the pole marks the spot.
-const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="26" height="36"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
+const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="22.4" height="31"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
   + `<g class="gm-body"><path d="M7 31V5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/><path d="M7 31V5" stroke="#f4f1ea" stroke-width="2" stroke-linecap="round"/>`
   + `<path d="M8.5 5.5h13l-3.5 5 3.5 5h-13z" fill="${c}" stroke="#1b1d22" stroke-width="2.6" stroke-linejoin="round"/></g></svg>`;
 
@@ -316,7 +316,7 @@ function makeLayer(a) {
       return L.marker(ll(a.x + 0.5, a.z + 0.5), {
         icon: L.divIcon({
           className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div style="transform:translate(-50%,-33px)" class="wp-icon gm">${flagSvg(a.color)}${a.name ? `<span class="nm" style="--c:${a.color}">${esc(a.name)}</span>` : ''}</div>`,
+          html: `<div style="transform:translate(-50%,-28.4px)" class="wp-icon gm">${flagSvg(a.color)}${a.name ? `<span class="nm" style="--c:${a.color}">${esc(a.name)}</span>` : ''}</div>`,
         }),
       });
     case 'text':
@@ -1076,7 +1076,8 @@ function setupPanels() {
     const on = !$('#btn-contour').classList.contains('on');
     $('#btn-contour').classList.toggle('on', on);
     refreshContours();
-    if (on) toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示(太い線は4本ごと)');
+    if (!on) toast('等高線を非表示');
+    else toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示(太い線は4本ごと)');
   });
 
   $('#btn-grid').addEventListener('click', () => {
@@ -1238,7 +1239,8 @@ function setupSearch() {
 }
 
 // ---------- players, deaths, explorers, who's online ----------
-const PLAYER_COLORS = ['#ff5252', '#29b6f6', '#ffb300', '#66bb6a', '#ab47bc', '#ff7043', '#26c6da', '#d4e157', '#ec407a', '#8d6e63'];
+// Clearly different colors first: the first people get the easiest ones to tell apart.
+const PLAYER_COLORS = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#8e24aa', '#fb8c00', '#00acc1', '#d81b60', '#c0ca33', '#6d4c41'];
 const playerGroup = L.layerGroup();
 // Game-style marker: a dark outline, a light body and a shadow on the ground; the body lifts on hover.
 const DEATH_SVG = `<svg class="gm-svg" viewBox="0 0 24 34" width="20" height="28"><ellipse class="gm-shadow" cx="12" cy="31" rx="6.5" ry="2"/>`
@@ -1249,8 +1251,8 @@ let exploreLayer = null;
 const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="17" height="20.4"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
   + `<g class="gm-body"><circle cx="10" cy="9" r="6.5" fill="${c}" stroke="#1b1d22" stroke-width="2.6"/><circle cx="10" cy="9" r="2.2" fill="#f4f1ea"/></g></svg>`;
 
-// Each person keeps the same color: it comes from their ID, not from where they are in the list
-// (the list order changes as people log in and out). Two people only share a color if all are taken.
+// Each person keeps the same color: the order comes from their ID, not from where they are in the list
+// (the list order changes as people log in and out). Colors are handed out from the top of the list.
 const colorCache = new Map();
 function playerColor(key) {
   if (!state.players.some((p) => p.key === key)) return '#9e9e9e';
@@ -1259,13 +1261,8 @@ function playerColor(key) {
   if (colorCache.get('sig') !== sig) {
     colorCache.clear(); colorCache.set('sig', sig);
     const hash = (k) => { let h = 2166136261; for (const ch of k) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
-    const used = new Set();
-    for (const k of keys.sort((a, b) => hash(a) - hash(b) || (a < b ? -1 : 1))) {
-      let i = hash(k) % PLAYER_COLORS.length;
-      for (let t = 0; t < PLAYER_COLORS.length && used.has(i); t++) i = (i + 1) % PLAYER_COLORS.length;
-      used.add(i);
-      colorCache.set(k, PLAYER_COLORS[i]);
-    }
+    keys.sort((a, b) => hash(a) - hash(b) || (a < b ? -1 : 1))
+      .forEach((k, i) => colorCache.set(k, PLAYER_COLORS[i % PLAYER_COLORS.length]));
   }
   return colorCache.get(key);
 }

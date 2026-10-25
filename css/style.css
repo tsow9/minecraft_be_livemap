@@ -220,7 +220,7 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
   padding: 9px 16px; border-radius: 999px; pointer-events: none; font-weight: 500; }
 
 .wp-icon { pointer-events: auto; }
-.wp-icon .flag { margin-left: 10px; }
+.wp-icon .flag { margin-left: 8.6px; }
 .wp-icon .nm { margin-top: 1px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 1px 8px; border-radius: 999px;
   background: rgba(14, 16, 20, .85); box-shadow: inset 0 -2px 0 var(--c, #fff), 0 2px 8px rgba(0,0,0,.4); }
 .txt-icon { white-space: pre; font-weight: 700; font-size: 15px; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 6px #000; }
