@@ -304,6 +304,11 @@ function styleOf(a) {
   return { color: a.color, weight: a.weight, opacity: 0.95, smoothFactor: a.type === 'draw' ? 0.3 : 1, fill: filled, fillColor: a.color, fillOpacity: 0.15, lineCap: 'round', lineJoin: 'round' };
 }
 
+// Pins are game-style checkpoint flags; the foot of the pole marks the spot.
+const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="22" height="30"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
+  + `<g class="gm-body"><path d="M7 31V5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/><path d="M7 31V5" stroke="#f4f1ea" stroke-width="2" stroke-linecap="round"/>`
+  + `<path d="M8.5 5.5h13l-3.5 5 3.5 5h-13z" fill="${c}" stroke="#1b1d22" stroke-width="2.6" stroke-linejoin="round"/></g></svg>`;
+
 function makeLayer(a) {
   const pts = () => a.pts.map((p) => ll(p[0], p[1]));
   switch (a.type) {
@@ -311,7 +316,7 @@ function makeLayer(a) {
       return L.marker(ll(a.x + 0.5, a.z + 0.5), {
         icon: L.divIcon({
           className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div style="transform:translate(-50%,-30px);--c:${a.color}" class="wp-icon"><svg class="pin" viewBox="0 0 24 30"><use href="#i-wp-pin"/></svg>${a.name ? `<span class="nm">${esc(a.name)}</span>` : ''}</div>`,
+          html: `<div style="transform:translate(-50%,-27.5px)" class="wp-icon gm">${flagSvg(a.color)}${a.name ? `<span class="nm" style="--c:${a.color}">${esc(a.name)}</span>` : ''}</div>`,
         }),
       });
     case 'text':
@@ -562,7 +567,8 @@ function setMode(mode) {
   document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === (mode === 'erase' ? 'freehand' : mode)));
   $('#pen-toggle').hidden = !hand;
   document.querySelectorAll('#pen-toggle button').forEach((b) => b.classList.toggle('on', b.dataset.pen === mode));
-  $('#mode-hint').textContent = HINTS[mode] || '';
+  const canCancel = mode !== 'none' && window.matchMedia('(pointer: fine)').matches;
+  $('#mode-hint').textContent = (HINTS[mode] || '') + (canCancel ? '(Esc・右クリックでやめる)' : '');
   $('#map').classList.toggle('mode-draw', mode !== 'none');
   $('#map').classList.toggle('mode-freehand', hand);
   $('#map').classList.toggle('mode-erase', mode === 'erase');
@@ -610,6 +616,26 @@ function setupTools() {
   });
 
   setupFreehand();
+  setupCancel();
+}
+
+// Esc or right-click: drop the shape being drawn and go back to the normal pointer.
+function setupCancel() {
+  const cancel = () => {
+    if (state.mode === 'none') return false;
+    setMode('none');
+    toast('作成をやめました');
+    return true;
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || editor.open || e.target.closest?.('input, textarea')) return;
+    cancel();
+  });
+  map.getContainer().addEventListener('contextmenu', (e) => {
+    if (state.mode === 'none') return;
+    e.preventDefault();
+    cancel();
+  });
 }
 
 function setupFreehand() {
@@ -1318,9 +1344,28 @@ const DEATH_SVG = `<svg class="gm-svg" viewBox="0 0 24 34" width="20" height="28
   + '<path d="M12 4.5v21M5 11.5h14" stroke="#f4f1ea" stroke-width="3.5" stroke-linecap="round"/></g></svg>';
 let exploreLayer = null;
 
+const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="14" height="17"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
+  + `<g class="gm-body"><circle cx="10" cy="9" r="6.5" fill="${c}" stroke="#1b1d22" stroke-width="2.6"/><circle cx="10" cy="9" r="2.2" fill="#f4f1ea"/></g></svg>`;
+
+// Each person keeps the same color: it comes from their ID, not from where they are in the list
+// (the list order changes as people log in and out). Two people only share a color if all are taken.
+const colorCache = new Map();
 function playerColor(key) {
-  const i = state.players.findIndex((p) => p.key === key);
-  return i < 0 ? '#9e9e9e' : PLAYER_COLORS[i % PLAYER_COLORS.length];
+  if (!state.players.some((p) => p.key === key)) return '#9e9e9e';
+  const keys = state.players.map((p) => p.key).sort();
+  const sig = keys.join('|');
+  if (colorCache.get('sig') !== sig) {
+    colorCache.clear(); colorCache.set('sig', sig);
+    const hash = (k) => { let h = 2166136261; for (const ch of k) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+    const used = new Set();
+    for (const k of keys.sort((a, b) => hash(a) - hash(b) || (a < b ? -1 : 1))) {
+      let i = hash(k) % PLAYER_COLORS.length;
+      for (let t = 0; t < PLAYER_COLORS.length && used.has(i); t++) i = (i + 1) % PLAYER_COLORS.length;
+      used.add(i);
+      colorCache.set(k, PLAYER_COLORS[i]);
+    }
+  }
+  return colorCache.get(key);
 }
 function playerName(key) {
   if (key === '_') return '記録を始める前';
@@ -1365,7 +1410,7 @@ function renderPlayers() {
       const m = L.marker(ll(p.x + 0.5, p.z + 0.5), {
         pmIgnore: true, zIndexOffset: off ? 900 : 1000,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div class="pl-icon ${cls}" style="transform:translate(-50%,-9px)"><span class="dot" style="background:${color}"></span><span class="nm">${esc(p.name)}</span></div>` }),
+          html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-15px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
       m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div></div>`);
       playerGroup.addLayer(m);

@@ -36,10 +36,6 @@
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11"/><path d="M5.6 14.4l8.3-8.3a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L13 19.1a3 3 0 0 1-2.1.9H9.4a3 3 0 0 1-2.1-.9l-1.7-1.7a2 2 0 0 1 0-3z"/><path d="M10 10l6 6"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-    <symbol id="i-wp-pin" viewBox="0 0 24 30">
-      <path d="M12 29s-10-8.6-10-17a10 10 0 0 1 20 0c0 8.4-10 17-10 17z" style="fill: var(--c, #3ecf8e)" stroke="#fff" stroke-width="2"/>
-      <circle cx="12" cy="12" r="4" fill="#fff"/>
-    </symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
@@ -141,12 +137,12 @@
   <h3>地図上の位置 <span class="sub" id="players-updated"></span></h3>
   <ul id="player-list" class="plist"></ul>
   <label class="check"><input type="checkbox" id="show-deaths" checked> 死んだ場所を表示</label>
-  <p class="help">誰かがプレイ中のあいだ、約10分おきに位置を更新します(Realmsがワールドを保存した時点の場所)。ログアウトした人は、最後にいた場所を表示します。名前は、ログインした人と動いた記録から自動で推定しています。</p>
+  <p class="help">誰かがプレイ中のあいだ、5分おきにプレイヤーの位置を更新します。ログアウトした人は、最後にいた場所を表示します。</p>
 </section>
 
 <section id="panel-explore" class="panel" hidden>
   <h2>開拓した人(推定) <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
-  <p class="help">新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。1時間ごとの記録からの推定なので、外れることもあります。</p>
+  <p class="help">新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。これは記録からの推定です。</p>
   <ul id="explore-legend" class="plist"></ul>
 </section>
 

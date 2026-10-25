@@ -99,18 +99,16 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .panel .check { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
 input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 
-.pl-icon { display: flex; flex-direction: column; align-items: center; }
-.pl-icon .dot { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
-.pl-icon .nm { margin-top: 4px; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 2px 8px; border-radius: 999px;
+.pl-icon { position: relative; }
+.pl-icon .nm { margin-top: 2px; font-size: 11px; font-weight: 700; white-space: nowrap; padding: 1px 7px; border-radius: 999px;
   background: rgba(14, 16, 20, .85); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
 .pl-icon.off, .pl-icon.unk { opacity: .65; }
 .pl-icon.off .nm::after { content: " ・ログアウト"; font-weight: 500; color: var(--sub); }
-.pl-icon .dot { position: relative; }
-.pl-icon.on .dot { box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(0,0,0,.6); }
-.pl-icon.on .dot::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--accent);
-  animation: pulse 2s ease-out infinite; will-change: transform, opacity; }
-@keyframes pulse { from { transform: scale(.7); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
-.leaflet-zoom-anim .pl-icon.on .dot::after { animation: none; opacity: 0; }
+.pl-icon .ring { display: none; position: absolute; left: 50%; top: 6.4px; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  border-radius: 50%; border: 2px solid var(--accent); pointer-events: none; }
+.pl-icon.on .ring { display: block; animation: pulse 2s ease-out infinite; will-change: transform, opacity; }
+@keyframes pulse { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }
+.leaflet-zoom-anim .pl-icon.on .ring { animation: none; opacity: 0; }
 .gm { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 .gm-svg { display: block; overflow: visible; }
 .gm-shadow { fill: #000; opacity: .35; transform-box: fill-box; transform-origin: center; transition: transform .15s, opacity .15s; }
@@ -221,11 +219,10 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
 #toast { position: absolute; z-index: 2000; left: 50%; top: 72px; transform: translateX(-50%); background: var(--glass-strong);
   padding: 9px 16px; border-radius: 999px; pointer-events: none; font-weight: 500; }
 
-.wp-icon { display: flex; flex-direction: column; align-items: center; pointer-events: auto; cursor: pointer; }
-.wp-icon .pin { width: 24px; height: 30px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); transition: transform .12s; transform-origin: 50% 100%; }
-.wp-icon:hover .pin { transform: scale(1.12); }
-.wp-icon .nm { margin-top: 2px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 2px 8px; border-radius: 999px;
-  background: rgba(14, 16, 20, .85); box-shadow: 0 2px 8px rgba(0,0,0,.4); border: 1px solid color-mix(in srgb, var(--c, #fff) 60%, transparent); }
+.wp-icon { pointer-events: auto; }
+.wp-icon .flag { margin-left: 8.4px; }
+.wp-icon .nm { margin-top: 1px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 1px 8px; border-radius: 999px;
+  background: rgba(14, 16, 20, .85); box-shadow: inset 0 -2px 0 var(--c, #fff), 0 2px 8px rgba(0,0,0,.4); }
 .txt-icon { white-space: pre; font-weight: 700; font-size: 15px; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 6px #000; }
 
 .leaflet-popup-content-wrapper { background: var(--glass-strong); color: var(--fg); border-radius: 14px;
