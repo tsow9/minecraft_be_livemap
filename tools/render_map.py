@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 
 import bedrock_db
+from nbt import root_compound
 import block_colors
 from block_colors import color_of
 
@@ -26,60 +27,6 @@ MIN_ZOOM = -4
 AIR, WATER, SOLID = 0, 1, 2
 NETHER_TOP = 127
 UNSET = -32768
-
-
-# ---------- little-endian NBT (only what palettes need) ----------
-def _nbt(data, pos, tag):
-    if tag == 1:
-        return data[pos], pos + 1
-    if tag == 2:
-        return struct.unpack_from('<h', data, pos)[0], pos + 2
-    if tag == 3:
-        return struct.unpack_from('<i', data, pos)[0], pos + 4
-    if tag == 4:
-        return struct.unpack_from('<q', data, pos)[0], pos + 8
-    if tag == 5:
-        return struct.unpack_from('<f', data, pos)[0], pos + 4
-    if tag == 6:
-        return struct.unpack_from('<d', data, pos)[0], pos + 8
-    if tag == 7:
-        n = struct.unpack_from('<i', data, pos)[0]
-        return data[pos + 4:pos + 4 + n], pos + 4 + n
-    if tag == 8:
-        n = struct.unpack_from('<H', data, pos)[0]
-        return data[pos + 2:pos + 2 + n].decode('utf-8', 'replace'), pos + 2 + n
-    if tag == 9:
-        sub, n = data[pos], struct.unpack_from('<i', data, pos + 1)[0]
-        pos += 5
-        out = []
-        for _ in range(n):
-            v, pos = _nbt(data, pos, sub)
-            out.append(v)
-        return out, pos
-    if tag == 10:
-        out = {}
-        while True:
-            t = data[pos]
-            pos += 1
-            if t == 0:
-                return out, pos
-            n = struct.unpack_from('<H', data, pos)[0]
-            name = data[pos + 2:pos + 2 + n].decode('utf-8', 'replace')
-            out[name], pos = _nbt(data, pos + 2 + n, t)
-    if tag == 11:
-        n = struct.unpack_from('<i', data, pos)[0]
-        return None, pos + 4 + 4 * n
-    if tag == 12:
-        n = struct.unpack_from('<i', data, pos)[0]
-        return None, pos + 4 + 8 * n
-    raise ValueError(f'unknown NBT tag {tag}')
-
-
-def _root_compound(data, pos):
-    if data[pos] != 10:
-        raise ValueError('palette entry is not a compound')
-    n = struct.unpack_from('<H', data, pos + 1)[0]
-    return _nbt(data, pos + 3 + n, 10)
 
 
 # ---------- sub-chunk decoding ----------
@@ -97,7 +44,7 @@ def _palette_lut(data, pos):
     kinds = np.zeros(max(count, 1), np.uint8)
     colors = np.zeros((max(count, 1), 3), np.uint8)
     for i in range(count):
-        entry, pos = _root_compound(data, pos)
+        entry, pos = root_compound(data, pos)
         states = entry.get('states') if isinstance(entry.get('states'), dict) else {}
         rgb, kind = color_of(str(entry.get('name', 'minecraft:air')), states)
         kinds[i] = {'air': AIR, 'water': WATER, 'solid': SOLID}[kind]
@@ -306,6 +253,14 @@ def world_name(d):
         return os.path.basename(d)
 
 
+def _load_json(path):
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
 # ---------- config ----------
 def snapshot_label(snap_id):
     try:
@@ -346,7 +301,7 @@ def main():
     ap.add_argument('--snapshot', help='保存名(省略すると今日の日付)')
     ap.add_argument('--dims', default='overworld,nether,end')
     ap.add_argument('--keep', type=int, default=0, help='残す地図の数(0なら全部残す)')
-    ap.add_argument('--members', help='Realmsのメンバー一覧(プレイヤー情報と開拓者の推定に使う)')
+    ap.add_argument('--live', help='live.json(開拓者の推定に使う足跡)。空文字なら足跡なしで記録だけ始める')
     args = ap.parse_args()
 
     dims = [d.strip() for d in args.dims.split(',') if d.strip()]
@@ -370,13 +325,16 @@ def main():
     started = time.time()
     try:
         surfaces = read_surfaces(db_dir, dims)
-        if args.members:
+        if args.live is not None:
             import players
-            secret = os.environ.get('CACHE_KEY') or ''
-            if len(secret) < 20:
-                sys.exit('プレイヤー情報には合言葉(CACHE_KEY)が必要です。')
+            explore_path = os.path.join(args.site, 'explore.json')
+            explore = _load_json(explore_path)
+            live_state = _load_json(args.live) if args.live else None
             chunk_sets = {name: set(surfaces[DIM_IDS[name]]) for name in dims}
-            players.update(args.site, db_dir, chunk_sets, args.members, secret)
+            explore, added = players.update_explore(explore, chunk_sets, live_state, int(time.time() * 1000))
+            with open(explore_path, 'w', encoding='utf-8') as f:
+                json.dump(explore, f, separators=(',', ':'))
+            print(f'新しく開拓されたチャンク: {added}')
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)

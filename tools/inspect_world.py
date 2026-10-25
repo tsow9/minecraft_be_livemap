@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 
 import bedrock_db
+import nbt
 import render_map
 
 
@@ -37,7 +38,7 @@ def main():
         print(f'  {n:5d}  {s}')
     for s, value in samples.items():
         try:
-            root, _ = render_map._root_compound(value, 0)
+            root, _ = nbt.root_compound(value, 0)
         except Exception as e:  # noqa: BLE001 - diagnostics only
             print(f'{s}: NBTとして読めない ({e}) 長さ{len(value)}')
             continue

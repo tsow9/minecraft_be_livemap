@@ -32,7 +32,7 @@ def main():
         tiles = os.path.join(data, 'tiles')
         if os.path.isdir(tiles):
             shutil.copytree(tiles, os.path.join(out, 'tiles'))
-    for name in ('players.json', 'explore.json'):
+    for name in ('explore.json',):
         if os.path.exists(os.path.join(data, name)):
             shutil.copy2(os.path.join(data, name), out)
     repo = os.environ.get('GITHUB_REPOSITORY')

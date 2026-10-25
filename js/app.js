@@ -39,6 +39,7 @@ const state = {
   gridLayer: null,
   players: [],
   explore: null,
+  worldAt: null,
   demo: false,
 };
 
@@ -806,18 +807,26 @@ async function fetchJson(url) {
   } catch { return null; }
 }
 
+function placeText(p) {
+  if (p.online === true) return `プレイ中 ・ 現在地(${timeText(state.worldAt)} の記録)`;
+  if (p.online === false) return `最終ログアウト位置${p.lastSeenOnline ? `(${timeText(p.lastSeenOnline)} ごろ)` : ''}`;
+  return '最後に記録された位置(誰の記録かまだ分かりません)';
+}
+
 function renderPlayers() {
   playerGroup.clearLayers();
   const showDeaths = $('#show-deaths').checked;
   for (const p of state.players) {
     const color = playerColor(p.key);
     if (p.dim === state.dim) {
+      const off = p.online !== true;
+      const cls = p.online === true ? 'on' : p.online === false ? 'off' : 'unk';
       const m = L.marker(ll(p.x + 0.5, p.z + 0.5), {
-        pmIgnore: true, zIndexOffset: 1000,
+        pmIgnore: true, zIndexOffset: off ? 900 : 1000,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div class="pl-icon" style="transform:translate(-50%,-9px)"><span class="dot" style="background:${color}"></span><span class="nm">${esc(p.name)}</span></div>` }),
+          html: `<div class="pl-icon ${cls}" style="transform:translate(-50%,-9px)"><span class="dot" style="background:${color}"></span><span class="nm">${esc(p.name)}</span></div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div><div class="sub">位置の記録: ${timeText(p.movedAt)}</div></div>`);
+      m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div></div>`);
       playerGroup.addLayer(m);
     }
     const d = p.death;
@@ -835,8 +844,9 @@ function renderPlayers() {
   for (const p of state.players) {
     const li = document.createElement('li');
     li.className = 'click';
-    li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}</span>`;
-    li.addEventListener('click', () => goTo(p.x, p.z, p.dim, 0));
+    const status = p.online === true ? '現在地' : p.online === false ? 'ログアウト位置' : '記録';
+    li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)};opacity:${p.online === true ? 1 : 0.5}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${status} ${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}</span>`;
+    li.addEventListener('click', () => { goTo(p.x, p.z, p.dim, 0); });
     list.append(li);
   }
   if (!state.players.length) list.innerHTML = '<li class="sub">まだ記録がありません</li>';
@@ -886,41 +896,53 @@ function refreshExplore() {
   renderExploreLegend();
 }
 
+let lastPlayersJson = '';
+
 async function refreshLive() {
+  const badge = $('#online-badge');
+  const list = $('#live-list');
   if (!state.config.liveUrl) {
-    $('#live-title').hidden = true;
-    $('#live-list').hidden = true;
+    $('#live-title').textContent = '参加中の人(まだ設定されていません)';
     return;
   }
   const data = await fetchJson(`${state.config.liveUrl}?t=${Math.floor(Date.now() / 60000)}`);
-  const list = $('#live-list');
-  const badge = $('#online-badge');
   if (!data) { list.innerHTML = '<li class="sub">まだ情報がありません</li>'; badge.hidden = true; return; }
-  const members = Array.isArray(data.members) ? data.members : [];
+  const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
+    .sort((a, b) => (b.online - a.online) || ((b.lastLogin || 0) - (a.lastLogin || 0)));
   const online = members.filter((m) => m.online);
   badge.textContent = online.length;
   badge.hidden = online.length === 0;
-  $('#live-title').innerHTML = `参加中の人 <span class="sub">${online.length}人がプレイ中 ・ ${esc(timeText(Date.parse(data.updatedAt)))} 時点</span>`;
+  const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.parse(data.updatedAt);
+  $('#live-title').innerHTML = `参加中の人 <span class="sub">${online.length}人がプレイ中 ・ ${esc(timeText(at))} 時点</span>`;
   list.innerHTML = '';
   for (const m of members) {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="dot" style="background:${m.online ? 'var(--accent)' : '#555'}"></span><span class="grow">${esc(m.name)}</span><span class="sub">${m.online ? 'プレイ中' : '最終ログイン ' + esc(agoText(m.lastLogin))}</span>`;
+    const when = m.online ? 'プレイ中' : m.lastSeenOnline ? `${esc(agoText(m.lastSeenOnline))}まで遊んでいた` : '最終ログイン ' + esc(agoText(m.lastLogin));
+    li.innerHTML = `<span class="dot" style="background:${m.online ? 'var(--accent)' : '#555'}"></span><span class="grow">${esc(m.name)}</span><span class="sub">${when}</span>`;
     list.append(li);
+  }
+
+  const players = Array.isArray(data.players) ? data.players : [];
+  const json = JSON.stringify(players);
+  state.worldAt = data.worldAt;
+  $('#players-updated').textContent = data.worldAt ? `${timeText(data.worldAt)} の記録` : '';
+  if (json !== lastPlayersJson) {
+    lastPlayersJson = json;
+    state.players = players;
+    renderPlayers();
+    renderExploreLegend();
   }
 }
 
 async function setupPlayers() {
-  const [players, explore] = await Promise.all([fetchJson('players.json'), fetchJson('explore.json')]);
-  state.players = Array.isArray(players?.players) ? players.players : [];
-  state.explore = explore;
-  $('#players-updated').textContent = players?.lastRun ? `${timeText(players.lastRun)} 時点` : '';
+  state.explore = await fetchJson('explore.json');
   playerGroup.addTo(map);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
   $('#btn-explore').addEventListener('click', () => {
     if (!$('#btn-explore').classList.contains('on')) toast('色の付いた場所が、その人が開拓した場所(推定)です');
   });
-  refreshLive();
+  await refreshLive();
   setInterval(refreshLive, 60000);
 }
 

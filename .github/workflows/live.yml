@@ -1,6 +1,7 @@
-name: 参加中の人
+name: 参加中の人と現在地
 
-# Light job: only asks Realms who is online (no world download). The site reads live.json from the live-data branch.
+# Light job every 10 minutes: who is online, and (only while someone plays) where players are.
+# The site reads live.json straight from the live-data branch, so no site rebuild is needed.
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   live:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -29,7 +30,20 @@ jobs:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
       - name: 参加中の人を調べる
-        run: node tools/realms/live.js live.json
+        run: node tools/realms/live.js members.json
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - name: 前回の状態を取得
+        id: prev
+        run: |
+          mkdir -p live
+          if git fetch --depth 1 origin live-data; then git archive FETCH_HEAD | tar -x -C live; fi
+          echo "need_world=$(python3 tools/live_update.py need-world live/live.json members.json)" >> "$GITHUB_OUTPUT"
+      - name: プレイ中ならワールドをダウンロード
+        if: steps.prev.outputs.need_world == 'true'
+        run: node tools/realms/download.js world.mcworld members.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
@@ -39,15 +53,24 @@ jobs:
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
+      - name: 現在地を更新
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+        run: |
+          if [ -f world.mcworld ]; then
+            python3 tools/live_update.py update live/live.json members.json world.mcworld
+          else
+            python3 tools/live_update.py update live/live.json members.json
+          fi
       - name: 公開する
         # Single force-pushed commit so the branch never grows.
         run: |
-          mkdir live && mv live.json live/
           cd live
+          rm -rf .git
           git init -q -b live-data
           git add live.json
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -q -m "参加中の人 $(date -u '+%F %H:%M')"
+            commit -q -m "参加中の人と現在地 $(date -u '+%F %H:%M')"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
         env:
           GH_TOKEN: ${{ github.token }}

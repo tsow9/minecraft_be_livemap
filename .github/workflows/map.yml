@@ -135,11 +135,11 @@ jobs:
           python-version: '3.12'
       - name: 地図を作る
         if: steps.compare.outputs.changed == 'true'
-        env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
         run: |
           pip install --quiet numpy pillow
-          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30 --members members.json
+          live=""
+          if git fetch --depth 1 origin live-data; then git show FETCH_HEAD:live.json > live.json && live=live.json; fi
+          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30 --live "$live"
           cp fingerprint.txt data/world.sha256
       - name: 地図データを保存
         if: steps.compare.outputs.changed == 'true'
