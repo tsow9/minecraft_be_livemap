@@ -16,6 +16,7 @@ import zipfile
 import players
 
 MAP_EVERY_MS = 55 * 60 * 1000
+MAP_WHILE_PLAYING_MS = 4 * 60 * 1000
 
 
 def load(path, default):
@@ -48,8 +49,9 @@ def main():
             shutil.rmtree(tmp, ignore_errors=True)
     now = int(time.time() * 1000)
     state = players.update_live(state, members, records, now)
-    # The frequent check also starts the hourly map update, so only one timer is needed.
-    if now - (state.get('mapRequestedAt') or 0) >= MAP_EVERY_MS:
+    # The frequent check also starts the map update: every check while someone plays, hourly otherwise.
+    gap = MAP_WHILE_PLAYING_MS if records is not None else MAP_EVERY_MS
+    if now - (state.get('mapRequestedAt') or 0) >= gap:
         state['mapRequestedAt'] = now
         if os.environ.get('GITHUB_OUTPUT'):
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:

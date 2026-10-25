@@ -77,7 +77,7 @@ jobs:
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: 1時間おきの地図更新を始める
+      - name: 地図の更新を始める(プレイ中は毎回、それ以外は1時間おき)
         if: steps.update.outputs.run_map == 'true'
         run: gh workflow run map.yml --ref main -f action=地図を更新
         env:
