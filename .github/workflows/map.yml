@@ -12,7 +12,7 @@ on:
       action:
         description: やること
         type: choice
-        options: [地図を更新, Realmsにログイン, サイトだけ公開]
+        options: [地図を更新, Realmsにログイン, サイトだけ公開, 診断]
         default: 地図を更新
 
 permissions:
@@ -46,6 +46,42 @@ jobs:
         with:
           path: .auth/token.enc
           key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+
+  diagnose:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == '診断'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: realms-auth-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --prefix tools/realms --no-audit --no-fund
+      - name: Realmsのメンバー情報を調べる
+        run: node tools/realms/inspect.js
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - name: ワールドをダウンロード
+        run: node tools/realms/download.js world.mcworld
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - uses: actions/cache/save@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: ワールドの中のプレイヤー情報を調べる
+        run: |
+          pip install --quiet numpy pillow
+          python3 tools/inspect_world.py world.mcworld
 
   update:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == '地図を更新')

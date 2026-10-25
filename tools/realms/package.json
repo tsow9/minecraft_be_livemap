@@ -4,6 +4,7 @@
   "description": "Realmsからワールドをダウンロードする部品",
   "dependencies": {
     "prismarine-auth": "3.1.1",
-    "prismarine-realms": "1.6.0"
+    "prismarine-realms": "1.6.0",
+    "node-fetch": "2.7.0"
   }
 }
