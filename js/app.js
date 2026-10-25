@@ -53,12 +53,263 @@ const store = {
   load() {
     try { return sanitizeList(JSON.parse(localStorage.getItem(STORE_KEY) || '[]')); } catch { return []; }
   },
+  // Keeps a copy on this device; when sharing, also sends what changed to the group's server.
   save() {
+    store.saveLocal();
+    if (sharing()) queueChanges();
+  },
+  saveLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state.annotations)); }
     catch { toast('この端末に保存できませんでした'); }
     updateDataCount();
   },
 };
+
+// ---------- sharing: pins and drawings live on the group's server (share/worker.js) ----------
+// Anyone can look; writing needs the group's passphrase, which this device remembers once entered.
+const PASS_KEY = 'mcmap.pass';
+const SYNC_KEY = 'mcmap.sync.v1';
+const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
+const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), trash: new Map(), pushing: false, localOnly: [] };
+
+function sharing() { return !!share.url; }
+function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
+function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch { /* private mode */ } }
+
+function saveSyncState() {
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify({ rev: share.rev, synced: [...share.synced], pending: [...share.pending] }));
+  } catch { /* private mode: changes still go out while the page is open */ }
+}
+
+function loadSyncState() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch { /* ignore */ }
+  try { share.localOnly = sanitizeList(JSON.parse(localStorage.getItem(LOCAL_ONLY_KEY) || '[]')); } catch { share.localOnly = []; }
+  if (saved) {
+    share.rev = Number(saved.rev) || 0;
+    share.synced = new Map(Array.isArray(saved.synced) ? saved.synced : []);
+    share.pending = new Map(Array.isArray(saved.pending) ? saved.pending : []);
+    return;
+  }
+  // First time sharing on this device: what was drawn before stays aside until someone chooses to share it.
+  if (state.annotations.length) {
+    share.localOnly = sanitizeList([...share.localOnly, ...state.annotations]);
+    try { localStorage.setItem(LOCAL_ONLY_KEY, JSON.stringify(share.localOnly)); } catch { /* ignore */ }
+  }
+  state.annotations = [];
+  store.saveLocal();
+  saveSyncState();
+}
+
+// Compares what is on the map with what the server last had, and lines up the differences to send.
+function queueChanges() {
+  const now = new Map(state.annotations.map((a) => [a.id, a]));
+  for (const [id, p] of share.pending) {
+    if (!p.deleted && !now.has(id) && !share.synced.has(id)) share.pending.delete(id);
+  }
+  for (const [id, a] of now) {
+    const j = JSON.stringify(a);
+    if (share.synced.get(id) !== j && share.pending.get(id)?.json !== j) share.pending.set(id, { data: a, deleted: false, json: j });
+  }
+  for (const [id, j] of share.synced) {
+    if (!now.has(id) && !share.pending.get(id)?.deleted) share.pending.set(id, { data: JSON.parse(j), deleted: true, json: j });
+  }
+  saveSyncState();
+  clearTimeout(share.pushTimer);
+  share.pushTimer = setTimeout(pushChanges, 400);
+}
+
+async function pushChanges() {
+  if (share.pushing || !share.pending.size) return;
+  const pass = getPass();
+  if (!pass) { askPass(); return; }
+  share.pushing = true;
+  let retry = 10000;
+  const batch = [...share.pending].slice(0, 200);
+  try {
+    const res = await fetch(`${share.url}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Passphrase': pass },
+      body: JSON.stringify({ items: batch.map(([id, p]) => ({ id, data: p.data, deleted: p.deleted })) }),
+    });
+    if (res.status === 401) {
+      setPass('');
+      retry = 0;
+      toast('合言葉が違うようです。もう一度入れてください');
+      askPass();
+    } else if (res.ok) {
+      retry = 0;
+      for (const [id, p] of batch) {
+        if (share.pending.get(id) === p) share.pending.delete(id);
+        if (p.deleted) { share.synced.delete(id); share.trash.set(id, { data: p.data, at: Date.now() }); }
+        else { share.synced.set(id, p.json); share.trash.delete(id); }
+      }
+      saveSyncState();
+      renderShareStatus();
+    }
+  } catch { /* offline: try again shortly */ }
+  share.pushing = false;
+  if (share.pending.size && getPass()) setTimeout(pushChanges, retry);
+}
+
+// Brings in what others changed. A full pull (page open) also drops things the server no longer has.
+async function pullChanges(full = false) {
+  let data;
+  try {
+    const since = full ? 0 : Math.max(0, share.rev - 10000 * 1000);
+    const res = await fetch(`${share.url}/items?since=${since}`, { cache: 'no-store' });
+    if (!res.ok) return;
+    data = await res.json();
+  } catch { return; }
+  if (!Array.isArray(data?.items)) return;
+  let changed = false;
+  const seen = new Set();
+  const removeLocal = (id) => {
+    const before = state.annotations.length;
+    state.annotations = state.annotations.filter((a) => a.id !== id);
+    if (state.annotations.length !== before) { removeAnnLayer(id); changed = true; }
+  };
+  for (const it of data.items) {
+    seen.add(it.id);
+    if (share.pending.has(it.id)) continue;
+    const clean = sanitize({ ...it.data, id: it.id });
+    if (!clean) continue;
+    if (it.deleted) {
+      share.trash.set(it.id, { data: clean, at: Math.floor(it.rev / 1000) });
+      share.synced.delete(it.id);
+      removeLocal(it.id);
+      continue;
+    }
+    share.trash.delete(it.id);
+    const j = JSON.stringify(clean);
+    if (share.synced.get(it.id) === j && state.annotations.some((a) => a.id === it.id)) continue;
+    share.synced.set(it.id, j);
+    const i = state.annotations.findIndex((a) => a.id === it.id);
+    if (i >= 0) state.annotations[i] = clean; else state.annotations.push(clean);
+    renderAnn(clean);
+    changed = true;
+  }
+  if (full) {
+    for (const id of [...share.synced.keys()]) {
+      if (!seen.has(id) && !share.pending.has(id)) { share.synced.delete(id); removeLocal(id); }
+    }
+  }
+  share.rev = Math.max(share.rev, Number(data.rev) || 0);
+  saveSyncState();
+  if (changed) store.saveLocal();
+  renderShareStatus();
+}
+
+// Asks for the passphrase (once per device). Resolves true when this device may write.
+let passAsk = null;
+function askPass() {
+  if (passAsk) return passAsk;
+  const dlg = $('#pass-dialog');
+  passAsk = new Promise((resolve) => {
+    $('#pass-error').textContent = '';
+    $('#pass-input').value = '';
+    const finish = (ok) => {
+      dlg.removeEventListener('close', onClose);
+      $('#pass-form').removeEventListener('submit', onSubmit);
+      passAsk = null;
+      resolve(ok);
+    };
+    const onClose = () => finish(!!getPass());
+    const onSubmit = async (e) => {
+      if (e.submitter?.value !== 'ok') return;
+      e.preventDefault();
+      const pass = $('#pass-input').value.trim();
+      if (!pass) return;
+      $('#pass-error').textContent = '確認中…';
+      try {
+        const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
+        if (res.ok) {
+          setPass(pass);
+          dlg.close();
+          toast('書き込めるようになりました');
+          renderShareStatus();
+          pushChanges();
+          return;
+        }
+        $('#pass-error').textContent = res.status === 401 ? '合言葉が違います(何度も間違えると1時間入れなくなります)' : 'うまく確認できませんでした';
+      } catch {
+        $('#pass-error').textContent = '通信できませんでした。電波のよいところでもう一度';
+      }
+    };
+    dlg.addEventListener('close', onClose);
+    $('#pass-form').addEventListener('submit', onSubmit);
+    dlg.showModal();
+    setTimeout(() => $('#pass-input').focus(), 50);
+  });
+  return passAsk;
+}
+
+// Call before anything that changes pins or drawings.
+async function ensureWriter() {
+  if (!sharing() || getPass()) return true;
+  return askPass();
+}
+
+function renderShareStatus() {
+  if (!sharing()) return;
+  const st = $('#share-status');
+  st.textContent = getPass()
+    ? (share.pending.size ? `送信待ち ${share.pending.size}件(つながると自動で送ります)` : 'みんなと共有中・書き込めます')
+    : '見るだけ(合言葉を入れると書き込めます)';
+  $('#share-login').hidden = !!getPass();
+  $('#share-logout').hidden = !getPass();
+  const lo = $('#local-only');
+  lo.hidden = !share.localOnly.length;
+  $('#local-only-count').textContent = share.localOnly.length;
+  const list = $('#trash-list');
+  list.innerHTML = '';
+  const items = [...share.trash.values()].sort((a, b) => b.at - a.at).slice(0, 30);
+  for (const t of items) {
+    const li = document.createElement('li');
+    const kind = { waypoint: 'ピン', text: '文字' }[t.data.type] || '図形';
+    li.innerHTML = `<span class="dot" style="background:${esc(t.data.color)}"></span><span class="grow"></span><span class="sub"></span>`;
+    li.querySelector('.grow').textContent = t.data.name || t.data.text || kind;
+    li.querySelector('.sub').textContent = `${kind}・${timeText(t.at)}`;
+    li.append(button('戻す', async () => {
+      if (!(await ensureWriter())) return;
+      share.trash.delete(t.data.id);
+      addAnn({ ...t.data, updatedAt: Date.now() });
+      toast('元に戻しました');
+      renderShareStatus();
+    }));
+    list.append(li);
+  }
+  $('#trash').hidden = !items.length;
+}
+
+function setupShare() {
+  if (!sharing()) return;
+  document.body.classList.add('shared');
+  loadSyncState();
+  renderAll();
+  $('#share-login').addEventListener('click', () => askPass());
+  $('#share-logout').addEventListener('click', () => {
+    setPass('');
+    toast('この端末の合言葉を消しました');
+    renderShareStatus();
+  });
+  $('#local-only-send').addEventListener('click', async () => {
+    if (!(await ensureWriter())) return;
+    const ids = new Set(state.annotations.map((a) => a.id));
+    for (const a of share.localOnly) if (!ids.has(a.id)) state.annotations.push(a);
+    const n = share.localOnly.length;
+    share.localOnly = [];
+    try { localStorage.removeItem(LOCAL_ONLY_KEY); } catch { /* ignore */ }
+    store.save();
+    renderAll();
+    toast(`${n}件をみんなと共有しました`);
+  });
+  renderShareStatus();
+  pullChanges(true).then(() => { if (share.pending.size && getPass()) pushChanges(); });
+  setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullChanges(); });
+}
 
 function num(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
 function sanitize(a) {
@@ -416,7 +667,7 @@ function openCoordPopup(latlng) {
   const acts = document.createElement('div'); acts.className = 'acts';
   acts.append(
     button('コピー', () => copyText(coordText(x, z)), 'copy'),
-    button('ここに印をつける', () => { map.closePopup(); createWaypoint(x, z); }, 'pin'),
+    button('ここに印をつける', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'pin'),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -438,9 +689,9 @@ function openAnnPopup(id, at) {
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
   if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
-  const del = button('削除', () => { deleteAnn(a.id); toast('削除しました'); }, 'trash');
+  const del = button('削除', async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast('削除しました'); }, 'trash');
   del.classList.add('danger');
-  acts.append(button('編集', () => { map.closePopup(); openEditor(a, false); }, 'pencil'), del);
+  acts.append(button('編集', async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
   el.append(acts);
   const pos = isPoint ? ll(a.x + 0.5, a.z + 0.5) : (at || ll(c.x, c.z));
   L.popup({ offset: a.type === 'waypoint' ? [0, -8] : [0, 0] }).setLatLng(pos).setContent(el).openOn(map);
@@ -586,8 +837,10 @@ function setupTools() {
   document.querySelectorAll('#pen-toggle button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.pen)));
   fillSwatches($('#colors'), state.color, (c) => { state.color = c; if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   $('#width').addEventListener('input', (e) => { state.width = Number(e.target.value); if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
-  $('#btn-tools').addEventListener('click', () => {
-    const t = $('#tools'); t.hidden = !t.hidden;
+  $('#btn-tools').addEventListener('click', async () => {
+    const t = $('#tools');
+    if (t.hidden && !(await ensureWriter())) return;
+    t.hidden = !t.hidden;
     $('#btn-tools').classList.toggle('on', !t.hidden);
     document.body.classList.toggle('tools-open', !t.hidden);
     if (t.hidden) setMode('none');
@@ -1142,7 +1395,7 @@ function setupPanels() {
   $('#import').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || !(await ensureWriter())) return;
     try {
       const data = JSON.parse(await file.text());
       const incoming = sanitizeList(Array.isArray(data) ? data : data.annotations);
@@ -1480,6 +1733,7 @@ async function main() {
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
     liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
+    shareUrl: typeof cfg.shareUrl === 'string' && /^https:\/\/[\w.-]+(:\d+)?$/.test(cfg.shareUrl.replace(/\/$/, '')) ? cfg.shareUrl.replace(/\/$/, '') : null,
     liveApiUrl: typeof cfg.liveApiUrl === 'string' && /^https:\/\/api\.github\.com\//.test(cfg.liveApiUrl) ? cfg.liveApiUrl : null,
   };
   document.title = state.config.title;
@@ -1498,7 +1752,10 @@ async function main() {
   await loadBlockNames();
   refreshBase();
   state.annotations = store.load();
+  share.url = new URLSearchParams(location.search).get('share') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+    ? new URLSearchParams(location.search).get('share') : state.config.shareUrl;
   renderAll();
+  setupShare();
   setupTools();
   setupCoords();
   setupPanels();

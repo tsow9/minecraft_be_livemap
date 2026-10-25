@@ -160,11 +160,30 @@
 
 <section id="panel-data" class="panel" hidden>
   <h2>データ <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
-  <p class="help">書き込んだウェイポイントや図形は、今はこの端末の中だけに保存されています。別の端末や友だちに渡すときはファイルに書き出してください。</p>
+  <p class="help only-local">書き込んだピンや図形は、今はこの端末の中だけに保存されています。別の端末や友だちに渡すときはファイルに書き出してください。</p>
+  <div class="only-shared">
+    <p class="help">ピンや図形は、みんなと自動で共有されます(10秒ほどで反映)。書き込むには合言葉が必要です。</p>
+    <p class="share-row"><span id="share-status"></span>
+      <button id="share-login" class="mini" hidden>合言葉を入れる</button>
+      <button id="share-logout" class="mini" hidden>この端末の合言葉を消す</button></p>
+    <div id="local-only" class="notice" hidden>この端末だけにあるデータが <b id="local-only-count">0</b> 件あります。
+      <button id="local-only-send" class="mini">みんなと共有する</button></div>
+    <div id="trash" hidden><h3>最近消したもの(30日間は戻せます)</h3><ul id="trash-list" class="plist"></ul></div>
+  </div>
   <p id="data-count"></p>
   <button id="export" class="mini">ファイルに書き出す</button>
   <label class="mini filebtn">ファイルを読み込む<input id="import" type="file" accept="application/json,.json" hidden></label>
 </section>
+
+<dialog id="pass-dialog" class="box">
+  <form method="dialog" id="pass-form">
+    <h2>合言葉を入れてください</h2>
+    <p class="help">ピンや図形はみんなで共有しています。書き込むには、仲間内で決めた合言葉が必要です。この端末では次から入れなくて大丈夫です。</p>
+    <input id="pass-input" type="password" autocomplete="current-password" aria-label="合言葉">
+    <p id="pass-error" class="error" role="alert"></p>
+    <div class="btns"><span class="grow"></span><button value="cancel">やめる</button><button value="ok" class="primary">OK</button></div>
+  </form>
+</dialog>
 
 <dialog id="editor">
   <form method="dialog" id="editor-form">

@@ -1,0 +1,13 @@
+# Filled in by the 共有サーバー workflow (database_id and the site address).
+name = "blockmap-share"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGINS = "__ORIGINS__"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blockmap-share"
+database_id = "__DB_ID__"

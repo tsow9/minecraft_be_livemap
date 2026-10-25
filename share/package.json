@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Shared pins and drawings for the map site (Cloudflare Worker + D1)",
+  "devDependencies": {
+    "wrangler": "4.146.0"
+  }
+}
