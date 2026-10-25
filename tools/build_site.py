@@ -10,7 +10,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SITE_ITEMS = ['index.html', 'css', 'js', 'vendor']
+SITE_ITEMS = ['index.html', 'favicon.svg', 'css', 'js', 'vendor']
 MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 
 

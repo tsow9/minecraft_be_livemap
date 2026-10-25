@@ -4,11 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
 <title>マイクラ地図</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0e1013">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="vendor/geoman/leaflet-geoman.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M15.5 4.7a3.5 3.5 0 0 1 0 6.6"/><path d="M18 14c2 .9 3.5 3 3.5 5.5"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.8 8.2l-2.3 5.3-5.3 2.3 2.3-5.3z"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21.5c3.9 0 7-2.8 7-6.8 0-3.9-2.6-6-4-9.7-1.6 1.8-2.3 3.6-2.2 5.5-1.6-.9-2.7-2.6-2.8-4.8C7.4 8.2 5 11.2 5 14.7c0 4 3.1 6.8 7 6.8z"/><path d="M12 21.5c-1.7 0-3-1.2-3-2.9 0-1.8 1.5-2.9 3-4.6 1.5 1.7 3 2.8 3 4.6 0 1.7-1.3 2.9-3 2.9z"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 3.5v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-mountain" viewBox="0 0 24 24"><path d="M2 20l7-12 4.5 7 2.5-3.5L22 20z"/><path d="M6.5 14.5c1.5.8 3 .8 4.5 0"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="i-pointer" viewBox="0 0 24 24"><path d="M5 3l14 7.2-6.2 1.8L10 18.5z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6V4.5h14V6M12 4.5v15M9 19.5h6"/></symbol>
+    <symbol id="i-freehand" viewBox="0 0 24 24"><path d="M3 17c2.5-5.5 4.6-9 6.6-9 2.6 0 .9 8 4 8 2.3 0 3.7-4.6 7.4-8"/></symbol>
+    <symbol id="i-line" viewBox="0 0 24 24"><path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="5" r="1.6"/></symbol>
+    <symbol id="i-polygon" viewBox="0 0 24 24"><path d="M12 3l9 6.8-3.5 10.7h-11L3 9.8z"/></symbol>
+    <symbol id="i-rect" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="1.5"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M5 18l5-11 9 5"/><rect x="3" y="16" width="4" height="4" rx=".8"/><rect x="8" y="5" width="4" height="4" rx=".8"/><rect x="17" y="10" width="4" height="4" rx=".8"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
+  </defs>
+</svg>
 <div id="map"></div>
 <div id="crosshair" aria-hidden="true"></div>
 <div id="past-banner" hidden><span id="past-text"></span> <button id="past-back" class="mini">最新に戻る</button></div>
@@ -25,30 +53,30 @@
   </div>
 </header>
 
-<div id="sidebuttons">
-  <button id="btn-players" title="プレイヤー・参加中の人">👥<span id="online-badge" hidden></span></button>
-  <button id="btn-explore" title="開拓した人(推定)">🧭</button>
-  <button id="btn-tools" title="描く・編集">✏️</button>
-  <button id="btn-nether" title="ネザー座標の換算">🔥</button>
-  <button id="btn-time" title="タイムラプス">🕒</button>
-  <button id="btn-contour" title="等高線">⛰</button>
-  <button id="btn-grid" title="チャンク線">#</button>
-  <button id="btn-data" title="データの保存・読込">💾</button>
+<div id="sidebuttons" role="toolbar">
+  <button id="btn-players" title="プレイヤー・参加中の人"><svg class="ic"><use href="#i-users"/></svg><span id="online-badge" hidden></span></button>
+  <button id="btn-explore" title="開拓した人(推定)"><svg class="ic"><use href="#i-compass"/></svg></button>
+  <button id="btn-tools" title="描く・編集"><svg class="ic"><use href="#i-pencil"/></svg></button>
+  <button id="btn-nether" title="ネザー座標の換算"><svg class="ic"><use href="#i-flame"/></svg></button>
+  <button id="btn-time" title="タイムラプス"><svg class="ic"><use href="#i-history"/></svg></button>
+  <button id="btn-contour" title="等高線"><svg class="ic"><use href="#i-mountain"/></svg></button>
+  <button id="btn-grid" title="チャンク線"><svg class="ic"><use href="#i-grid"/></svg></button>
+  <button id="btn-data" title="データの保存・読込"><svg class="ic"><use href="#i-save"/></svg></button>
 </div>
 
 <div id="tools" hidden>
   <div class="row modes">
-    <button data-mode="none" class="on" title="通常">👆</button>
-    <button data-mode="waypoint" title="ウェイポイント">📍</button>
-    <button data-mode="text" title="テキスト">T</button>
-    <button data-mode="freehand" title="手書き">〰️</button>
-    <button data-mode="Line" title="線">／</button>
-    <button data-mode="Polygon" title="多角形">⬠</button>
-    <button data-mode="Rectangle" title="四角">▭</button>
-    <button data-mode="Circle" title="円">◯</button>
-    <button data-mode="edit" title="形を直す">✎</button>
-    <button data-mode="drag" title="動かす">✥</button>
-    <button data-mode="remove" title="消す">🗑</button>
+    <button data-mode="none" class="on" title="通常"><svg class="ic"><use href="#i-pointer"/></svg></button>
+    <button data-mode="waypoint" title="ウェイポイント"><svg class="ic"><use href="#i-pin"/></svg></button>
+    <button data-mode="text" title="テキスト"><svg class="ic"><use href="#i-text"/></svg></button>
+    <button data-mode="freehand" title="手書き"><svg class="ic"><use href="#i-freehand"/></svg></button>
+    <button data-mode="Line" title="線"><svg class="ic"><use href="#i-line"/></svg></button>
+    <button data-mode="Polygon" title="多角形"><svg class="ic"><use href="#i-polygon"/></svg></button>
+    <button data-mode="Rectangle" title="四角"><svg class="ic"><use href="#i-rect"/></svg></button>
+    <button data-mode="Circle" title="円"><svg class="ic"><use href="#i-circle"/></svg></button>
+    <button data-mode="edit" title="形を直す"><svg class="ic"><use href="#i-edit"/></svg></button>
+    <button data-mode="drag" title="動かす"><svg class="ic"><use href="#i-move"/></svg></button>
+    <button data-mode="remove" title="消す"><svg class="ic"><use href="#i-trash"/></svg></button>
   </div>
   <div class="row style">
     <div id="colors"></div>
@@ -58,13 +86,14 @@
 </div>
 
 <div id="coords">
-  <div><span class="lbl">十字の位置</span> <b id="c-center">X 0 / Z 0</b> <button id="copy-center" class="mini">コピー</button></div>
+  <div class="head"><span class="lbl">十字の位置</span><button id="copy-center" class="mini" title="座標をコピー"><svg class="ic"><use href="#i-copy"/></svg>コピー</button></div>
+  <div id="c-center" class="xyz"></div>
   <div class="blk" id="c-block"></div>
   <div class="sub" id="c-center-other"></div>
 </div>
 
 <section id="panel-nether" class="panel" hidden>
-  <h2>ネザー座標の換算 <button class="close">×</button></h2>
+  <h2>ネザー座標の換算 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <p class="help">ネザーで1ブロック進むと、地上では8ブロック進みます。</p>
   <div class="conv">
     <div>
@@ -85,7 +114,7 @@
 </section>
 
 <section id="panel-players" class="panel" hidden>
-  <h2>プレイヤー <button class="close">×</button></h2>
+  <h2>プレイヤー <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <h3 id="live-title">参加中の人</h3>
   <ul id="live-list" class="plist"></ul>
   <h3>地図上の位置 <span class="sub" id="players-updated"></span></h3>
@@ -95,13 +124,13 @@
 </section>
 
 <section id="panel-explore" class="panel" hidden>
-  <h2>開拓した人(推定) <button class="close">×</button></h2>
+  <h2>開拓した人(推定) <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <p class="help">新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。1時間ごとの記録からの推定なので、外れることもあります。</p>
   <ul id="explore-legend" class="plist"></ul>
 </section>
 
 <section id="panel-time" class="panel" hidden>
-  <h2>過去の地図 <button class="close">×</button></h2>
+  <h2>過去の地図 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <p class="help">日付を選ぶと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。</p>
   <label class="datepick">日付を選ぶ <input id="time-date" type="date"></label>
   <div id="time-chips" class="chips"></div>
@@ -113,7 +142,7 @@
 </section>
 
 <section id="panel-data" class="panel" hidden>
-  <h2>データ <button class="close">×</button></h2>
+  <h2>データ <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <p class="help">書き込んだウェイポイントや図形は、今はこの端末の中だけに保存されています。別の端末や友だちに渡すときはファイルに書き出してください。</p>
   <p id="data-count"></p>
   <button id="export" class="mini">ファイルに書き出す</button>

@@ -7,7 +7,7 @@ const DIMS = {
 };
 const TYPES = ['waypoint', 'text', 'line', 'draw', 'polygon', 'rect', 'circle'];
 const ICONS = {
-  pin: ['📍', 'ピン'], home: ['🏠', '拠点'], death: ['💀', '死んだ場所'], portal: ['🌀', 'ポータル'],
+  pin: ['📍', 'ピン'], home: ['🏠', '拠点'], death: ['🪦', '死んだ場所'], portal: ['🌀', 'ポータル'],
   mine: ['⛏️', '鉱山'], farm: ['🌾', '畑・トラップ'], village: ['🏘️', '村'], star: ['⭐', 'お気に入り'],
 };
 const COLORS = ['#ffffff', '#ff5252', '#ffb300', '#ffee58', '#66bb6a', '#29b6f6', '#5c6bc0', '#ab47bc', '#222222'];
@@ -838,8 +838,15 @@ function prefetchInfo() {
 
 function showCenterInfo(x, z, info) {
   centerInfo = info;
-  $('#c-center').textContent = info ? `X ${x} / Y ${info.y} / Z ${z}` : `X ${x} / Z ${z}`;
-  $('#c-block').textContent = info ? `🧱 ${info.ja || BLOCK_JA(info.name)}` : '';
+  const part = (k, v) => `<span><i>${k}</i>${v}</span>`;
+  $('#c-center').innerHTML = part('X', x) + (info ? part('Y', info.y) : '') + part('Z', z);
+  const blk = $('#c-block');
+  blk.textContent = '';
+  if (info) {
+    const k = document.createElement('span'); k.className = 'k'; k.textContent = 'ブロック';
+    const v = document.createElement('span'); v.className = 'v'; v.textContent = info.ja || BLOCK_JA(info.name);
+    blk.append(k, v);
+  }
 }
 
 function updateCenterInfo() {
@@ -1156,9 +1163,9 @@ function renderPlayers() {
     if (showDeaths && d && d.dim === state.dim) {
       const m = L.marker(ll(d.x + 0.5, d.z + 0.5), {
         pmIgnore: true,
-        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: '<div class="death-icon" style="transform:translate(-50%,-50%)">💀</div>' }),
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: '<div class="death-icon" style="transform:translate(-50%,-50%)"><svg class="ic"><use href="#i-grave"/></svg></div>' }),
       });
-      m.bindPopup(() => `<div class="pop"><h4>💀 ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
+      m.bindPopup(() => `<div class="pop"><h4 class="death-h"><svg class="ic"><use href="#i-grave"/></svg> ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
       playerGroup.addLayer(m);
     }
   }
