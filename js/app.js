@@ -1748,6 +1748,8 @@ async function setupPlayers() {
   await refreshLive();
   setInterval(refreshLive, 60000);
   setInterval(refreshConfig, 60000);
+  // Phones pause background tabs, so also check right away when the page comes back into view.
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshConfig(); });
 }
 
 // ---------- staying on the newest version of the site ----------
