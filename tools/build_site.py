@@ -48,6 +48,7 @@ def main():
     html = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)"', rf'\1?v={version}"', html)
     with open(page, 'w', encoding='utf-8') as f:
         f.write(html)
+    cfg['version'] = version  # open pages compare this with their own and switch to the new site
     with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     print(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)')
