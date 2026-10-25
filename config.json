@@ -1,7 +1,7 @@
 {
-  "title": "Realm Atlas",
+  "title": "Compass",
   "tileUrl": "tiles/{snapshot}/{dim}/{z}/{x}/{y}.png",
-  "minNativeZoom": -4,
+  "minNativeZoom": -6,
   "maxNativeZoom": 0,
   "snapshots": []
 }

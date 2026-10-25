@@ -236,7 +236,8 @@ const ChunkGrid = L.GridLayer.extend({
 function snapshots() { return state.demo ? DEMO_SNAPSHOTS : state.config.snapshots; }
 
 function makeBaseLayer() {
-  const opts = { minZoom: -6, maxZoom: 4, noWrap: true, pmIgnore: true };
+  // Load tiles once the zoom settles (not at every step on the way), and keep a few extra around for panning.
+  const opts = { minZoom: -6, maxZoom: 4, noWrap: true, pmIgnore: true, updateWhenZooming: false, keepBuffer: 3 };
   if (state.demo) {
     return new DemoLayer({ ...opts, dim: state.dim, week: state.snapshotIndex, maxNativeZoom: 2, attribution: 'デモ地形(本物の地図はまだ未設定)' });
   }
@@ -927,18 +928,35 @@ function refreshContours() {
   }
 }
 
-// Load the block info for everything on screen plus a margin, so moving around answers instantly.
+// Load the block info around the crosshair ahead of time, a little at a time when the browser is idle,
+// so moving around answers instantly without slowing down scrolling and zooming.
+const idle = window.requestIdleCallback || ((fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 50));
+let prefetchQueue = [];
+let prefetchRunning = false;
 function prefetchInfo() {
-  if (state.demo || map.getZoom() < -3) return;
+  if (state.demo || map.getZoom() < -3) { prefetchQueue = []; return; }
+  const c = block(map.getCenter());
+  const cx = Math.floor(c.x / 256), cz = Math.floor(c.z / 256);
+  // Close in: the whole screen plus a margin. Zoomed out: only the tiles next to the crosshair.
   const b = map.getBounds();
-  const x0 = Math.floor(b.getWest() / 256) - 1, x1 = Math.floor(b.getEast() / 256) + 1;
-  const z0 = Math.floor(-b.getNorth() / 256) - 1, z1 = Math.floor(-b.getSouth() / 256) + 1;
+  let x0 = Math.floor(b.getWest() / 256) - 1, x1 = Math.floor(b.getEast() / 256) + 1;
+  let z0 = Math.floor(-b.getNorth() / 256) - 1, z1 = Math.floor(-b.getSouth() / 256) + 1;
+  if ((x1 - x0 + 1) * (z1 - z0 + 1) > 30) { x0 = cx - 1; x1 = cx + 1; z0 = cz - 1; z1 = cz + 1; }
+  const urls = [];
   for (let tx = x0; tx <= x1; tx++) {
     for (let tz = z0; tz <= z1; tz++) {
       const url = infoUrl(tx, tz);
-      if (url) loadInfoTile(url);
+      if (url && !infoCache.has(url)) urls.push([Math.abs(tx - cx) + Math.abs(tz - cz), url]);
     }
   }
+  prefetchQueue = urls.sort((p, q) => p[0] - q[0]).map((u) => u[1]);
+  if (prefetchRunning) return;
+  prefetchRunning = true;
+  const work = (deadline) => {
+    while (prefetchQueue.length && deadline.timeRemaining() > 2) loadInfoTile(prefetchQueue.shift());
+    if (prefetchQueue.length) idle(work); else prefetchRunning = false;
+  };
+  idle(work);
 }
 
 function showCenterInfo(x, z, info) {
@@ -1070,7 +1088,7 @@ function setupPanels() {
 
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }
-    else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 5 }).addTo(map);
+    else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 5, updateWhenZooming: false }).addTo(map);
     $('#btn-grid').classList.toggle('on', !!state.gridLayer);
     toast(state.gridLayer ? 'チャンク線(16ブロック)と原点の線を表示' : 'チャンク線を非表示');
   });
@@ -1345,7 +1363,7 @@ function renderExploreLegend() {
 function refreshExplore() {
   if (exploreLayer) { map.removeLayer(exploreLayer); exploreLayer = null; }
   if ($('#btn-explore').classList.contains('on')) {
-    exploreLayer = new ExploreLayer({ minZoom: -6, maxZoom: 4, opacity: 0.45, pmIgnore: true, zIndex: 4 }).addTo(map);
+    exploreLayer = new ExploreLayer({ minZoom: -6, maxZoom: 4, opacity: 0.45, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
   }
   renderExploreLegend();
 }
@@ -1442,7 +1460,7 @@ async function loadConfig() {
 async function main() {
   const cfg = await loadConfig();
   state.config = {
-    title: cfg.title || 'Realm Atlas',
+    title: cfg.title || 'Compass',
     tileUrl: cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png',
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,

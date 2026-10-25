@@ -25,7 +25,7 @@ import history
 from block_colors import color_of, is_foliage
 
 DIM_IDS = {'overworld': 0, 'nether': 1, 'end': 2}
-MIN_ZOOM = -4
+MIN_ZOOM = -6
 AIR, WATER, SOLID = 0, 1, 2
 NETHER_TOP = 127
 UNSET = -32768
