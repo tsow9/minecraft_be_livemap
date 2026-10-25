@@ -194,6 +194,21 @@ def _state_color(name, states):
     return None
 
 
+FOLIAGE_WORDS = ('leaves', 'log', 'wood', 'stem', 'hyphae', 'vine', 'sapling', 'short_grass', 'tall_grass', 'tallgrass',
+                 'dry_grass', 'fern', 'flower', 'tulip', 'bush',
+                 'mushroom', 'fungus', 'roots', 'bamboo', 'reeds', 'sugar_cane', 'cactus', 'kelp', 'seagrass', 'lily',
+                 'dripleaf', 'azalea', 'petals', 'litter', 'propagule', 'berry', 'cocoa', 'crop', 'wheat', 'carrots',
+                 'potatoes', 'beetroot', 'melon_stem', 'pumpkin_stem', 'dandelion', 'poppy', 'allium', 'bluet', 'orchid',
+                 'daisy', 'cornflower', 'lilac', 'peony', 'rose', 'sunflower', 'eyeblossom', 'lichen', 'moss_carpet',
+                 'spore_blossom', 'hanging', 'pitcher', 'torchflower', 'wildflowers', 'shrub', 'deadbush', 'web')
+
+
+def is_foliage(name):
+    """Trees and plants: skipped when working out the shape of the ground for contour lines."""
+    simple = name.split(':', 1)[-1]
+    return any(w in simple for w in FOLIAGE_WORDS) and not simple.endswith(('planks', 'stairs', 'slab', 'fence', 'door'))
+
+
 def color_of(name, states=None):
     """Return ((r, g, b), kind) where kind is 'air', 'water' or 'solid'."""
     states = states or {}

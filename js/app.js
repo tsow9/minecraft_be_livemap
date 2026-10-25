@@ -280,6 +280,7 @@ async function refreshBase() {
   updatePastBanner();
   updateCenterInfo();
   prefetchInfo();
+  refreshContours();
   const next = makeBaseLayer();
   const prev = state.baseLayer;
   next.addTo(map).bringToBack();
@@ -654,10 +655,10 @@ function loadInfoTile(url) {
   return p;
 }
 
-function infoUrl(tx, tz) {
+function infoUrl(tx, tz, kind = 'info') {
   if (state.demo) return null;
   const m = manifests.get(snapshots()[state.snapshotIndex]?.id);
-  const key = `info/${state.dim}/${tx}/${tz}`;
+  const key = `${kind}/${state.dim}/${tx}/${tz}`;
   const hit = m && m[key];
   return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
 }
@@ -674,7 +675,95 @@ function blockAtNow(x, z) {
   const v = (data.data[i] << 16) | (data.data[i + 1] << 8) | data.data[i + 2];
   const id = v >> 9;
   if (!id) return { info: null };
-  return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y: (v & 511) - 64 } };
+  const y = (v & 511) - 64;
+  return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y }, raw: { id, y } };
+}
+
+// ---------- contour lines (drawn from the heights stored in the info tiles) ----------
+let contourLayer = null;
+
+function contourStep(zoom) {
+  if (zoom >= 0) return 4;
+  return zoom >= -1 ? 8 : 16;
+}
+
+const ContourLayer = L.GridLayer.extend({
+  createTile(coords, done) {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 256;
+    this._draw(tile, coords).then(() => done(null, tile), () => done(null, tile));
+    return tile;
+  },
+  async _draw(tile, coords) {
+    const scale = Math.pow(2, coords.z);
+    const bx = coords.x * 256 / scale, bz = coords.y * 256 / scale;
+    const cell = Math.max(1, scale);
+    const stride = Math.max(1, 1 / scale);
+    const n = 256 / cell;
+    const urls = new Set();
+    for (let tx = Math.floor(bx / 256); tx <= Math.floor((bx + (n + 1) * stride) / 256); tx++) {
+      for (let tz = Math.floor(bz / 256); tz <= Math.floor((bz + (n + 1) * stride) / 256); tz++) {
+        for (const kind of ['info', 'ground']) {
+          const u = infoUrl(tx, tz, kind);
+          if (u) urls.add(u);
+        }
+      }
+    }
+    if (!urls.size) return;
+    await Promise.all([...urls].map(loadInfoTile));
+    const water = blockNames.indexOf('water');
+    const step = contourStep(coords.z);
+    const level = new Float64Array((n + 1) * (n + 1)).fill(NaN);
+    for (let j = 0; j <= n; j++) {
+      for (let i = 0; i <= n; i++) {
+        const x = Math.floor(bx + i * stride), z = Math.floor(bz + j * stride);
+        const top = blockAtNow(x, z);
+        if (!top.raw || top.raw.id === water) continue;
+        const g = groundAt(x, z);
+        if (g !== null) level[j * (n + 1) + i] = Math.floor(g / step);
+      }
+    }
+    const ctx = tile.getContext('2d');
+    const draw = (bold) => {
+      ctx.beginPath();
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < n; i++) {
+          const a = level[j * (n + 1) + i];
+          if (Number.isNaN(a)) continue;
+          const right = level[j * (n + 1) + i + 1];
+          const below = level[(j + 1) * (n + 1) + i];
+          // Draw on the edge between two cells whose height band differs; bold every 4th band.
+          if (!Number.isNaN(right) && right !== a && (Math.max(a, right) % 4 === 0) === bold) {
+            ctx.moveTo((i + 1) * cell, j * cell); ctx.lineTo((i + 1) * cell, (j + 1) * cell);
+          }
+          if (!Number.isNaN(below) && below !== a && (Math.max(a, below) % 4 === 0) === bold) {
+            ctx.moveTo(i * cell, (j + 1) * cell); ctx.lineTo((i + 1) * cell, (j + 1) * cell);
+          }
+        }
+      }
+      ctx.stroke();
+    };
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(60, 35, 10, 0.55)'; ctx.lineWidth = 1; draw(false);
+    ctx.strokeStyle = 'rgba(60, 35, 10, 0.9)'; ctx.lineWidth = 2; draw(true);
+  },
+});
+
+// Ground height with trees and plants left out (R/G = Y + 65, 0 = no data).
+function groundAt(x, z) {
+  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
+  const data = infoData.get(infoUrl(tx, tz, 'ground'));
+  if (!data) return null;
+  const i = ((z - tz * 256) * data.width + (x - tx * 256)) * 4;
+  const v = (data.data[i] << 8) | data.data[i + 1];
+  return v ? v - 65 : null;
+}
+
+function refreshContours() {
+  if (contourLayer) { map.removeLayer(contourLayer); contourLayer = null; }
+  if ($('#btn-contour').classList.contains('on') && !state.demo) {
+    contourLayer = new ContourLayer({ minZoom: -2, maxZoom: 4, pmIgnore: true, zIndex: 3 }).addTo(map);
+  }
 }
 
 // Load the block info for everything on screen plus a margin, so moving around answers instantly.
@@ -803,6 +892,13 @@ function setupPanels() {
     });
   }
   document.querySelectorAll('.panel .close').forEach((c) => c.addEventListener('click', () => { close(); refreshExplore(); }));
+
+  $('#btn-contour').addEventListener('click', () => {
+    const on = !$('#btn-contour').classList.contains('on');
+    $('#btn-contour').classList.toggle('on', on);
+    refreshContours();
+    if (on) toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示(太い線は4本ごと)');
+  });
 
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }

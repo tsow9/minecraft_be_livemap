@@ -22,7 +22,7 @@ from nbt import root_compound
 import block_colors
 import block_ids
 import history
-from block_colors import color_of
+from block_colors import color_of, is_foliage
 
 DIM_IDS = {'overworld': 0, 'nether': 1, 'end': 2}
 MIN_ZOOM = -4
@@ -46,6 +46,7 @@ def _palette_lut(data, pos):
     kinds = np.zeros(max(count, 1), np.uint8)
     colors = np.zeros((max(count, 1), 3), np.uint8)
     ids = np.zeros(max(count, 1), np.uint16)
+    ground = np.zeros(max(count, 1), bool)
     for i in range(count):
         entry, pos = root_compound(data, pos)
         states = entry.get('states') if isinstance(entry.get('states'), dict) else {}
@@ -54,10 +55,11 @@ def _palette_lut(data, pos):
         kinds[i] = {'air': AIR, 'water': WATER, 'solid': SOLID}[kind]
         colors[i] = rgb
         ids[i] = block_ids.id_of(name, states)
+        ground[i] = kind == 'solid' and not is_foliage(name)
     if len(_palette_cache) > 20000:
         _palette_cache.clear()
-    _palette_cache[key] = (kinds, colors, ids)
-    return kinds, colors, ids
+    _palette_cache[key] = (kinds, colors, ids, ground)
+    return kinds, colors, ids, ground
 
 
 def decode_subchunk(data):
@@ -86,19 +88,20 @@ def decode_subchunk(data):
         pos += 4 * n_words
         shifts = (np.arange(per_word, dtype=np.uint32) * bits)
         idx = ((words[:, None] >> shifts) & ((1 << bits) - 1)).reshape(-1)[:4096].astype(np.uint16)
-    kinds, colors, ids = _palette_lut(data, pos)
+    kinds, colors, ids, ground = _palette_lut(data, pos)
     idx = np.minimum(idx, len(kinds) - 1).reshape(16, 16, 16)
-    return kinds[idx], idx, (colors, ids)
+    return kinds[idx], idx, (colors, ids, ground)
 
 
 # ---------- per-chunk surface ----------
 class Surface:
-    __slots__ = ('top_y', 'top_c', 'top_id', 'water_y')
+    __slots__ = ('top_y', 'top_c', 'top_id', 'water_y', 'ground_y')
 
     def __init__(self):
         self.top_y = np.full((16, 16), UNSET, np.int16)
         self.top_c = np.zeros((16, 16, 3), np.uint8)
         self.top_id = np.zeros((16, 16), np.uint16)
+        self.ground_y = np.full((16, 16), UNSET, np.int16)
         self.water_y = np.full((16, 16), UNSET, np.int16)
 
 
@@ -108,7 +111,7 @@ def _highest(mask):
 
 
 def merge_open_sky(surf, sub_y, kinds, idx, lut):
-    colors, ids = lut
+    colors, ids, ground = lut
     has, ys = _highest(kinds == SOLID)
     gy = sub_y * 16 + ys
     upd = has & (gy > surf.top_y)
@@ -118,6 +121,10 @@ def merge_open_sky(surf, sub_y, kinds, idx, lut):
         pal = idx[xs, zs, ys[upd]]
         surf.top_c[xs, zs] = colors[pal]
         surf.top_id[xs, zs] = ids[pal]
+    has, ys = _highest(ground[idx])
+    gy = sub_y * 16 + ys
+    upd = has & (gy > surf.ground_y)
+    surf.ground_y[upd] = gy[upd]
     has, ys = _highest(kinds == WATER)
     gy = sub_y * 16 + ys
     upd = has & (gy > surf.water_y)
@@ -139,11 +146,12 @@ def nether_surface(subs):
     top = NETHER_TOP - np.argmax(below[:, :, ::-1], axis=2)
     for x, z in zip(*np.nonzero(has)):
         y = int(top[x, z])
-        kinds, idx, (colors, ids) = subs[y // 16]
+        kinds, idx, (colors, ids, _) = subs[y // 16]
         pal = idx[x, z, y % 16]
         surf.top_y[x, z] = y
         surf.top_c[x, z] = colors[pal]
         surf.top_id[x, z] = ids[pal]
+        surf.ground_y[x, z] = y
     return surf
 
 
@@ -226,6 +234,17 @@ def build_tile(chunks, tx, tz):
     return Image.fromarray(out, 'RGBA')
 
 
+def build_ground_tile(chunks, tx, tz):
+    """Ground height without trees and plants (for contour lines): value = Y + 65 in R/G, 0 = no data."""
+    v = np.zeros((256, 256), np.uint32)
+    for (cx, cz), surf in chunks:
+        ox, oz = (cx - tx * 16) * 16, (cz - tz * 16) * 16
+        g = surf.ground_y.T.astype(np.int32)
+        v[oz:oz + 16, ox:ox + 16] = np.where(g > UNSET, np.clip(g + 65, 1, 65535), 0)
+    rgb = np.dstack([(v >> 8) & 255, v & 255, np.zeros_like(v)]).astype(np.uint8)
+    return Image.fromarray(rgb, 'RGB')
+
+
 def build_info_tile(chunks, tx, tz):
     """Per block: which block is on top and its height, packed into RGB (12-bit block ID, 9-bit Y+64)."""
     ids = np.zeros((256, 256), np.uint32)
@@ -244,7 +263,7 @@ def build_info_tile(chunks, tx, tz):
     return Image.fromarray(rgb, 'RGB')
 
 
-def write_tiles(surfaces, out_dir, info_dir):
+def write_tiles(surfaces, out_dir, info_dir, ground_dir):
     by_tile = {}
     for (cx, cz), surf in surfaces.items():
         by_tile.setdefault((cx // 16, cz // 16), []).append(((cx, cz), surf))
@@ -258,6 +277,9 @@ def write_tiles(surfaces, out_dir, info_dir):
         info = os.path.join(info_dir, str(tx), f'{tz}.png')
         os.makedirs(os.path.dirname(info), exist_ok=True)
         build_info_tile(chunks, tx, tz).save(info, compress_level=9)
+        ground = os.path.join(ground_dir, str(tx), f'{tz}.png')
+        os.makedirs(os.path.dirname(ground), exist_ok=True)
+        build_ground_tile(chunks, tx, tz).save(ground, compress_level=9)
     for z in range(-1, MIN_ZOOM - 1, -1):
         parents = {}
         for (tx, tz), img in level.items():
@@ -389,7 +411,8 @@ def main():
             if not chunks:
                 print(f'  {name}: データなし')
                 continue
-            n = write_tiles(chunks, os.path.join(staging, name), os.path.join(staging, 'info', name))
+            n = write_tiles(chunks, os.path.join(staging, name), os.path.join(staging, 'info', name),
+                            os.path.join(staging, 'ground', name))
             total += n
             print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
         if total == 0:
