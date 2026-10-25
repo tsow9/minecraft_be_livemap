@@ -63,6 +63,10 @@ ALIASES = {
 }
 
 
+# Where the official block name alone is unclear on a map (planted wheat is just "作物").
+OVERRIDES = {'wheat': '小麦(作物)'}
+
+
 def parse_lang(text):
     out = {}
     for line in text.splitlines():
@@ -118,6 +122,8 @@ def _bases(bid, state):
 
 def japanese(key, lang):
     bid, _, state = key.partition(':')
+    if bid in OVERRIDES:
+        return OVERRIDES[bid]
     for base in _bases(bid, state):
         for k in (f'tile.{base}.name', f'item.{base}.name'):
             if k in lang:
