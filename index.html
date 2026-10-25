@@ -2,11 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
-<title>Compass</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cut">
+<title>Blockmap</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="Compass">
+<meta name="apple-mobile-web-app-title" content="Blockmap">
 <meta name="theme-color" content="#0e1013">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="vendor/geoman/leaflet-geoman.css">
@@ -40,15 +40,14 @@
       <path d="M12 29s-10-8.6-10-17a10 10 0 0 1 20 0c0 8.4-10 17-10 17z" style="fill: var(--c, #3ecf8e)" stroke="#fff" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="#fff"/>
     </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
-    <linearGradient id="g-death" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0585d"/><stop offset="1" stop-color="#a51f26"/></linearGradient>
-    <symbol id="i-death-pin" viewBox="0 0 30 38">
-      <path d="M15 36.5S2.5 25.6 2.5 14.8a12.5 12.5 0 0 1 25 0C27.5 25.6 15 36.5 15 36.5z" fill="url(#g-death)" stroke="#fff" stroke-width="2"/>
-      <path d="M10 21.5v-8a5 5 0 0 1 10 0v8z" fill="#fff"/>
-      <path d="M14.2 11.3h1.6v6.6h-1.6zM12 13.5h6v1.6h-6z" fill="#b3262c"/>
-      <path d="M8.5 21.5h13" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+    <symbol id="i-death-cross" viewBox="0 0 22 30">
+      <ellipse cx="11" cy="27.5" rx="6" ry="1.8" fill="#000" opacity=".35"/>
+      <path d="M11 2v24M4 9h14" stroke="#1b1d22" stroke-width="7" stroke-linecap="round"/>
+      <path d="M11 2v24M4 9h14" stroke="#f4f1ea" stroke-width="3.5" stroke-linecap="round"/>
     </symbol>
   </defs>
 </svg>
@@ -108,12 +107,16 @@
   <div id="mode-hint"></div>
 </div>
 
-<div id="coords">
-  <div class="head"><span class="lbl">十字の位置</span><button id="copy-center" class="mini" title="座標をコピー"><svg class="ic"><use href="#i-copy"/></svg>コピー</button></div>
-  <div id="c-center" class="xyz"></div>
+<div id="coords" title="タップで詳しく表示">
+  <div class="line">
+    <div id="c-center" class="xyz"></div>
+    <button id="copy-center" class="icon-btn" title="座標をコピー"><svg class="ic"><use href="#i-copy"/></svg></button>
+    <button id="coords-close" class="icon-btn" title="座標表示を閉じる"><svg class="ic"><use href="#i-close"/></svg></button>
+  </div>
   <div class="blk" id="c-block"></div>
   <div class="sub" id="c-center-other"></div>
 </div>
+<button id="coords-open" hidden title="座標を表示"><svg class="ic"><use href="#i-target"/></svg></button>
 
 <section id="panel-nether" class="panel" hidden>
   <h2>ネザー座標の換算 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>

@@ -243,9 +243,11 @@ function makeBaseLayer() {
   }
   const snap = snapshots()[state.snapshotIndex];
   const url = state.config.tileUrl.replace('{snapshot}', encodeURIComponent(snap.id)).replace('{dim}', state.dim);
+  // Sharp screens (most phones) get the next more detailed picture shown at half size, so zoomed-out views stay crisp.
+  const hi = (window.devicePixelRatio || 1) >= 1.5 ? 1 : 0;
   return new HistoryTileLayer(url, {
-    ...opts, tileSize: 256, manifest: manifests.get(snap.id), dim: state.dim,
-    minNativeZoom: state.config.minNativeZoom, maxNativeZoom: state.config.maxNativeZoom,
+    ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
+    minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: state.config.maxNativeZoom - hi,
     attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
   });
 }
@@ -873,20 +875,15 @@ const ContourLayer = L.GridLayer.extend({
 
     // Lines go on the edge between two cells whose height band differs; every 4th band is bold.
     const thin = [], bold = [];
-    const labels = [null, null, null, null];
+    const marks = [];  // [x, y, height, bold] for every piece of line, to place the height labels
     const consider = (a, b, x0, y0, x1, y1) => {
       if (a === NO_GROUND || b === NO_GROUND || a === b) return;
       const lo = Math.min(a, b), hi = Math.max(a, b);
       const b4 = Math.floor(hi / 4) * 4;
       const isBold = b4 > lo;
       (isBold ? bold : thin).push(x0, y0, x1, y1);
-      // Remember one good spot per quarter of the tile for a height label.
-      const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-      if (mx < 24 || mx > 232 || my < 16 || my > 240) return;
-      const q = (mx >= 128 ? 1 : 0) + (my >= 128 ? 2 : 0);
-      const cx = mx >= 128 ? 192 : 64, cy = my >= 128 ? 192 : 64;
-      const score = (isBold ? 0 : 1e6) + (hi - lo > 1 ? 1e5 : 0) + (mx - cx) ** 2 + (my - cy) ** 2;
-      if (!labels[q] || score < labels[q].score) labels[q] = { score, mx, my, y: (isBold ? b4 : hi) * step };
+      // Only the bold lines get numbers, so the map stays easy to read.
+      if (isBold) marks.push([(x0 + x1) / 2, (y0 + y1) / 2, b4 * step, true]);
     };
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
@@ -896,6 +893,7 @@ const ContourLayer = L.GridLayer.extend({
         consider(a, level[(j + 1) * (n + 1) + i], i * cell, (j + 1) * cell, (i + 1) * cell, (j + 1) * cell);
       }
     }
+    const labels = placeContourLabels(marks);
     if (!this._map) return;
     const ctx = tile.getContext('2d');
     ctx.scale(dpr, dpr);
@@ -908,17 +906,73 @@ const ContourLayer = L.GridLayer.extend({
     stroke(thin, 'rgba(60, 35, 10, 0.55)', 1);
     stroke(bold, 'rgba(60, 35, 10, 0.9)', 2);
 
+    // Like a paper map: the number sits in a gap of its own line, turned to follow it.
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
     for (const l of labels) {
-      if (!l) continue;
       const text = `Y${l.y}`;
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 250, 235, 0.95)'; ctx.strokeText(text, l.mx, l.my);
-      ctx.fillStyle = 'rgb(70, 40, 10)'; ctx.fillText(text, l.mx, l.my);
+      const w = ctx.measureText(text).width;
+      ctx.save();
+      ctx.translate(l.x, l.y0);
+      ctx.rotate(l.angle);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillRect(-w / 2 - 3, -5, w + 6, 10);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 250, 235, 0.85)'; ctx.strokeText(text, 0, 0.5);
+      ctx.fillStyle = 'rgb(70, 40, 10)'; ctx.fillText(text, 0, 0.5);
+      ctx.restore();
     }
   },
 });
+
+// Picks up to one spot per quarter of a tile where a line runs fairly straight, and the direction it runs there.
+function placeContourLabels(marks) {
+  const cells = new Map();
+  for (const m of marks) {
+    const k = `${Math.floor(m[0] / 16)},${Math.floor(m[1] / 16)}`;
+    if (!cells.has(k)) cells.set(k, []);
+    cells.get(k).push(m);
+  }
+  const near = (m) => {
+    const out = [];
+    const ci = Math.floor(m[0] / 16), cj = Math.floor(m[1] / 16);
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        for (const o of cells.get(`${ci + di},${cj + dj}`) || []) {
+          if (o[2] === m[2] && (o[0] - m[0]) ** 2 + (o[1] - m[1]) ** 2 <= 14 * 14) out.push(o);
+        }
+      }
+    }
+    return out;
+  };
+  const labels = [];
+  for (let q = 0; q < 4; q++) {
+    const cx = q % 2 ? 192 : 64, cy = q >= 2 ? 192 : 64;
+    const mine = marks.filter((m) => m[0] >= 26 && m[0] <= 230 && m[1] >= 14 && m[1] <= 242 &&
+      (m[0] >= 128) === (q % 2 === 1) && (m[1] >= 128) === (q >= 2));
+    mine.sort((a, b) => ((a[0] - cx) ** 2 + (a[1] - cy) ** 2) - ((b[0] - cx) ** 2 + (b[1] - cy) ** 2));
+    for (const m of mine.slice(0, 60)) {
+      const pts = near(m);
+      if (pts.length < 6) continue;
+      // Direction of the line from the spread of nearby pieces (principal axis).
+      let mx = 0, my = 0;
+      for (const p of pts) { mx += p[0]; my += p[1]; }
+      mx /= pts.length; my /= pts.length;
+      let sxx = 0, syy = 0, sxy = 0;
+      for (const p of pts) { const dx = p[0] - mx, dy = p[1] - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+      const tr = sxx + syy, det = sxx * syy - sxy * sxy;
+      const l1 = tr / 2 + Math.sqrt(Math.max(0, tr * tr / 4 - det)), l2 = tr - l1;
+      if (l1 <= 0 || l2 / l1 > 0.12) continue;
+      let angle = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      labels.push({ x: mx, y0: my, angle, y: m[2] });
+      break;
+    }
+  }
+  return labels;
+}
 
 function refreshContours() {
   if (contourLayer) { map.removeLayer(contourLayer); contourLayer = null; }
@@ -966,9 +1020,7 @@ function showCenterInfo(x, z, info) {
   const blk = $('#c-block');
   blk.textContent = '';
   if (info) {
-    const k = document.createElement('span'); k.className = 'k'; k.textContent = 'ブロック';
-    const v = document.createElement('span'); v.className = 'v'; v.textContent = info.ja || BLOCK_JA(info.name);
-    blk.append(k, v);
+    blk.textContent = info.ja || BLOCK_JA(info.name);
   }
 }
 
@@ -997,10 +1049,23 @@ function setupCoords() {
   map.on('move', update);
   map.on('moveend', prefetchInfo);
   update();
-  $('#copy-center').addEventListener('click', () => {
+  $('#copy-center').addEventListener('click', (e) => {
+    e.stopPropagation();
     const { x, z } = block(map.getCenter());
     copyText(coordText(x, z, centerInfo?.y));
   });
+  // Small by default; tap for the Nether line, or close it and bring it back with the small button.
+  const box = $('#coords'), open = $('#coords-open');
+  const show = (visible) => {
+    box.hidden = !visible; open.hidden = visible;
+    try { localStorage.setItem('mcmap.coords', visible ? 'open' : 'closed'); } catch { /* private mode */ }
+  };
+  box.addEventListener('click', () => box.classList.toggle('detail'));
+  $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
+  open.addEventListener('click', () => show(true));
+  let saved = null;
+  try { saved = localStorage.getItem('mcmap.coords'); } catch { /* private mode */ }
+  if (saved === 'closed') show(false);
 }
 
 // ---------- dimensions ----------
@@ -1305,9 +1370,9 @@ function renderPlayers() {
     if (showDeaths && d && d.dim === state.dim) {
       const m = L.marker(ll(d.x + 0.5, d.z + 0.5), {
         pmIgnore: true,
-        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon" style="transform:translate(-50%,-33px)"><svg class="pin" viewBox="0 0 30 38"><use href="#i-death-pin"/></svg><span class="nm">${esc(p.name)}</span></div>` }),
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon" style="transform:translate(-50%,-27px)"><svg class="cross" viewBox="0 0 22 30"><use href="#i-death-cross"/></svg><span class="nm">${esc(p.name)}</span></div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4 class="death-h"><svg class="ic"><use href="#i-grave"/></svg> ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
+      m.bindPopup(() => `<div class="pop"><h4 class="death-h"><svg class="cross" viewBox="0 0 22 30"><use href="#i-death-cross"/></svg> ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
       playerGroup.addLayer(m);
     }
   }
@@ -1460,7 +1525,7 @@ async function loadConfig() {
 async function main() {
   const cfg = await loadConfig();
   state.config = {
-    title: cfg.title || 'Compass',
+    title: cfg.title || 'Blockmap',
     tileUrl: cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png',
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
@@ -1475,7 +1540,7 @@ async function main() {
 
   map = L.map('map', {
     crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: 4,
-    zoomSnap: 0.5, zoomControl: false, attributionControl: true, tap: false,
+    zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false,
   });
   L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
   map.pm.setLang('ja');

@@ -17,7 +17,7 @@
   --blur: saturate(160%) blur(14px);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-page); color: var(--fg);
+html, body { margin: 0; position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--bg-page); color: var(--fg);
   font-family: "Inter", system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 14px;
   -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -27,7 +27,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 #map { position: absolute; inset: 0; background: var(--bg-page); }
 .leaflet-container { background: var(--bg-page); font: inherit; }
-.leaflet-tile { image-rendering: pixelated; }
+.leaflet-tile { image-rendering: crisp-edges; image-rendering: pixelated; }
 #map.mode-draw { cursor: crosshair; }
 #map.mode-freehand { touch-action: none; }
 
@@ -112,12 +112,12 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 @keyframes pulse { from { transform: scale(.7); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
 .leaflet-zoom-anim .pl-icon.on .dot::after { animation: none; opacity: 0; }
 .death-icon { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-.death-icon .pin { width: 26px; height: 33px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.55)); transition: transform .12s; transform-origin: 50% 100%; }
-.death-icon:hover .pin { transform: scale(1.12); }
-.death-icon .nm { margin-top: 2px; font-size: 11px; font-weight: 600; white-space: nowrap; padding: 1px 7px; border-radius: 999px;
-  background: rgba(40, 12, 14, .85); color: #ffd4d5; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.death-icon .cross { width: 20px; height: 27px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); transition: transform .12s; transform-origin: 50% 100%; }
+.death-icon:hover .cross { transform: scale(1.12); }
+.death-icon .nm { margin-top: 1px; font-size: 11px; font-weight: 600; white-space: nowrap; padding: 1px 7px; border-radius: 999px;
+  background: rgba(14, 16, 20, .82); color: #e9e6df; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .death-h { display: flex; align-items: center; gap: 6px; }
-.death-h .ic { width: 16px; height: 16px; color: var(--danger); }
+.death-h .cross { width: 13px; height: 18px; }
 
 #tools { position: absolute; z-index: 1000; left: 50%; transform: translateX(-50%); bottom: 14px;
   padding: 8px; border-radius: 18px; max-width: calc(100vw - 16px); }
@@ -139,19 +139,24 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 .mini.danger:hover { background: rgba(229, 72, 77, .18); }
 #mode-hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 6px; min-height: 1em; }
 
-#coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 10px 12px; border-radius: var(--radius);
-  min-width: 220px; font-variant-numeric: tabular-nums; }
-#coords .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-#coords .lbl { color: var(--sub); font-size: 11px; font-weight: 600; letter-spacing: .06em; }
-#coords .xyz { display: flex; gap: 12px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-#coords .xyz i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--sub); margin-right: 4px; }
-#coords .blk { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
-#coords .blk .k { color: var(--sub); font-size: 11px; font-weight: 600; flex: none; }
-#coords .blk .v { font-weight: 600; }
+#coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 6px 6px 7px 12px; border-radius: var(--radius);
+  font-variant-numeric: tabular-nums; cursor: pointer; user-select: none; -webkit-user-select: none; }
+#coords[hidden] { display: none; }
+#coords .line { display: flex; align-items: center; gap: 2px; }
+#coords .xyz { display: flex; gap: 10px; font-size: 15px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
+#coords .xyz i { font-style: normal; font-size: 10px; font-weight: 700; color: var(--sub); margin-right: 3px; }
+#coords .blk { font-size: 12px; color: var(--sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 #coords .blk:empty { display: none; }
-#coords .sub { color: var(--sub); font-size: 12px; margin-top: 4px; }
-#coords .sub:empty { display: none; }
-#coords .mini { padding: 3px 9px; font-size: 12px; }
+#coords .sub { display: none; color: var(--sub); font-size: 12px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
+#coords.detail .sub:not(:empty) { display: block; }
+.icon-btn { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--sub); flex: none; }
+.icon-btn:hover { background: var(--hover); color: var(--fg); }
+.icon-btn .ic { width: 16px; height: 16px; }
+#coords-open { position: absolute; left: 12px; bottom: 14px; z-index: 900; display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 50%; border: 1px solid var(--line); background: var(--glass); color: var(--fg); box-shadow: var(--shadow); }
+#coords-open[hidden] { display: none; }
+
+.mini { padding: 3px 9px; font-size: 12px; }
 #coords .mini .ic { width: 14px; height: 14px; margin-right: 4px; }
 
 .mini { display: inline-flex; align-items: center; white-space: nowrap; padding: 6px 12px; border-radius: 999px;
@@ -255,8 +260,10 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
   .leaflet-control-zoom { display: none; }
   #tools { bottom: 16px; padding: 6px; width: calc(100vw - 20px); }
   .modes button { width: 36px; height: 36px; }
-  #coords { top: 112px; left: 10px; bottom: auto; padding: 8px 10px; min-width: 0; }
-  #coords .xyz { font-size: 15px; gap: 10px; }
+  #coords { top: 112px; left: 10px; bottom: auto; padding: 5px 4px 6px 10px; }
+  #coords .xyz { font-size: 14px; gap: 8px; }
+  #coords .blk { max-width: 200px; }
+  #coords-open { top: 112px; left: 10px; bottom: auto; }
   #toast { top: 50%; }
   #past-banner { top: auto; bottom: 16px; }
   body.tools-open #past-banner { bottom: 150px; }
