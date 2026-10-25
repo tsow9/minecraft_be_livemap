@@ -407,8 +407,8 @@ async function copyText(text, message) {
 const coordText = (x, z, y) => `${x} ${y ?? '~'} ${z}`;
 
 function otherDimLine(x, z, dim = state.dim) {
-  if (dim === 'overworld') return `ネザーでは X ${Math.floor(x / 8)} / Z ${Math.floor(z / 8)}`;
-  if (dim === 'nether') return `地上では X ${x * 8} / Z ${z * 8}`;
+  if (dim === 'overworld') return `ネザー X ${Math.floor(x / 8)} / Z ${Math.floor(z / 8)}`;
+  if (dim === 'nether') return `地上 X ${x * 8} / Z ${z * 8}`;
   return '';
 }
 
