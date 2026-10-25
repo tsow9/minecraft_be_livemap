@@ -85,6 +85,8 @@ button { cursor: pointer; }
 #coords .lbl { color: var(--sub); }
 #coords .sub { color: var(--sub); font-size: 12px; }
 #coords .sub:empty { display: none; }
+#coords .blk { font-size: 13px; }
+#coords .blk:empty { display: none; }
 body.tools-open #coords { bottom: 140px; }
 
 .mini { white-space: nowrap; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--line); background: #2a2e35; font-size: 13px; }

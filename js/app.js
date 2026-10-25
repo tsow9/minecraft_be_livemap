@@ -278,6 +278,7 @@ async function refreshBase() {
   if (!state.demo) await loadManifest(snapshots()[state.snapshotIndex].id);
   if (token !== baseToken) return;
   updatePastBanner();
+  updateCenterInfo();
   const next = makeBaseLayer();
   const prev = state.baseLayer;
   next.addTo(map).bringToBack();
@@ -612,21 +613,82 @@ function setupFreehand() {
 }
 
 // ---------- coordinates readout ----------
+// ---------- what is under the crosshair ----------
+// Info tiles store, per block, the top block's ID and height (RGB = 12-bit ID << 9 | Y+64).
+const infoCache = new Map();
+let blockNames = [];
+let centerInfo = null;
+
+async function loadBlockNames() {
+  const data = await fetchJson(`blocks.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  blockNames = Array.isArray(data?.names) ? data.names : [];
+}
+
+function loadInfoTile(url) {
+  if (infoCache.has(url)) return infoCache.get(url);
+  const p = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      resolve(ctx.getImageData(0, 0, c.width, c.height));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+  infoCache.set(url, p);
+  if (infoCache.size > 40) infoCache.delete(infoCache.keys().next().value);
+  return p;
+}
+
+async function blockAt(x, z) {
+  if (state.demo) return null;
+  const snap = snapshots()[state.snapshotIndex];
+  const m = manifests.get(snap?.id);
+  if (!m) return null;
+  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
+  const key = `info/${state.dim}/${tx}/${tz}`;
+  const hit = m[key];
+  if (!hit) return null;
+  const data = await loadInfoTile(`tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}`);
+  if (!data) return null;
+  const i = ((z - tz * 256) * data.width + (x - tx * 256)) * 4;
+  const v = (data.data[i] << 16) | (data.data[i + 1] << 8) | data.data[i + 2];
+  const id = v >> 9;
+  if (!id) return null;
+  return { name: blockNames[id] || '', y: (v & 511) - 64 };
+}
+
+let infoTimer = null;
+function updateCenterInfo() {
+  clearTimeout(infoTimer);
+  infoTimer = setTimeout(async () => {
+    const { x, z } = block(map.getCenter());
+    const info = await blockAt(x, z);
+    const now = block(map.getCenter());
+    if (now.x !== x || now.z !== z) return;
+    centerInfo = info;
+    $('#c-center').textContent = info ? `X ${x} / Y ${info.y} / Z ${z}` : `X ${x} / Z ${z}`;
+    $('#c-block').textContent = info ? `🧱 ${BLOCK_JA(info.name)}` : '';
+  }, 120);
+}
+
 function setupCoords() {
   const update = () => {
     const { x, z } = block(map.getCenter());
+    centerInfo = null;
     $('#c-center').textContent = `X ${x} / Z ${z}`;
     $('#c-center-other').textContent = otherDimLine(x, z);
+    updateCenterInfo();
   };
   map.on('move', update);
   update();
-  $('#copy-center').addEventListener('click', () => { const { x, z } = block(map.getCenter()); copyText(coordText(x, z)); });
-  map.on('mousemove', (e) => {
-    if (e.originalEvent.pointerType && e.originalEvent.pointerType !== 'mouse') return;
-    const { x, z } = block(e.latlng);
-    $('#c-mouse').textContent = `カーソル X ${x} / Z ${z}`;
+  $('#copy-center').addEventListener('click', () => {
+    const { x, z } = block(map.getCenter());
+    copyText(coordText(x, z, centerInfo?.y));
   });
-  map.on('mouseout', () => { $('#c-mouse').textContent = ''; });
 }
 
 // ---------- dimensions ----------
@@ -996,6 +1058,7 @@ async function refreshConfig() {
   const keep = state.config.snapshots.findIndex((x) => x.id === viewing);
   state.snapshotIndex = wasLatest || keep < 0 ? state.config.snapshots.length - 1 : keep;
   renderTimeline();
+  await loadBlockNames();
   refreshBase();
   state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   refreshExplore();
@@ -1084,6 +1147,7 @@ async function main() {
   map.pm.setGlobalOptions({ snappable: false, continueDrawing: false });
   annGroup.addTo(map);
 
+  await loadBlockNames();
   refreshBase();
   state.annotations = store.load();
   renderAll();
