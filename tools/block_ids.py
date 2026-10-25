@@ -7,22 +7,28 @@ DETAIL_STATES = ('color', 'wood_type', 'old_log_type', 'new_log_type', 'old_leaf
 
 _names = ['']
 _ids = {'': 0}
+_ja = ['']
 
 
 def load(site):
-    global _names, _ids
+    global _names, _ids, _ja
     try:
         with open(os.path.join(site, 'blocks.json'), encoding='utf-8') as f:
-            names = json.load(f)['names']
+            data = json.load(f)
+        names = data['names']
+        ja = data.get('ja') or []
     except (OSError, ValueError, KeyError):
-        names = ['']
+        names, ja = [''], []
     _names = list(names)
     _ids = {n: i for i, n in enumerate(_names)}
+    _ja = list(ja) + [None] * (len(_names) - len(ja))
 
 
-def save(site):
+def save(site, japanese=None):
+    """japanese(key) -> official Japanese name or None; when unavailable, earlier names are kept."""
+    ja = [(japanese(n) if japanese and n else None) or (_ja[i] if i < len(_ja) else None) for i, n in enumerate(_names)]
     with open(os.path.join(site, 'blocks.json'), 'w', encoding='utf-8') as f:
-        json.dump({'names': _names}, f, ensure_ascii=False, separators=(',', ':'))
+        json.dump({'names': _names, 'ja': ja}, f, ensure_ascii=False, separators=(',', ':'))
 
 
 def key_of(name, states):

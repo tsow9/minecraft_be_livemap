@@ -617,11 +617,13 @@ function setupFreehand() {
 // Info tiles store, per block, the top block's ID and height (RGB = 12-bit ID << 9 | Y+64).
 const infoCache = new Map();
 let blockNames = [];
+let blockNamesJa = [];
 let centerInfo = null;
 
 async function loadBlockNames() {
   const data = await fetchJson(`blocks.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   blockNames = Array.isArray(data?.names) ? data.names : [];
+  blockNamesJa = Array.isArray(data?.ja) ? data.ja : [];
 }
 
 function loadInfoTile(url) {
@@ -658,7 +660,7 @@ async function blockAt(x, z) {
   const v = (data.data[i] << 16) | (data.data[i + 1] << 8) | data.data[i + 2];
   const id = v >> 9;
   if (!id) return null;
-  return { name: blockNames[id] || '', y: (v & 511) - 64 };
+  return { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y: (v & 511) - 64 };
 }
 
 let infoTimer = null;
@@ -671,7 +673,7 @@ function updateCenterInfo() {
     if (now.x !== x || now.z !== z) return;
     centerInfo = info;
     $('#c-center').textContent = info ? `X ${x} / Y ${info.y} / Z ${z}` : `X ${x} / Z ${z}`;
-    $('#c-block').textContent = info ? `🧱 ${BLOCK_JA(info.name)}` : '';
+    $('#c-block').textContent = info ? `🧱 ${info.ja || BLOCK_JA(info.name)}` : '';
   }, 120);
 }
 

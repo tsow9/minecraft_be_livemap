@@ -4,8 +4,10 @@ Usage: python build_site.py DATA_DIR OUT_DIR
 """
 import json
 import os
+import re
 import shutil
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE_ITEMS = ['index.html', 'css', 'js', 'vendor']
@@ -39,6 +41,13 @@ def main():
     if repo and not cfg.get('liveUrl'):
         cfg['liveUrl'] = f'https://raw.githubusercontent.com/{repo}/live-data/live.json'
         cfg['liveApiUrl'] = f'https://api.github.com/repos/{repo}/contents/live.json?ref=live-data'
+    version = (os.environ.get('GITHUB_SHA') or str(int(time.time())))[:12]
+    page = os.path.join(out, 'index.html')
+    with open(page, encoding='utf-8') as f:
+        html = f.read()
+    html = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)"', rf'\1?v={version}"', html)
+    with open(page, 'w', encoding='utf-8') as f:
+        f.write(html)
     with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     print(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)')

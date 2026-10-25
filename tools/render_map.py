@@ -285,6 +285,17 @@ def world_name(d):
         return os.path.basename(d)
 
 
+def _official_japanese():
+    """Lookup for the game's own Japanese block names, or None if the file can't be fetched."""
+    import official_names
+    try:
+        lang = official_names.download()
+    except OSError as e:
+        print(f'公式の日本語名を取得できませんでした(前回の名前を使います): {e}')
+        return None
+    return lambda key: official_names.japanese(key, lang)
+
+
 def _load_json(path):
     try:
         with open(path, encoding='utf-8') as f:
@@ -383,7 +394,7 @@ def main():
             print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
         if total == 0:
             sys.exit('地図にできるデータがありませんでした。')
-        block_ids.save(args.site)
+        block_ids.save(args.site, _official_japanese())
         update_config(args.site, snap_id, staging)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
