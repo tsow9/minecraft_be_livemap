@@ -22,6 +22,8 @@ const DEMO_SNAPSHOTS = [
 const ll = (x, z) => L.latLng(-z, x);
 const block = (latlng) => ({ x: Math.floor(latlng.lng), z: Math.floor(-latlng.lat) });
 const round1 = (v) => Math.round(v * 10) / 10;
+// Hand drawings keep finer positions so zooming in never makes them wobble.
+const round2 = (v) => Math.round(v * 100) / 100;
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -296,7 +298,7 @@ async function refreshBase() {
 // ---------- annotations: rendering ----------
 function styleOf(a) {
   const filled = a.type === 'polygon' || a.type === 'rect' || a.type === 'circle';
-  return { color: a.color, weight: a.weight, opacity: 0.95, fill: filled, fillColor: a.color, fillOpacity: 0.15, lineCap: 'round', lineJoin: 'round' };
+  return { color: a.color, weight: a.weight, opacity: 0.95, smoothFactor: a.type === 'draw' ? 0.3 : 1, fill: filled, fillColor: a.color, fillOpacity: 0.15, lineCap: 'round', lineJoin: 'round' };
 }
 
 function makeLayer(a) {
@@ -353,7 +355,8 @@ function renderAll() {
 function updateGeometry(id, layer) {
   const a = state.annotations.find((v) => v.id === id);
   if (!a) return;
-  const toPt = (p) => [round1(p.lng), round1(-p.lat)];
+  const r = a.type === 'draw' ? round2 : round1;
+  const toPt = (p) => [r(p.lng), r(-p.lat)];
   if (a.type === 'waypoint' || a.type === 'text') {
     const b = block(layer.getLatLng()); a.x = b.x; a.z = b.z;
   } else if (a.type === 'circle') {
@@ -593,16 +596,17 @@ function setupFreehand() {
   const finish = (keep) => {
     if (temp) { map.removeLayer(temp); temp = null; }
     if (keep && pts && pts.length >= 2) {
+      // Only drop points that change nothing visible, so the line stays exactly where it was drawn.
       const z = map.getZoom();
-      const simplified = L.LineUtil.simplify(pts.map((p) => map.project(p, z)), 1.2).map((p) => map.unproject(p, z));
+      const simplified = L.LineUtil.simplify(pts.map((p) => map.project(p, z)), 0.35).map((p) => map.unproject(p, z));
       if (simplified.length >= 2) {
         addAnn({ id: uid(), type: 'draw', dim: state.dim, color: state.color, weight: state.width, name: '', note: '',
-          pts: simplified.map((p) => [round1(p.lng), round1(-p.lat)]) });
+          pts: simplified.map((p) => [round2(p.lng), round2(-p.lat)]) });
       }
     }
     pts = null;
   };
-  let eraser = null, erased = false, last = null;
+  let eraser = null, erased = false, last = null, smooth = null;
   const stopErase = () => {
     if (eraser) { map.removeLayer(eraser); eraser = null; }
     if (erased) store.save();
@@ -620,8 +624,10 @@ function setupFreehand() {
       erased = eraseAlong(last, last) || erased;
       return;
     }
-    pts = [map.mouseEventToLatLng(e)];
-    temp = L.polyline(pts, { color: state.color, weight: state.width, pmIgnore: true, interactive: false }).addTo(map);
+    smooth = map.mouseEventToContainerPoint(e);
+    pts = [map.containerPointToLatLng(smooth)];
+    temp = L.polyline(pts, { color: state.color, weight: state.width, opacity: 0.95, lineCap: 'round', lineJoin: 'round',
+      smoothFactor: 0.3, pmIgnore: true, interactive: false }).addTo(map);
   });
   el.addEventListener('pointermove', (e) => {
     if (last && state.mode === 'erase' && pointers.size === 1) {
@@ -632,7 +638,13 @@ function setupFreehand() {
       return;
     }
     if (!pts || state.mode !== 'freehand' || pointers.size > 1) return;
-    pts.push(map.mouseEventToLatLng(e));
+    // A light steadying of the pen (like drawing apps) takes out the small shakes of a finger or mouse.
+    const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    for (const ev of events.length ? events : [e]) {
+      const raw = map.mouseEventToContainerPoint(ev);
+      smooth = smooth.add(raw.subtract(smooth).multiplyBy(0.45));
+      if (smooth.distanceTo(map.latLngToContainerPoint(pts[pts.length - 1])) >= 1) pts.push(map.containerPointToLatLng(smooth));
+    }
     temp.setLatLngs(pts);
   });
   const up = (e) => {
@@ -677,10 +689,10 @@ function eraseAlong(p0, p1) {
     state.annotations = state.annotations.filter((v) => v.id !== a.id);
     removeAnnLayer(a.id);
     for (const run of runs) {
-      const simple = L.LineUtil.simplify(run, 1.2);
+      const simple = L.LineUtil.simplify(run, 0.35);
       if (simple.length < 2) continue;
       const piece = sanitize({ ...a, id: uid(), updatedAt: Date.now(),
-        pts: simple.map((p) => { const q = map.containerPointToLatLng(p); return [round1(q.lng), round1(-q.lat)]; }) });
+        pts: simple.map((p) => { const q = map.containerPointToLatLng(p); return [round2(q.lng), round2(-q.lat)]; }) });
       if (piece) { state.annotations.push(piece); renderAnn(piece); }
     }
   }
@@ -1391,7 +1403,7 @@ async function loadConfig() {
 async function main() {
   const cfg = await loadConfig();
   state.config = {
-    title: cfg.title || 'マイクラ地図',
+    title: cfg.title || 'Realm Atlas',
     tileUrl: cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png',
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
