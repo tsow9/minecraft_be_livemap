@@ -72,9 +72,10 @@ function hashId (value) {
   return crypto.createHmac('sha256', SECRET).update(String(value)).digest('hex').slice(0, 16)
 }
 
+// Realms reports lastLogin in epoch seconds; accept milliseconds or ISO strings too.
 function toMillis (v) {
   if (v == null) return null
-  const n = typeof v === 'number' ? v : Date.parse(v)
+  const n = typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(v)
   return Number.isFinite(n) ? n : null
 }
 

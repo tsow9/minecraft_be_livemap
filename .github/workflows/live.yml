@@ -1,6 +1,7 @@
 name: 参加中の人と現在地
 
-# Light job every 10 minutes: who is online, and (only while someone plays) where players are.
+# Light job every few minutes: who is online, and (only while someone plays) where players are.
+# GitHub's own timer is unreliable, so an outside timer may also start this through workflow_dispatch.
 # The site reads live.json straight from the live-data branch, so no site rebuild is needed.
 on:
   schedule:
@@ -9,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: live-players
@@ -54,6 +56,7 @@ jobs:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: 現在地を更新
+        id: update
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
         run: |
@@ -72,5 +75,10 @@ jobs:
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -q -m "参加中の人と現在地 $(date -u '+%F %H:%M')"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: 1時間おきの地図更新を始める
+        if: steps.update.outputs.run_map == 'true'
+        run: gh workflow run map.yml --ref main -f action=地図を更新
         env:
           GH_TOKEN: ${{ github.token }}

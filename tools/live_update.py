@@ -15,6 +15,8 @@ import zipfile
 
 import players
 
+MAP_EVERY_MS = 55 * 60 * 1000
+
 
 def load(path, default):
     try:
@@ -46,6 +48,12 @@ def main():
             shutil.rmtree(tmp, ignore_errors=True)
     now = int(time.time() * 1000)
     state = players.update_live(state, members, records, now)
+    # The frequent check also starts the hourly map update, so only one timer is needed.
+    if now - (state.get('mapRequestedAt') or 0) >= MAP_EVERY_MS:
+        state['mapRequestedAt'] = now
+        if os.environ.get('GITHUB_OUTPUT'):
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write('run_map=true\n')
     with open(state_path, 'w', encoding='utf-8') as f:
         json.dump(state, f, ensure_ascii=False, separators=(',', ':'))
     online = sum(1 for m in members if m.get('online'))

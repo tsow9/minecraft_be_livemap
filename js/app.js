@@ -256,7 +256,7 @@ const HistoryTileLayer = L.TileLayer.extend({
     if (!m) return L.TileLayer.prototype.getTileUrl.call(this, coords);
     const key = `${this.options.dim}/${this._getZoomForUrl()}/${coords.x}/${coords.y}`;
     const hit = m[key];
-    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png` : EMPTY_TILE;
+    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : EMPTY_TILE;
   },
 });
 
@@ -655,6 +655,38 @@ function updatePastBanner() {
 }
 
 let setSnapshotIndex = () => {};
+const isDateId = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
+
+function labelTimeline() {
+  const s = snapshots()[state.snapshotIndex];
+  $('#time-label').textContent = s ? (s.label || s.id) : 'なし';
+  if (s && isDateId(s.id)) $('#time-date').value = s.id;
+  $('#time-chips').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
+}
+
+function renderTimeline() {
+  const snaps = snapshots();
+  const range = $('#time-range');
+  range.max = Math.max(0, snaps.length - 1);
+  range.value = state.snapshotIndex;
+  const dated = snaps.filter((s) => isDateId(s.id));
+  if (dated.length) { $('#time-date').min = dated[0].id; $('#time-date').max = dated[dated.length - 1].id; }
+  const chips = $('#time-chips');
+  chips.innerHTML = '';
+  let month = '';
+  for (let i = snaps.length - 1; i >= 0; i--) {
+    const s = snaps[i];
+    const m = isDateId(s.id) ? `${Number(s.id.slice(0, 4))}年${Number(s.id.slice(5, 7))}月` : '';
+    if (m && m !== month) { month = m; chips.insertAdjacentHTML('beforeend', `<div class="month">${m}</div>`); }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = i === snaps.length - 1 ? `${s.label || s.id}(最新)` : (s.label || s.id);
+    b.dataset.index = i;
+    b.addEventListener('click', () => setSnapshotIndex(i));
+    chips.append(b);
+  }
+  labelTimeline();
+}
 
 // ---------- panels ----------
 function setupPanels() {
@@ -695,40 +727,15 @@ function setupPanels() {
 
   // past maps
   const range = $('#time-range');
-  const snaps = snapshots();
-  range.max = Math.max(0, snaps.length - 1);
-  range.value = state.snapshotIndex;
   const dateInput = $('#time-date');
-  const isDate = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
-  const dated = snaps.filter((s) => isDate(s.id));
-  if (dated.length) { dateInput.min = dated[0].id; dateInput.max = dated[dated.length - 1].id; }
-  const chips = $('#time-chips');
-  let month = '';
-  for (let i = snaps.length - 1; i >= 0; i--) {
-    const s = snaps[i];
-    const m = isDate(s.id) ? `${Number(s.id.slice(0, 4))}年${Number(s.id.slice(5, 7))}月` : '';
-    if (m && m !== month) { month = m; chips.insertAdjacentHTML('beforeend', `<div class="month">${m}</div>`); }
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = i === snaps.length - 1 ? `${s.label || s.id}(最新)` : (s.label || s.id);
-    b.dataset.index = i;
-    b.addEventListener('click', () => setSnap(i));
-    chips.append(b);
-  }
-  const label = () => {
-    const s = snaps[state.snapshotIndex];
-    $('#time-label').textContent = s ? (s.label || s.id) : 'なし';
-    if (s && isDate(s.id)) dateInput.value = s.id;
-    chips.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
-  };
-  label();
-  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; label(); refreshBase(); };
+  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; labelTimeline(); refreshBase(); };
   setSnapshotIndex = setSnap;
+  renderTimeline();
   dateInput.addEventListener('change', () => {
+    const snaps = snapshots();
     const want = dateInput.value;
     if (!want || !snaps.length) return;
-    let i = snaps.map((s) => s.id).filter((id) => id <= want).length - 1;
-    if (i < 0) i = 0;
+    const i = Math.max(0, snaps.map((s) => s.id).filter((id) => id <= want).length - 1);
     setSnap(i);
     if (snaps[i].id !== want) toast(`その日の地図はないので、${snaps[i].label || snaps[i].id}の地図を表示しています`);
   });
@@ -736,12 +743,13 @@ function setupPanels() {
   let timer = null;
   const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = '▶ 再生'; };
   $('#time-play').addEventListener('click', () => {
+    const n = snapshots().length;
     if (timer) { stop(); return; }
-    if (snaps.length < 2) { toast('保存した地図が2つ以上になると再生できます'); return; }
-    if (state.snapshotIndex >= snaps.length - 1) setSnap(0);
+    if (n < 2) { toast('保存した地図が2つ以上になると再生できます'); return; }
+    if (state.snapshotIndex >= n - 1) setSnap(0);
     $('#time-play').textContent = '■ 停止';
     timer = setInterval(() => {
-      if (state.snapshotIndex >= snaps.length - 1) { stop(); return; }
+      if (state.snapshotIndex >= snapshots().length - 1) { stop(); return; }
       setSnap(state.snapshotIndex + 1);
     }, 1500);
   });
@@ -961,6 +969,37 @@ function refreshExplore() {
 
 let lastPlayersJson = '';
 
+// The GitHub API answers "unchanged" (304) for free, so polling it stays fresh without the file server's 5-minute cache.
+async function fetchLive() {
+  if (state.config.liveApiUrl) {
+    try {
+      const res = await fetch(state.config.liveApiUrl, { cache: 'no-cache', headers: { Accept: 'application/vnd.github.raw' } });
+      if (res.ok) return await res.json();
+    } catch { /* fall back to the file server */ }
+  }
+  return fetchJson(state.config.liveUrl);
+}
+
+async function refreshConfig() {
+  const cfg = await fetchJson('config.json');
+  if (!cfg || !Array.isArray(cfg.snapshots) || cfg.updatedAt === state.config.updatedAt) return;
+  const before = snapshots();
+  const wasLatest = state.snapshotIndex >= before.length - 1;
+  const viewing = before[state.snapshotIndex]?.id;
+  state.config.snapshots = cfg.snapshots.filter((x) => x && x.id);
+  state.config.updatedAt = cfg.updatedAt;
+  if (!state.config.snapshots.length) return;
+  state.demo = false;
+  const latest = state.config.snapshots[state.config.snapshots.length - 1].id;
+  manifests.delete(latest);
+  const keep = state.config.snapshots.findIndex((x) => x.id === viewing);
+  state.snapshotIndex = wasLatest || keep < 0 ? state.config.snapshots.length - 1 : keep;
+  renderTimeline();
+  refreshBase();
+  state.explore = await fetchJson('explore.json');
+  refreshExplore();
+}
+
 async function refreshLive() {
   const badge = $('#online-badge');
   const list = $('#live-list');
@@ -968,7 +1007,7 @@ async function refreshLive() {
     $('#live-title').textContent = '参加中の人(まだ設定されていません)';
     return;
   }
-  const data = await fetchJson(`${state.config.liveUrl}?t=${Math.floor(Date.now() / 60000)}`);
+  const data = await fetchLive();
   if (!data) { list.innerHTML = '<li class="sub">まだ情報がありません</li>'; badge.hidden = true; return; }
   const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
     .sort((a, b) => (b.online - a.online) || ((b.lastLogin || 0) - (a.lastLogin || 0)));
@@ -1007,6 +1046,7 @@ async function setupPlayers() {
   });
   await refreshLive();
   setInterval(refreshLive, 60000);
+  setInterval(refreshConfig, 180000);
 }
 
 // ---------- boot ----------
@@ -1028,6 +1068,7 @@ async function main() {
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
     liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
+    liveApiUrl: typeof cfg.liveApiUrl === 'string' && /^https:\/\/api\.github\.com\//.test(cfg.liveApiUrl) ? cfg.liveApiUrl : null,
   };
   document.title = state.config.title;
   state.demo = state.config.snapshots.length === 0;
@@ -1052,7 +1093,7 @@ async function main() {
   await setupPlayers();
   document.querySelectorAll('#dims button').forEach((b) => b.addEventListener('click', () => setDim(b.dataset.dim)));
   setMode('none');
-  window.mcmap = { state, map };
+  window.mcmap = { state, map, refreshConfig, refreshLive };
 }
 
 main();

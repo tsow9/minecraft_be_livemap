@@ -38,6 +38,7 @@ def main():
     repo = os.environ.get('GITHUB_REPOSITORY')
     if repo and not cfg.get('liveUrl'):
         cfg['liveUrl'] = f'https://raw.githubusercontent.com/{repo}/live-data/live.json'
+        cfg['liveApiUrl'] = f'https://api.github.com/repos/{repo}/contents/live.json?ref=live-data'
     with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     print(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)')
