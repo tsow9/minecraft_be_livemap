@@ -65,6 +65,19 @@ const BLOCK_JA = (() => {
     polished_blackstone_brick: '磨かれたブラックストーンレンガ', prismarine_brick: 'プリズマリンレンガ', dark_prismarine: 'ダークプリズマリン', quartz: 'クォーツ',
     smooth_quartz: '滑らかなクォーツ', smooth_sandstone: '滑らかな砂岩', cut_sandstone: '研がれた砂岩', purpur: 'プルプァ', tuff_brick: '凝灰岩レンガ',
     polished_tuff: '磨かれた凝灰岩', resin_brick: '樹脂レンガ', normal_stone: '石',
+    chiseled_stone_bricks: '模様入りの石レンガ', budding_amethyst: '芽生えたアメジスト', small_amethyst_bud: '小さなアメジストの芽',
+    medium_amethyst_bud: '中くらいのアメジストの芽', large_amethyst_bud: '大きなアメジストの芽', amethyst_cluster: 'アメジストの塊',
+    sculk_vein: 'スカルクヴェイン', sculk_sensor: 'スカルクセンサー', calibrated_sculk_sensor: '調律されたスカルクセンサー', sculk_catalyst: 'スカルクカタリスト',
+    sculk_shrieker: 'スカルクシュリーカー', infested_stone: '虫食い石', infested_deepslate: '虫食い深層岩', infested_cobblestone: '虫食い丸石',
+    red_mushroom: '赤いキノコ', brown_mushroom: '茶色いキノコ', crimson_fungus: '真紅のキノコ', warped_fungus: '歪んだキノコ', shelf_mushroom: 'サルノコシカケ',
+    tuff_bricks: '凝灰岩レンガ', chiseled_tuff: '模様入りの凝灰岩', chiseled_tuff_bricks: '模様入りの凝灰岩レンガ', candle: 'ろうそく',
+    azalea_leaves: 'ツツジの葉', azalea_leaves_flowered: '開花したツツジの葉', muddy_mangrove_roots: '泥だらけのマングローブの根',
+    stone_button: '石のボタン', stone_pressure_plate: '石の感圧板', orange_tulip: '橙色のチューリップ', white_tulip: '白色のチューリップ',
+    red_tulip: '赤色のチューリップ', pink_tulip: '桃色のチューリップ', red_shrub: '赤い低木', red_poplar_leaves: '赤いポプラの葉',
+    orange_poplar_leaves: '橙色のポプラの葉', yellow_poplar_leaves: '黄色のポプラの葉', polished_blackstone_bricks: '磨かれたブラックストーンレンガ',
+    prismarine_bricks: 'プリズマリンレンガ', bamboo_block: '竹ブロック', golden_dandelion: '金色のタンポポ', moving_block: '動いているブロック',
+    redstone_ore: 'レッドストーン鉱石', lit_redstone_ore: 'レッドストーン鉱石', lit_deepslate_redstone_ore: '深層レッドストーン鉱石',
+    chiseled_sandstone: '模様入りの砂岩', chiseled_red_sandstone: '模様入りの赤い砂岩', nether_brick_fence: 'ネザーレンガのフェンス', polished_sulfur: '磨かれた硫黄',
     wool: '羊毛', concrete: 'コンクリート', concrete_powder: 'コンクリートパウダー', stained_glass: '色付きガラス', stained_glass_pane: '色付き板ガラス',
     terracotta: 'テラコッタ', hardened_clay: 'テラコッタ', stained_hardened_clay: '色付きテラコッタ', carpet: 'カーペット', shulker_box: 'シュルカーボックス',
   };
@@ -102,9 +115,18 @@ const BLOCK_JA = (() => {
         if (rest === 'banner') return ja + '旗';
       }
     }
-    m = id.match(/^(.+)_(stairs|slab|double_slab|wall)$/);
+    m = id.match(/^(waxed_)?(exposed_|weathered_|oxidized_)?(cut_copper|chiseled_copper|copper_bulb|copper_grate|copper_door|copper_trapdoor|copper_lantern|copper_chain|copper_bars|copper_block|copper)(_stairs|_slab|_double_slab)?$/);
+    if (m) {
+      const age = { exposed_: '少し錆びた', weathered_: '錆びた', oxidized_: '酸化した' }[m[2]] || '';
+      const kind = { cut_copper: '切り込み入りの銅', chiseled_copper: '模様入りの銅', copper_bulb: '銅の電球', copper_grate: '銅の格子',
+        copper_door: '銅のドア', copper_trapdoor: '銅のトラップドア', copper_lantern: '銅のランタン', copper_chain: '銅の鎖', copper_bars: '銅の格子窓',
+        copper_block: '銅ブロック', copper: '銅ブロック' }[m[3]];
+      return (m[1] ? '錆止めされた' : '') + age + kind + (m[4] ? shapes[m[4].slice(1)] : '');
+    }
+    m = id.match(/^(.+?)_(double_slab|stairs|slab|wall)$/);
     if (m) return lookup(m[1]) + shapes[m[2]];
-    if (/copper/.test(id)) return '銅系ブロック(' + pretty(id) + ')';
+    m = id.match(/^(.+)_shelf$/);
+    if (m && woods[m[1]]) return woods[m[1]] + 'の棚';
     return pretty(id);
   }
 
