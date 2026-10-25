@@ -55,7 +55,7 @@ const BLOCK_JA = (() => {
     cornflower: 'ヤグルマギク', lily_of_the_valley: 'スズラン', oxeye_daisy: 'フランスギク', sunflower: 'ヒマワリ', lilac: 'ライラック', rose_bush: 'バラの低木',
     peony: 'ボタン', pink_petals: 'ピンクの花びら', wildflowers: '野花', wither_rose: 'ウィザーローズ', torchflower: 'トーチフラワー', pitcher_plant: 'ウツボカズラ',
     open_eyeblossom: '開いたヒトミバナ', closed_eyeblossom: '閉じたヒトミバナ', cactus_flower: 'サボテンの花',
-    wheat: '小麦(作物)', carrots: 'ニンジン', potatoes: 'ジャガイモ', beetroot: 'ビートルート', nether_wart: 'ネザーウォート', sweet_berry_bush: 'スイートベリーの低木',
+    wheat: '小麦', carrots: 'ニンジン', potatoes: 'ジャガイモ', beetroot: 'ビートルート', nether_wart: 'ネザーウォート', sweet_berry_bush: 'スイートベリーの低木',
     cocoa: 'カカオ', melon_stem: 'スイカの茎', pumpkin_stem: 'カボチャの茎', torchflower_crop: 'トーチフラワーの苗', pitcher_crop: 'ウツボカズラの苗',
     pale_moss_block: '青白い苔ブロック', pale_moss_carpet: '青白い苔のカーペット', pale_hanging_moss: '青白い垂れ苔', resin_clump: '樹脂の塊', resin_block: '樹脂ブロック',
     creaking_heart: 'きしむ心臓', dried_ghast: 'ひからびたガスト', straw_bed: 'わらのベッド', cinnabar: '辰砂',

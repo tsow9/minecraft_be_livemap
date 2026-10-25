@@ -64,7 +64,7 @@ ALIASES = {
 
 
 # Where the official block name alone is unclear on a map (planted wheat is just "作物").
-OVERRIDES = {'wheat': '小麦(作物)'}
+OVERRIDES = {'wheat': '小麦'}
 
 
 def parse_lang(text):
