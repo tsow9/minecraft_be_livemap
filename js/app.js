@@ -1726,7 +1726,7 @@ async function refreshLive() {
   list.innerHTML = '';
   for (const m of members) {
     const li = document.createElement('li');
-    const when = m.online ? 'プレイ中' : m.lastSeenOnline ? `${esc(agoText(m.lastSeenOnline))}まで遊んでいた` : '最終ログイン ' + esc(agoText(m.lastLogin));
+    const when = m.online ? 'プレイ中' : '最終ログイン ' + esc(agoText(Math.max(m.lastSeenOnline || 0, m.lastLogin || 0)));
     li.innerHTML = `<span class="dot" style="background:${m.online ? 'var(--accent)' : '#555'}"></span><span class="grow">${esc(m.name)}</span><span class="sub">${when}</span>`;
     list.append(li);
   }
@@ -1774,6 +1774,24 @@ function applyUpdate() {
   } catch { /* the view just starts over */ }
   // A new address skips the file server's cached copy of the page.
   location.replace(`${location.pathname}?v=${encodeURIComponent(newVersion)}`);
+}
+
+// Phone browsers: keep the page from being pinch-zoomed (only the map zooms), and keep the map
+// exactly as tall as the visible screen as the browser's toolbars slide in and out.
+function setupMobileView() {
+  for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1 && !e.target.closest?.('#map')) e.preventDefault();
+  }, { passive: false });
+  const fit = () => {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
+    map.invalidateSize({ pan: false });
+  };
+  window.visualViewport?.addEventListener('resize', fit);
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', () => setTimeout(fit, 300));
+  fit();
 }
 
 function setupUpdates() {
@@ -1842,6 +1860,7 @@ async function main() {
   document.querySelectorAll('#dims button').forEach((b) => b.addEventListener('click', () => setDim(b.dataset.dim)));
   setMode('none');
   setupUpdates();
+  setupMobileView();
   window.mcmap = { state, map, refreshConfig, refreshLive };
 }
 
