@@ -420,16 +420,18 @@ function openAnnPopup(id, at) {
   if (a.type === 'waypoint') head.textContent = `${ICONS[a.icon][0]} ${a.name || ICONS[a.icon][1]}`;
   else if (a.type === 'text') head.textContent = a.text;
   else head.textContent = a.name || { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
-  el.append(head, coordBlock(c.x, c.z, a.y, a.dim));
+  const isPoint = a.type === 'waypoint' || a.type === 'text';
+  el.append(head);
+  if (isPoint) el.append(coordBlock(c.x, c.z, a.y, a.dim));
   if (a.type === 'circle') el.insertAdjacentHTML('beforeend', `<div class="sub">半径 ${Math.round(a.r)} ブロック</div>`);
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
-  acts.append(
-    button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'),
-    button('編集', () => { map.closePopup(); openEditor(a, false); }, 'pencil'),
-  );
+  if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
+  const del = button('削除', () => { deleteAnn(a.id); toast('削除しました'); }, 'trash');
+  del.classList.add('danger');
+  acts.append(button('編集', () => { map.closePopup(); openEditor(a, false); }, 'pencil'), del);
   el.append(acts);
-  const pos = (a.type === 'waypoint' || a.type === 'text') ? ll(a.x + 0.5, a.z + 0.5) : (at || ll(c.x, c.z));
+  const pos = isPoint ? ll(a.x + 0.5, a.z + 0.5) : (at || ll(c.x, c.z));
   L.popup({ offset: a.type === 'waypoint' ? [0, -8] : [0, 0] }).setLatLng(pos).setContent(el).openOn(map);
 }
 
@@ -518,7 +520,7 @@ const HINTS = {
   Circle: '中心をタップ → 円の端をタップ',
   edit: '図形の白い点をドラッグして形を直す',
   drag: '動かしたいものをドラッグ',
-  remove: '消したいものをタップ',
+  erase: 'なぞった所の手書きを消す・2本指で拡大縮小',
 };
 const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
@@ -530,21 +532,26 @@ function setMode(mode) {
   if (map.pm.globalDragModeEnabled()) map.pm.disableGlobalDragMode();
   if (map.pm.globalRemovalModeEnabled()) map.pm.disableGlobalRemovalMode();
   map.dragging.enable();
-  document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  const hand = mode === 'freehand' || mode === 'erase';
+  document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === (mode === 'erase' ? 'freehand' : mode)));
+  $('#pen-toggle').hidden = !hand;
+  document.querySelectorAll('#pen-toggle button').forEach((b) => b.classList.toggle('on', b.dataset.pen === mode));
   $('#mode-hint').textContent = HINTS[mode] || '';
   $('#map').classList.toggle('mode-draw', mode !== 'none');
-  $('#map').classList.toggle('mode-freehand', mode === 'freehand');
+  $('#map').classList.toggle('mode-freehand', hand);
+  $('#map').classList.toggle('mode-erase', mode === 'erase');
   map.closePopup();
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
   if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') map.pm.enableGlobalEditMode();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
-  else if (mode === 'freehand') map.dragging.disable();
+  else if (hand) map.dragging.disable();
 }
 
 function setupTools() {
   document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  document.querySelectorAll('#pen-toggle button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.pen)));
   fillSwatches($('#colors'), state.color, (c) => { state.color = c; if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   $('#width').addEventListener('input', (e) => { state.width = Number(e.target.value); if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   $('#btn-tools').addEventListener('click', () => {
@@ -595,15 +602,35 @@ function setupFreehand() {
     }
     pts = null;
   };
+  let eraser = null, erased = false, last = null;
+  const stopErase = () => {
+    if (eraser) { map.removeLayer(eraser); eraser = null; }
+    if (erased) store.save();
+    erased = false; last = null;
+  };
   el.addEventListener('pointerdown', (e) => {
-    if (state.mode !== 'freehand') return;
+    if (state.mode !== 'freehand' && state.mode !== 'erase') return;
     pointers.add(e.pointerId);
-    if (pointers.size > 1) { finish(false); return; }
+    if (pointers.size > 1) { finish(false); stopErase(); return; }
     if (e.target.closest('.leaflet-control, .leaflet-popup')) return;
+    if (state.mode === 'erase') {
+      last = map.mouseEventToContainerPoint(e);
+      eraser = L.circleMarker(map.containerPointToLatLng(last), { radius: ERASER_PX, color: '#fff', weight: 1.5, dashArray: '3,3',
+        fillColor: '#fff', fillOpacity: 0.15, pmIgnore: true, interactive: false }).addTo(map);
+      erased = eraseAlong(last, last) || erased;
+      return;
+    }
     pts = [map.mouseEventToLatLng(e)];
     temp = L.polyline(pts, { color: state.color, weight: state.width, pmIgnore: true, interactive: false }).addTo(map);
   });
   el.addEventListener('pointermove', (e) => {
+    if (last && state.mode === 'erase' && pointers.size === 1) {
+      const p = map.mouseEventToContainerPoint(e);
+      eraser.setLatLng(map.containerPointToLatLng(p));
+      erased = eraseAlong(last, p) || erased;
+      last = p;
+      return;
+    }
     if (!pts || state.mode !== 'freehand' || pointers.size > 1) return;
     pts.push(map.mouseEventToLatLng(e));
     temp.setLatLngs(pts);
@@ -612,9 +639,52 @@ function setupFreehand() {
     const wasSingle = pointers.size === 1;
     pointers.delete(e.pointerId);
     if (pts) finish(wasSingle && e.type === 'pointerup');
+    if (last) stopErase();
   };
   el.addEventListener('pointerup', up);
   el.addEventListener('pointercancel', up);
+}
+
+// Cuts away the parts of hand drawings that the eraser passed over (screen points p0 → p1).
+const ERASER_PX = 12;
+function eraseAlong(p0, p1) {
+  let changed = false;
+  for (const a of [...state.annotations]) {
+    if (a.type !== 'draw' || a.dim !== state.dim) continue;
+    const r = ERASER_PX + (a.weight || 4) / 2;
+    const pts = a.pts.map(([x, z]) => map.latLngToContainerPoint(ll(x, z)));
+    const box = L.bounds([p0, p1]);
+    if (!L.bounds(pts).intersects(L.bounds([box.min.subtract(L.point(r, r)), box.max.add(L.point(r, r))]))) continue;
+    // Fill in points every few pixels so even long straight parts can be cut in the middle.
+    const dense = [];
+    pts.forEach((p, i) => {
+      if (i) {
+        const s = pts[i - 1], n = Math.ceil(s.distanceTo(p) / 3);
+        for (let k = 1; k < n; k++) dense.push(s.add(p.subtract(s).multiplyBy(k / n)));
+      }
+      dense.push(p);
+    });
+    const keep = dense.map((p) => L.LineUtil.pointToSegmentDistance(p, p0, p1) > r);
+    if (keep.every(Boolean)) continue;
+    changed = true;
+    const runs = [];
+    let cur = [];
+    dense.forEach((p, i) => {
+      if (keep[i]) cur.push(p);
+      else { if (cur.length >= 2) runs.push(cur); cur = []; }
+    });
+    if (cur.length >= 2) runs.push(cur);
+    state.annotations = state.annotations.filter((v) => v.id !== a.id);
+    removeAnnLayer(a.id);
+    for (const run of runs) {
+      const simple = L.LineUtil.simplify(run, 1.2);
+      if (simple.length < 2) continue;
+      const piece = sanitize({ ...a, id: uid(), updatedAt: Date.now(),
+        pts: simple.map((p) => { const q = map.containerPointToLatLng(p); return [round1(q.lng), round1(-q.lat)]; }) });
+      if (piece) { state.annotations.push(piece); renderAnn(piece); }
+    }
+  }
+  return changed;
 }
 
 // ---------- coordinates readout ----------
@@ -1304,9 +1374,6 @@ async function setupPlayers() {
   playerGroup.addTo(map);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
-  $('#btn-explore').addEventListener('click', () => {
-    if ($('#btn-explore').classList.contains('on')) toast('色の付いた場所が、その人が開拓した場所(推定)です');
-  });
   await refreshLive();
   setInterval(refreshLive, 60000);
   setInterval(refreshConfig, 60000);

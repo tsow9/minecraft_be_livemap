@@ -32,6 +32,7 @@
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M5 18l5-11 9 5"/><rect x="3" y="16" width="4" height="4" rx=".8"/><rect x="8" y="5" width="4" height="4" rx=".8"/><rect x="17" y="10" width="4" height="4" rx=".8"/></symbol>
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11"/><path d="M5.6 14.4l8.3-8.3a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L13 19.1a3 3 0 0 1-2.1.9H9.4a3 3 0 0 1-2.1-.9l-1.7-1.7a2 2 0 0 1 0-3z"/><path d="M10 10l6 6"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
@@ -83,9 +84,12 @@
     <button data-mode="Circle" title="円"><svg class="ic"><use href="#i-circle"/></svg></button>
     <button data-mode="edit" title="形を直す"><svg class="ic"><use href="#i-edit"/></svg></button>
     <button data-mode="drag" title="動かす"><svg class="ic"><use href="#i-move"/></svg></button>
-    <button data-mode="remove" title="消す"><svg class="ic"><use href="#i-trash"/></svg></button>
   </div>
   <div class="row style">
+    <div id="pen-toggle" class="seg small" hidden>
+      <button data-pen="freehand"><svg class="ic"><use href="#i-freehand"/></svg>ペン</button>
+      <button data-pen="erase"><svg class="ic"><use href="#i-eraser"/></svg>消しゴム</button>
+    </div>
     <div id="colors"></div>
     <label class="width">太さ <input id="width" type="range" min="1" max="12" value="4"></label>
   </div>

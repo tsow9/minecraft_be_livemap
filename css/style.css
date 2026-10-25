@@ -112,6 +112,13 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 .swatch:hover { transform: scale(1.1); }
 .swatch.on { box-shadow: 0 0 0 2px var(--bg-solid), 0 0 0 4px #fff; }
 .width { color: var(--sub); display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.seg.small { height: 34px; }
+.seg.small button { display: inline-flex; align-items: center; gap: 5px; padding: 0 12px; font-size: 13px; }
+.seg.small .ic { width: 16px; height: 16px; }
+#pen-toggle[hidden] { display: none; }
+#map.mode-erase { cursor: cell; }
+.mini.danger { color: #ff8a86; }
+.mini.danger:hover { background: rgba(229, 72, 77, .18); }
 #mode-hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 6px; min-height: 1em; }
 
 #coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 10px 12px; border-radius: var(--radius);
@@ -128,7 +135,6 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #coords .sub:empty { display: none; }
 #coords .mini { padding: 3px 9px; font-size: 12px; }
 #coords .mini .ic { width: 14px; height: 14px; margin-right: 4px; }
-body.tools-open #coords { bottom: 150px; }
 
 .mini { display: inline-flex; align-items: center; white-space: nowrap; padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--field); font-size: 13px; font-weight: 500; transition: background .15s; }
@@ -200,6 +206,7 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
 .leaflet-popup-tip { background: var(--glass-strong); }
 .leaflet-popup-content { margin: 12px 14px; font-size: 13px; line-height: 1.6; }
 .leaflet-container a.leaflet-popup-close-button { color: var(--sub); top: 4px; right: 4px; }
+.pop { min-width: 180px; }
 .pop h4 { margin: 0 0 4px; font-size: 14px; }
 .pop .xyz { font-variant-numeric: tabular-nums; font-weight: 700; }
 .pop .sub { color: var(--sub); font-size: 12px; }
@@ -212,6 +219,9 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
 .leaflet-control-attribution { background: rgba(0,0,0,.45) !important; color: var(--sub) !important; border-radius: 8px 0 0 0; }
 .leaflet-control-attribution a { color: var(--sub) !important; }
 
+@media (min-width: 701px) and (max-width: 1000px) {
+  #tools { left: 248px; right: 72px; transform: none; max-width: none; }
+}
 @media (max-width: 700px) {
   #topbar { padding: 10px; padding-top: max(10px, env(safe-area-inset-top)); }
   .seg button { padding: 0 11px; }
@@ -224,7 +234,6 @@ dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px
   .modes button { width: 36px; height: 36px; }
   #coords { top: 112px; left: 10px; bottom: auto; padding: 8px 10px; min-width: 0; }
   #coords .xyz { font-size: 15px; gap: 10px; }
-  body.tools-open #coords { bottom: auto; }
   #toast { top: 50%; }
   #past-banner { top: auto; bottom: 16px; }
   body.tools-open #past-banner { bottom: 150px; }
