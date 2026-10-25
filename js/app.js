@@ -384,9 +384,12 @@ function sanitizeList(list) { return Array.isArray(list) ? list.map(sanitize).fi
 let toastTimer;
 function toast(msg) {
   const t = $('#toast');
-  t.textContent = msg; t.hidden = false;
+  t.textContent = msg;
+  t.hidden = false;
+  void t.offsetWidth;  // start the fade-in from the hidden state
+  t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 async function copyText(text, message) {
