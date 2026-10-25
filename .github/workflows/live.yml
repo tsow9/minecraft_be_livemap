@@ -1,0 +1,53 @@
+name: 参加中の人
+
+# Light job: only asks Realms who is online (no world download). The site reads live.json from the live-data branch.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-players
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-restore-${{ github.run_id }}
+          restore-keys: realms-auth-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --prefix tools/realms --no-audit --no-fund
+      - name: 参加中の人を調べる
+        run: node tools/realms/live.js live.json
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - name: 新しくなったログイン情報を保存
+        uses: actions/cache/save@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ hashFiles('.auth/token.enc') }}
+      - name: 公開する
+        # Single force-pushed commit so the branch never grows.
+        run: |
+          mkdir live && mv live.json live/
+          cd live
+          git init -q -b live-data
+          git add live.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "参加中の人 $(date -u '+%F %H:%M')"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
+        env:
+          GH_TOKEN: ${{ github.token }}

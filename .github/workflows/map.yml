@@ -45,7 +45,7 @@ jobs:
       - uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
-          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          key: realms-auth-${{ hashFiles('.auth/token.enc') }}
 
   diagnose:
     if: github.event_name == 'workflow_dispatch' && inputs.action == '診断'
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: .auth/token.enc
-          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          key: realms-auth-restore-${{ github.run_id }}
           restore-keys: realms-auth-
       - uses: actions/setup-node@v4
         with:
@@ -69,7 +69,7 @@ jobs:
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - name: ワールドをダウンロード
-        run: node tools/realms/download.js world.mcworld
+        run: node tools/realms/download.js world.mcworld members.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
-          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: ワールドの中のプレイヤー情報を調べる
         run: |
           pip install --quiet numpy pillow
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: .auth/token.enc
-          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          key: realms-auth-restore-${{ github.run_id }}
           restore-keys: realms-auth-
       - uses: actions/setup-node@v4
         with:
@@ -104,7 +104,7 @@ jobs:
       - run: npm ci --prefix tools/realms --no-audit --no-fund
       - name: Realmsからワールドをダウンロード
         id: download
-        run: node tools/realms/download.js world.mcworld
+        run: node tools/realms/download.js world.mcworld members.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
@@ -113,7 +113,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
-          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: 前回の地図データを取得
         run: |
           mkdir -p data
@@ -135,9 +135,11 @@ jobs:
           python-version: '3.12'
       - name: 地図を作る
         if: steps.compare.outputs.changed == 'true'
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
         run: |
           pip install --quiet numpy pillow
-          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30
+          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30 --members members.json
           cp fingerprint.txt data/world.sha256
       - name: 地図データを保存
         if: steps.compare.outputs.changed == 'true'

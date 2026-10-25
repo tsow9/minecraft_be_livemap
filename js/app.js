@@ -37,6 +37,8 @@ const state = {
   layers: new Map(),
   baseLayer: null,
   gridLayer: null,
+  players: [],
+  explore: null,
   demo: false,
 };
 
@@ -612,6 +614,8 @@ function setDim(dim) {
   if (state.baseLayer) { map.removeLayer(state.baseLayer); state.baseLayer = null; }
   refreshBase();
   renderAll();
+  renderPlayers();
+  refreshExplore();
   $('#c-center-other').textContent = otherDimLine(block(map.getCenter()).x, block(map.getCenter()).z);
 }
 
@@ -622,7 +626,7 @@ function goTo(x, z, dim, zoom) {
 
 // ---------- panels ----------
 function setupPanels() {
-  const panels = { 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-data': 'panel-data' };
+  const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-data': 'panel-data' };
   const close = () => Object.entries(panels).forEach(([b, p]) => { $('#' + p).hidden = true; $('#' + b).classList.remove('on'); });
   for (const [b, p] of Object.entries(panels)) {
     $('#' + b).addEventListener('click', () => {
@@ -630,9 +634,10 @@ function setupPanels() {
       close();
       $('#' + p).hidden = !wasHidden;
       $('#' + b).classList.toggle('on', wasHidden);
+      refreshExplore();
     });
   }
-  document.querySelectorAll('.panel .close').forEach((c) => c.addEventListener('click', close));
+  document.querySelectorAll('.panel .close').forEach((c) => c.addEventListener('click', () => { close(); refreshExplore(); }));
 
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }
@@ -766,6 +771,159 @@ function setupSearch() {
   input.addEventListener('focus', () => { if (items.length) list.hidden = false; });
 }
 
+// ---------- players, deaths, explorers, who's online ----------
+const PLAYER_COLORS = ['#ff5252', '#29b6f6', '#ffb300', '#66bb6a', '#ab47bc', '#ff7043', '#26c6da', '#d4e157', '#ec407a', '#8d6e63'];
+const playerGroup = L.layerGroup();
+let exploreLayer = null;
+
+function playerColor(key) {
+  const i = state.players.findIndex((p) => p.key === key);
+  return i < 0 ? '#9e9e9e' : PLAYER_COLORS[i % PLAYER_COLORS.length];
+}
+function playerName(key) {
+  if (key === '_') return '記録を始める前';
+  if (key === '?') return 'わからない';
+  return state.players.find((p) => p.key === key)?.name || '(不明)';
+}
+function timeText(ms) {
+  if (!ms) return '';
+  const t = new Date(ms);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+}
+function agoText(ms) {
+  if (!ms) return '未ログイン';
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 60) return `${Math.max(1, min)}分前`;
+  if (min < 60 * 24) return `${Math.round(min / 60)}時間前`;
+  return `${Math.round(min / 1440)}日前`;
+}
+
+async function fetchJson(url) {
+  try {
+    const res = await fetch(url, { cache: 'no-cache' });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+}
+
+function renderPlayers() {
+  playerGroup.clearLayers();
+  const showDeaths = $('#show-deaths').checked;
+  for (const p of state.players) {
+    const color = playerColor(p.key);
+    if (p.dim === state.dim) {
+      const m = L.marker(ll(p.x + 0.5, p.z + 0.5), {
+        pmIgnore: true, zIndexOffset: 1000,
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+          html: `<div class="pl-icon" style="transform:translate(-50%,-9px)"><span class="dot" style="background:${color}"></span><span class="nm">${esc(p.name)}</span></div>` }),
+      });
+      m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div><div class="sub">位置の記録: ${timeText(p.movedAt)}</div></div>`);
+      playerGroup.addLayer(m);
+    }
+    const d = p.death;
+    if (showDeaths && d && d.dim === state.dim) {
+      const m = L.marker(ll(d.x + 0.5, d.z + 0.5), {
+        pmIgnore: true,
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: '<div class="death-icon" style="transform:translate(-50%,-50%)">💀</div>' }),
+      });
+      m.bindPopup(() => `<div class="pop"><h4>💀 ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
+      playerGroup.addLayer(m);
+    }
+  }
+  const list = $('#player-list');
+  list.innerHTML = '';
+  for (const p of state.players) {
+    const li = document.createElement('li');
+    li.className = 'click';
+    li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}</span>`;
+    li.addEventListener('click', () => goTo(p.x, p.z, p.dim, 0));
+    list.append(li);
+  }
+  if (!state.players.length) list.innerHTML = '<li class="sub">まだ記録がありません</li>';
+}
+
+const ExploreLayer = L.GridLayer.extend({
+  createTile(coords) {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 256;
+    const ctx = tile.getContext('2d');
+    const scale = Math.pow(2, coords.z);
+    const bx = coords.x * 256 / scale, bz = coords.y * 256 / scale, span = 256 / scale;
+    const size = Math.max(1, 16 * scale);
+    const owners = state.explore?.dims?.[state.dim] || {};
+    for (const [key, chunks] of Object.entries(owners)) {
+      if (key === '_') continue;
+      ctx.fillStyle = key === '?' ? '#000000' : playerColor(key);
+      for (const [cx, cz] of chunks) {
+        const x = cx * 16, z = cz * 16;
+        if (x + 16 < bx || x > bx + span || z + 16 < bz || z > bz + span) continue;
+        ctx.fillRect((x - bx) * scale, (z - bz) * scale, size, size);
+      }
+    }
+    return tile;
+  },
+});
+
+function renderExploreLegend() {
+  const list = $('#explore-legend');
+  list.innerHTML = '';
+  const owners = state.explore?.dims?.[state.dim] || {};
+  const rows = Object.entries(owners).map(([k, cs]) => [k, cs.length]).sort((a, b) => b[1] - a[1]);
+  for (const [key, n] of rows) {
+    const li = document.createElement('li');
+    const color = key === '_' ? 'transparent' : key === '?' ? '#000' : playerColor(key);
+    li.innerHTML = `<span class="dot" style="background:${color};border:1px solid #fff5"></span><span class="grow">${esc(playerName(key))}</span><span class="sub">${n} チャンク</span>`;
+    list.append(li);
+  }
+  if (!rows.length) list.innerHTML = '<li class="sub">まだ記録がありません</li>';
+}
+
+function refreshExplore() {
+  if (exploreLayer) { map.removeLayer(exploreLayer); exploreLayer = null; }
+  if ($('#btn-explore').classList.contains('on')) {
+    exploreLayer = new ExploreLayer({ minZoom: -6, maxZoom: 4, opacity: 0.45, pmIgnore: true, zIndex: 4 }).addTo(map);
+  }
+  renderExploreLegend();
+}
+
+async function refreshLive() {
+  if (!state.config.liveUrl) {
+    $('#live-title').hidden = true;
+    $('#live-list').hidden = true;
+    return;
+  }
+  const data = await fetchJson(`${state.config.liveUrl}?t=${Math.floor(Date.now() / 60000)}`);
+  const list = $('#live-list');
+  const badge = $('#online-badge');
+  if (!data) { list.innerHTML = '<li class="sub">まだ情報がありません</li>'; badge.hidden = true; return; }
+  const members = Array.isArray(data.members) ? data.members : [];
+  const online = members.filter((m) => m.online);
+  badge.textContent = online.length;
+  badge.hidden = online.length === 0;
+  $('#live-title').innerHTML = `参加中の人 <span class="sub">${online.length}人がプレイ中 ・ ${esc(timeText(Date.parse(data.updatedAt)))} 時点</span>`;
+  list.innerHTML = '';
+  for (const m of members) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="dot" style="background:${m.online ? 'var(--accent)' : '#555'}"></span><span class="grow">${esc(m.name)}</span><span class="sub">${m.online ? 'プレイ中' : '最終ログイン ' + esc(agoText(m.lastLogin))}</span>`;
+    list.append(li);
+  }
+}
+
+async function setupPlayers() {
+  const [players, explore] = await Promise.all([fetchJson('players.json'), fetchJson('explore.json')]);
+  state.players = Array.isArray(players?.players) ? players.players : [];
+  state.explore = explore;
+  $('#players-updated').textContent = players?.lastRun ? `${timeText(players.lastRun)} 時点` : '';
+  playerGroup.addTo(map);
+  renderPlayers();
+  $('#show-deaths').addEventListener('change', renderPlayers);
+  $('#btn-explore').addEventListener('click', () => {
+    if (!$('#btn-explore').classList.contains('on')) toast('色の付いた場所が、その人が開拓した場所(推定)です');
+  });
+  refreshLive();
+  setInterval(refreshLive, 60000);
+}
+
 // ---------- boot ----------
 async function loadConfig() {
   try {
@@ -784,6 +942,7 @@ async function main() {
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
+    liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
   };
   document.title = state.config.title;
   state.demo = state.config.snapshots.length === 0;
@@ -805,6 +964,7 @@ async function main() {
   setupCoords();
   setupPanels();
   setupSearch();
+  await setupPlayers();
   document.querySelectorAll('#dims button').forEach((b) => b.addEventListener('click', () => setDim(b.dataset.dim)));
   setMode('none');
   window.mcmap = { state, map };

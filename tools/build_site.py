@@ -32,6 +32,12 @@ def main():
         tiles = os.path.join(data, 'tiles')
         if os.path.isdir(tiles):
             shutil.copytree(tiles, os.path.join(out, 'tiles'))
+    for name in ('players.json', 'explore.json'):
+        if os.path.exists(os.path.join(data, name)):
+            shutil.copy2(os.path.join(data, name), out)
+    repo = os.environ.get('GITHUB_REPOSITORY')
+    if repo and not cfg.get('liveUrl'):
+        cfg['liveUrl'] = f'https://raw.githubusercontent.com/{repo}/live-data/live.json'
     with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     print(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)')

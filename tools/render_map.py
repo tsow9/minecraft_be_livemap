@@ -346,6 +346,7 @@ def main():
     ap.add_argument('--snapshot', help='保存名(省略すると今日の日付)')
     ap.add_argument('--dims', default='overworld,nether,end')
     ap.add_argument('--keep', type=int, default=0, help='残す地図の数(0なら全部残す)')
+    ap.add_argument('--members', help='Realmsのメンバー一覧(プレイヤー情報と開拓者の推定に使う)')
     args = ap.parse_args()
 
     dims = [d.strip() for d in args.dims.split(',') if d.strip()]
@@ -369,6 +370,13 @@ def main():
     started = time.time()
     try:
         surfaces = read_surfaces(db_dir, dims)
+        if args.members:
+            import players
+            secret = os.environ.get('CACHE_KEY') or ''
+            if len(secret) < 20:
+                sys.exit('プレイヤー情報には合言葉(CACHE_KEY)が必要です。')
+            chunk_sets = {name: set(surfaces[DIM_IDS[name]]) for name in dims}
+            players.update(args.site, db_dir, chunk_sets, args.members, secret)
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)

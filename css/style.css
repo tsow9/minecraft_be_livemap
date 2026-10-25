@@ -48,6 +48,21 @@ button { cursor: pointer; }
 #sidebuttons { position: absolute; right: 10px; top: 70px; z-index: 1000; display: flex; flex-direction: column; gap: 6px; }
 #sidebuttons button, .modes button { width: 42px; height: 42px; border-radius: var(--radius); border: 1px solid var(--line);
   background: var(--bg); font-size: 18px; }
+#sidebuttons button { position: relative; }
+#online-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--accent); color: #fff; font-size: 11px; line-height: 18px; font-weight: 700; }
+.plist { list-style: none; margin: 0 0 10px; padding: 0; max-height: 30vh; overflow: auto; }
+.plist li { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 6px; }
+.plist li.click { cursor: pointer; }
+.plist li.click:hover { background: #2c3038; }
+.plist .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.plist .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plist .sub, .panel .sub { color: var(--sub); font-size: 12px; font-weight: normal; }
+.panel .check { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.pl-icon { display: flex; flex-direction: column; align-items: center; }
+.pl-icon .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px #000; }
+.pl-icon .nm { margin-top: 2px; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 1px 6px; border-radius: 8px; background: #000b; }
+.death-icon { font-size: 16px; filter: drop-shadow(0 1px 2px #000); opacity: .9; }
 #sidebuttons button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
 
 #tools { position: absolute; z-index: 1000; left: 50%; transform: translateX(-50%); bottom: 12px;
@@ -126,8 +141,8 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
 
 @media (max-width: 700px) {
   .seg button { padding: 0 9px; }
-  #sidebuttons { top: 106px; }
-  #sidebuttons button { width: 40px; height: 40px; }
+  #sidebuttons { top: 106px; gap: 4px; }
+  #sidebuttons button { width: 38px; height: 38px; font-size: 16px; }
   .panel { left: 8px; right: 8px; top: auto; bottom: 22px; width: auto; max-width: none; z-index: 1200; }
   .leaflet-control-zoom { display: none; }
   #tools { bottom: 22px; padding: 6px; width: calc(100vw - 16px); }

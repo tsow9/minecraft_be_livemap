@@ -25,6 +25,8 @@
 </header>
 
 <div id="sidebuttons">
+  <button id="btn-players" title="プレイヤー・参加中の人">👥<span id="online-badge" hidden></span></button>
+  <button id="btn-explore" title="開拓した人(推定)">🧭</button>
   <button id="btn-tools" title="描く・編集">✏️</button>
   <button id="btn-nether" title="ネザー座標の換算">🔥</button>
   <button id="btn-time" title="タイムラプス">🕒</button>
@@ -78,6 +80,22 @@
     </div>
   </div>
   <button id="conv-from-center" class="mini">今の地図の中心を入れる</button>
+</section>
+
+<section id="panel-players" class="panel" hidden>
+  <h2>プレイヤー <button class="close">×</button></h2>
+  <h3 id="live-title">参加中の人</h3>
+  <ul id="live-list" class="plist"></ul>
+  <h3>地図上の位置 <span class="sub" id="players-updated"></span></h3>
+  <ul id="player-list" class="plist"></ul>
+  <label class="check"><input type="checkbox" id="show-deaths" checked> 死んだ場所を表示</label>
+  <p class="help">位置はワールドに保存された場所で、地図と一緒に1時間おきに更新されます。名前は、ログインした時刻と動いた記録から自動で推定しています。</p>
+</section>
+
+<section id="panel-explore" class="panel" hidden>
+  <h2>開拓した人(推定) <button class="close">×</button></h2>
+  <p class="help">新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。1時間ごとの記録からの推定なので、外れることもあります。</p>
+  <ul id="explore-legend" class="plist"></ul>
 </section>
 
 <section id="panel-time" class="panel" hidden>

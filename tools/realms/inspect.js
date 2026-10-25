@@ -1,30 +1,21 @@
 'use strict'
 // Diagnostics: shows what the Realms API returns about members, without printing names or IDs.
-const fs = require('fs')
-const { pack, unpack } = require('./secure-cache')
-const { ENC_FILE, SECRET, tempCacheDir, makeAuth, makeApi, pickOwnedRealm } = require('./common')
-const { gamertags } = require('./xbox')
+const { withSavedLogin, pickOwnedRealm, realmMembers } = require('./common')
 
 async function main () {
-  const dir = tempCacheDir()
-  try {
-    unpack(ENC_FILE, dir, SECRET)
-    const auth = makeAuth(dir, () => { console.error('ログインが必要です'); process.exit(1) })
-    const api = makeApi(auth)
+  await withSavedLogin(async (auth, api) => {
     const realm = await pickOwnedRealm(api, auth)
     const full = await api.getRealm(realm.id)
     const players = full.players || []
     console.log('Realmの項目:', Object.keys(full).join(', '))
     console.log('メンバー数:', players.length)
     if (players[0]) console.log('メンバーの項目:', Object.keys(players[0]).join(', '))
-    console.log('online=true の人数:', players.filter(p => p.online === true).length)
-    const ids = players.map(p => p.uuid || p.xuid).filter(Boolean)
-    const names = await gamertags(auth, ids)
-    console.log('名前を取得できた人数:', Object.keys(names).length, '/', ids.length)
-    pack(dir, ENC_FILE, SECRET)
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true })
-  }
+    console.log('lastLogin の形:', typeof players[0]?.lastLogin)
+    const members = await realmMembers(api, auth, realm.id)
+    console.log('online=true の人数:', members.filter(m => m.online).length)
+    console.log('名前を取得できた人数:', members.filter(m => m.name).length, '/', members.length)
+    console.log('最終ログインが分かる人数:', members.filter(m => m.lastLogin).length)
+  })
 }
 
 main().catch((e) => { console.error('診断に失敗しました:', e.message); process.exit(1) })
