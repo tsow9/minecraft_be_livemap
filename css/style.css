@@ -111,13 +111,16 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   animation: pulse 2s ease-out infinite; will-change: transform, opacity; }
 @keyframes pulse { from { transform: scale(.7); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
 .leaflet-zoom-anim .pl-icon.on .dot::after { animation: none; opacity: 0; }
-.death-icon { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-.death-icon .cross { width: 20px; height: 27px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); transition: transform .12s; transform-origin: 50% 100%; }
-.death-icon:hover .cross { transform: scale(1.12); }
+.gm { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.gm-svg { display: block; overflow: visible; }
+.gm-shadow { fill: #000; opacity: .35; transform-box: fill-box; transform-origin: center; transition: transform .15s, opacity .15s; }
+.gm-body { transition: transform .15s ease-out; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.gm:hover .gm-body { transform: translateY(-3px); }
+.gm:hover .gm-shadow { transform: scale(.8); opacity: .22; }
 .death-icon .nm { margin-top: 1px; font-size: 11px; font-weight: 600; white-space: nowrap; padding: 1px 7px; border-radius: 999px;
   background: rgba(14, 16, 20, .82); color: #e9e6df; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .death-h { display: flex; align-items: center; gap: 6px; }
-.death-h .cross { width: 13px; height: 18px; }
+.death-h .gm-svg { width: 13px; height: 18px; }
 
 #tools { position: absolute; z-index: 1000; left: 50%; transform: translateX(-50%); bottom: 14px;
   padding: 8px; border-radius: 18px; max-width: calc(100vw - 16px); }

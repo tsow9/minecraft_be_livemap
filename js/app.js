@@ -1312,6 +1312,10 @@ function setupSearch() {
 // ---------- players, deaths, explorers, who's online ----------
 const PLAYER_COLORS = ['#ff5252', '#29b6f6', '#ffb300', '#66bb6a', '#ab47bc', '#ff7043', '#26c6da', '#d4e157', '#ec407a', '#8d6e63'];
 const playerGroup = L.layerGroup();
+// Game-style marker: a dark outline, a light body and a shadow on the ground; the body lifts on hover.
+const DEATH_SVG = `<svg class="gm-svg" viewBox="0 0 24 34" width="20" height="28"><ellipse class="gm-shadow" cx="12" cy="31" rx="6.5" ry="2"/>`
+  + '<g class="gm-body"><path d="M12 4.5v21M5 11.5h14" stroke="#1b1d22" stroke-width="7" stroke-linecap="round"/>'
+  + '<path d="M12 4.5v21M5 11.5h14" stroke="#f4f1ea" stroke-width="3.5" stroke-linecap="round"/></g></svg>';
 let exploreLayer = null;
 
 function playerColor(key) {
@@ -1370,9 +1374,9 @@ function renderPlayers() {
     if (showDeaths && d && d.dim === state.dim) {
       const m = L.marker(ll(d.x + 0.5, d.z + 0.5), {
         pmIgnore: true,
-        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon" style="transform:translate(-50%,-27px)"><svg class="cross" viewBox="0 0 22 30"><use href="#i-death-cross"/></svg><span class="nm">${esc(p.name)}</span></div>` }),
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon gm" style="transform:translate(-50%,-25px)">${DEATH_SVG}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4 class="death-h"><svg class="cross" viewBox="0 0 22 30"><use href="#i-death-cross"/></svg> ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
+      m.bindPopup(() => `<div class="pop"><h4 class="death-h">${DEATH_SVG} ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
       playerGroup.addLayer(m);
     }
   }
