@@ -384,9 +384,10 @@ function deleteAnn(id) {
 }
 
 // ---------- popups ----------
-function button(label, onClick) {
+function button(label, onClick, icon) {
   const b = document.createElement('button');
   b.className = 'mini'; b.type = 'button'; b.textContent = label;
+  if (icon) b.insertAdjacentHTML('afterbegin', `<svg class="ic"><use href="#i-${icon}"/></svg>`);
   b.addEventListener('click', onClick);
   return b;
 }
@@ -403,8 +404,8 @@ function openCoordPopup(latlng) {
   el.append(coordBlock(x, z, null, state.dim));
   const acts = document.createElement('div'); acts.className = 'acts';
   acts.append(
-    button('コピー', () => copyText(coordText(x, z))),
-    button('📍 ここに印をつける', () => { map.closePopup(); createWaypoint(x, z); }),
+    button('コピー', () => copyText(coordText(x, z)), 'copy'),
+    button('ここに印をつける', () => { map.closePopup(); createWaypoint(x, z); }, 'pin'),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -424,8 +425,8 @@ function openAnnPopup(id, at) {
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
   acts.append(
-    button('コピー', () => copyText(coordText(c.x, c.z, a.y))),
-    button('編集', () => { map.closePopup(); openEditor(a, false); }),
+    button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'),
+    button('編集', () => { map.closePopup(); openEditor(a, false); }, 'pencil'),
   );
   el.append(acts);
   const pos = (a.type === 'waypoint' || a.type === 'text') ? ll(a.x + 0.5, a.z + 0.5) : (at || ll(c.x, c.z));
@@ -458,6 +459,7 @@ function openEditor(a, isNew) {
   $('#ed-text-row').hidden = !isText;
   $('#ed-icon-row').hidden = !isWp;
   $('#ed-y-row').hidden = !isWp;
+  $('#ed-note-row').hidden = !isWp && !isText;
   $('#ed-delete').hidden = isNew;
   $('#ed-name').value = a.name || '';
   $('#ed-text').value = a.text || '';
@@ -476,7 +478,8 @@ editor.addEventListener('close', () => {
   const action = editor.returnValue;
   if (action === 'delete') { deleteAnn(a.id); toast('削除しました'); return; }
   if (action !== 'save') return;
-  const next = { ...a, color, note: $('#ed-note').value.trim(), updatedAt: Date.now() };
+  const next = { ...a, color, updatedAt: Date.now() };
+  if (a.type === 'waypoint' || a.type === 'text') next.note = $('#ed-note').value.trim();
   if (a.type === 'text') {
     next.text = $('#ed-text').value.trim();
     if (!next.text) { if (!isNew) deleteAnn(a.id); return; }
@@ -533,7 +536,7 @@ function setMode(mode) {
   $('#map').classList.toggle('mode-freehand', mode === 'freehand');
   map.closePopup();
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
-  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' } });
+  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') map.pm.enableGlobalEditMode();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
@@ -1163,7 +1166,7 @@ function renderPlayers() {
     if (showDeaths && d && d.dim === state.dim) {
       const m = L.marker(ll(d.x + 0.5, d.z + 0.5), {
         pmIgnore: true,
-        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: '<div class="death-icon" style="transform:translate(-50%,-50%)"><svg class="ic"><use href="#i-grave"/></svg></div>' }),
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon" style="transform:translate(-50%,-33px)"><svg class="pin" viewBox="0 0 30 38"><use href="#i-death-pin"/></svg><span class="nm">${esc(p.name)}</span></div>` }),
       });
       m.bindPopup(() => `<div class="pop"><h4 class="death-h"><svg class="ic"><use href="#i-grave"/></svg> ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
       playerGroup.addLayer(m);
@@ -1302,7 +1305,7 @@ async function setupPlayers() {
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
   $('#btn-explore').addEventListener('click', () => {
-    if (!$('#btn-explore').classList.contains('on')) toast('色の付いた場所が、その人が開拓した場所(推定)です');
+    if ($('#btn-explore').classList.contains('on')) toast('色の付いた場所が、その人が開拓した場所(推定)です');
   });
   await refreshLive();
   setInterval(refreshLive, 60000);
@@ -1340,7 +1343,7 @@ async function main() {
   });
   L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
   map.pm.setLang('ja');
-  map.pm.setGlobalOptions({ snappable: false, continueDrawing: false });
+  map.pm.setGlobalOptions({ snappable: false, continueDrawing: false, tooltips: false });
   annGroup.addTo(map);
 
   await loadBlockNames();

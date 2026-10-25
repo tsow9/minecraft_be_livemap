@@ -93,9 +93,11 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 .pl-icon.on .dot { box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(0,0,0,.6); animation: pulse 2s ease-out infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 3px var(--accent), 0 0 0 3px rgba(62,207,142,.5); }
   100% { box-shadow: 0 0 0 3px var(--accent), 0 0 0 14px rgba(62,207,142,0); } }
-.death-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #fff;
-  background: #2a1214; border: 2px solid var(--danger); box-shadow: 0 2px 8px rgba(0,0,0,.55); }
-.death-icon .ic { width: 15px; height: 15px; stroke-width: 2; }
+.death-icon { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.death-icon .pin { width: 26px; height: 33px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.55)); transition: transform .12s; transform-origin: 50% 100%; }
+.death-icon:hover .pin { transform: scale(1.12); }
+.death-icon .nm { margin-top: 2px; font-size: 11px; font-weight: 600; white-space: nowrap; padding: 1px 7px; border-radius: 999px;
+  background: rgba(40, 12, 14, .85); color: #ffd4d5; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
 .death-h { display: flex; align-items: center; gap: 6px; }
 .death-h .ic { width: 16px; height: 16px; color: var(--danger); }
 
@@ -131,6 +133,7 @@ body.tools-open #coords { bottom: 150px; }
 .mini { display: inline-flex; align-items: center; white-space: nowrap; padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--field); font-size: 13px; font-weight: 500; transition: background .15s; }
 .mini:hover { background: rgba(255,255,255,.12); }
+.mini .ic { width: 15px; height: 15px; margin-right: 5px; }
 .filebtn { cursor: pointer; }
 
 .panel { position: absolute; z-index: 1100; right: 72px; top: 72px; width: 330px; max-width: calc(100vw - 20px);
@@ -170,6 +173,7 @@ body.tools-open #coords { bottom: 150px; }
 dialog#editor { border: 1px solid var(--line); border-radius: 20px; background: var(--bg-solid); color: var(--fg);
   width: min(380px, calc(100vw - 24px)); padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 dialog::backdrop { background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+#editor [hidden] { display: none !important; }
 #editor h2 { margin: 0 0 14px; font-size: 17px; }
 #editor label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; color: var(--sub); font-size: 12px; font-weight: 600; }
 #editor input, #editor textarea, #editor select { padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line);
