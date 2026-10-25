@@ -1,0 +1,146 @@
+name: 地図サイト
+
+# Runs only on this repository's own main branch, schedule, or manual start.
+# There is deliberately no pull_request trigger, so outside contributions never see the login secret.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: やること
+        type: choice
+        options: [地図を更新, Realmsにログイン, サイトだけ公開]
+        default: 地図を更新
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-site
+  cancel-in-progress: false
+
+env:
+  TZ: Asia/Tokyo
+
+jobs:
+  login:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'Realmsにログイン'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --prefix tools/realms --no-audit --no-fund
+      - name: Realmsにログイン(下に出るコードを入力してください)
+        run: node tools/realms/login.js
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - uses: actions/cache/save@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+
+  update:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == '地図を更新')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: realms-auth-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --prefix tools/realms --no-audit --no-fund
+      - name: Realmsからワールドをダウンロード
+        id: download
+        run: node tools/realms/download.js world.mcworld
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          REALM_NAME: ${{ vars.REALM_NAME }}
+          MC_VERSION: ${{ vars.MC_VERSION }}
+      - name: 新しくなったログイン情報を保存
+        uses: actions/cache/save@v4
+        with:
+          path: .auth/token.enc
+          key: realms-auth-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: 前回の地図データを取得
+        run: |
+          mkdir -p data
+          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
+      - name: ワールドが変わったか確認
+        id: compare
+        run: |
+          if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "${{ steps.download.outputs.world_hash }}" ]; then
+            echo "前回から変化なし"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.compare.outputs.changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 地図を作る
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          pip install --quiet numpy pillow
+          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --keep 30
+          echo "${{ steps.download.outputs.world_hash }}" > data/world.sha256
+      - name: 地図データを保存
+        if: steps.compare.outputs.changed == 'true'
+        # map-data keeps a single commit so the repository does not grow with every hourly update.
+        run: |
+          cd data
+          git init -q -b map-data
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "地図データ $(date '+%F %H:%M')"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" map-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  deploy:
+    needs: [update]
+    if: >-
+      always() && !cancelled() && (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開') ||
+        needs.update.outputs.changed == 'true'
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 地図データを取得
+        run: |
+          mkdir -p data
+          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
+      - name: 公開するファイルをまとめる
+        run: python3 tools/build_site.py data _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,7 +1,6 @@
 """Render a Minecraft Bedrock world into map tiles for the mc-map site.
 
-Usage: python render_map.py [--world PATH] [--site PATH] [--snapshot ID] [--dims overworld,nether,end]
-Without --world, it lists the worlds on this PC and asks which one to use.
+Usage: python render_map.py --world PATH [--site PATH] [--snapshot ID] [--keep N] [--dims overworld,nether,end]
 """
 import argparse
 import datetime
@@ -298,22 +297,6 @@ def write_tiles(surfaces, out_dir):
 
 
 # ---------- world discovery ----------
-def world_dirs():
-    roots = []
-    local = os.environ.get('LOCALAPPDATA')
-    roaming = os.environ.get('APPDATA')
-    if local:
-        roots.append(os.path.join(local, 'Packages', 'Microsoft.MinecraftUWP_8wekyb3d8bbwe', 'LocalState', 'games', 'com.mojang', 'minecraftWorlds'))
-    if roaming:
-        roots += glob.glob(os.path.join(roaming, 'Minecraft Bedrock', 'Users', '*', 'games', 'com.mojang', 'minecraftWorlds'))
-    found = []
-    for root in roots:
-        for d in glob.glob(os.path.join(root, '*')):
-            if os.path.isdir(os.path.join(d, 'db')):
-                found.append(d)
-    return sorted(found, key=lambda d: os.path.getmtime(os.path.join(d, 'db')), reverse=True)
-
-
 def world_name(d):
     try:
         with open(os.path.join(d, 'levelname.txt'), encoding='utf-8') as f:
@@ -322,28 +305,31 @@ def world_name(d):
         return os.path.basename(d)
 
 
-def choose_world():
-    worlds = world_dirs()
-    if not worlds:
-        sys.exit('このPCにワールドが見つかりませんでした。--world でフォルダか .mcworld ファイルを指定してください。')
-    print('このPCにあるワールド(新しい順):')
-    for i, d in enumerate(worlds[:15], 1):
-        t = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(d, 'db'))).strftime('%m/%d %H:%M')
-        print(f'  {i}. {world_name(d)}  ({t})')
-    ans = input('番号を入れてEnter(そのままEnterなら1): ').strip() or '1'
-    if not ans.isdigit() or not 1 <= int(ans) <= len(worlds[:15]):
-        sys.exit('番号が正しくありません。')
-    return worlds[int(ans) - 1]
-
-
 # ---------- config ----------
-def update_config(site, snap_id, label):
+def snapshot_label(snap_id):
+    try:
+        d = datetime.date.fromisoformat(snap_id)
+    except ValueError:
+        return snap_id
+    return f'{d.month}月{d.day}日'
+
+
+def update_config(site, snap_id, keep):
     path = os.path.join(site, 'config.json')
-    with open(path, encoding='utf-8') as f:
-        cfg = json.load(f)
+    cfg = {}
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            cfg = json.load(f)
     snaps = [s for s in cfg.get('snapshots', []) if s.get('id') != snap_id]
-    snaps.append({'id': snap_id, 'label': label})
-    cfg['snapshots'] = sorted(snaps, key=lambda s: s['id'])
+    snaps.append({'id': snap_id, 'label': snapshot_label(snap_id)})
+    snaps.sort(key=lambda s: s['id'])
+    if keep and len(snaps) > keep:
+        for old in snaps[:-keep]:
+            shutil.rmtree(os.path.join(site, 'tiles', old['id']), ignore_errors=True)
+            print(f'古い地図 {old["id"]} を削除しました')
+        snaps = snaps[-keep:]
+    cfg['snapshots'] = snaps
+    cfg['updatedAt'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
     cfg['minNativeZoom'] = MIN_ZOOM
     cfg['maxNativeZoom'] = 0
     with open(path, 'w', encoding='utf-8') as f:
@@ -354,16 +340,17 @@ def update_config(site, snap_id, label):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser(description='統合版ワールドから地図タイルを作ります')
-    ap.add_argument('--world', help='ワールドのフォルダ、または .mcworld ファイル')
+    ap.add_argument('--world', required=True, help='ワールドのフォルダ、または .mcworld ファイル')
     ap.add_argument('--site', default=os.path.dirname(here), help='地図サイトのフォルダ')
     ap.add_argument('--snapshot', help='保存名(省略すると今日の日付)')
     ap.add_argument('--dims', default='overworld,nether,end')
+    ap.add_argument('--keep', type=int, default=0, help='残す地図の数(0なら全部残す)')
     args = ap.parse_args()
 
     dims = [d.strip() for d in args.dims.split(',') if d.strip()]
     if any(d not in DIM_IDS for d in dims):
         sys.exit('--dims には overworld / nether / end を指定してください。')
-    world = args.world or choose_world()
+    world = args.world
     tmp = None
     if os.path.isfile(world) and world.lower().endswith(('.mcworld', '.zip')):
         tmp = tempfile.mkdtemp(prefix='mcmap-')
@@ -374,9 +361,7 @@ def main():
     if not os.path.isdir(db_dir):
         sys.exit(f'ワールドのデータ(db フォルダ)が見つかりません: {world}')
 
-    today = datetime.date.today()
-    snap_id = args.snapshot or today.isoformat()
-    label = f'{today.month}月{today.day}日' if not args.snapshot else args.snapshot
+    snap_id = args.snapshot or datetime.date.today().isoformat()
     out_root = os.path.join(args.site, 'tiles', snap_id)
 
     print(f'ワールド「{world_name(world)}」を読み込みます。大きいワールドだと数分かかります。')
@@ -399,7 +384,7 @@ def main():
         print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
     if total == 0:
         sys.exit('地図にできるデータがありませんでした。')
-    update_config(args.site, snap_id, label)
+    update_config(args.site, snap_id, args.keep)
     print(f'完了しました({time.time() - started:.0f}秒)。保存名: {snap_id}')
 
 

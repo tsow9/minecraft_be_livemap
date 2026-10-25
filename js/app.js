@@ -240,8 +240,15 @@ function makeBaseLayer() {
   return L.tileLayer(url, {
     ...opts, tileSize: 256,
     minNativeZoom: state.config.minNativeZoom, maxNativeZoom: state.config.maxNativeZoom,
-    attribution: esc(snap.label || snap.id),
+    attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
   });
+}
+
+function updatedText() {
+  const t = new Date(state.config.updatedAt);
+  if (Number.isNaN(t.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return ` ・最終更新 ${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 }
 
 function refreshBase() {
@@ -776,6 +783,7 @@ async function main() {
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
+    updatedAt: cfg.updatedAt,
   };
   document.title = state.config.title;
   state.demo = state.config.snapshots.length === 0;

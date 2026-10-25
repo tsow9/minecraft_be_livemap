@@ -1,27 +1,29 @@
 # マイクラ統合版 地図サイト
 
-Realmsで遊んでいるワールドを、スマホやPCのブラウザで見られる地図サイトです。費用は無料の範囲で作ります。
+Realmsで遊んでいるワールドを、スマホやPCのブラウザで見られる地図サイトです。地図は**クラウドで1時間おきに自動更新**され、PCは使いません。費用は無料の範囲です。
+
+サイト: https://tsow9.github.io/minecraft_be_livemap/
 
 ## 要件のまとめ
 
-前提: 統合版Realms、Switchのメンバーもいる、リアルタイム表示は欲しい、地図の作成はWindows PCで行う。
+前提: 統合版Realms(持ち主は自分)、Switchのメンバーもいる、リアルタイムに近い更新が欲しい、PCは使わずクラウドで安全に。
 
 ### できたもの
 
 | 機能 | 状態 |
 |---|---|
 | 地図の無制限表示(見ている部分だけ読み込む) | ✅ |
-| ワールド → 地図画像の変換(地上・ネザー・エンド) | ✅ `update-map.bat` をダブルクリック |
+| Realms → 地図の自動更新(1時間おき・クラウド) | ✅ 最初に1回だけログインが必要 |
 | 座標の表示とコピー(コピーした文字は `/tp` にそのまま使える) | ✅ |
 | 地上・ネザー・エンドの切り替え | ✅ |
 | ネザー座標の換算(1/8・8倍) | ✅ |
 | 座標・ウェイポイントの検索 | ✅ |
 | ウェイポイント(印) | ✅ ピン・拠点・死んだ場所・ポータル・鉱山・畑・村・お気に入り |
 | テキスト・図形(線・多角形・四角・円)・手書き | ✅ 色と太さを選べる。移動・形の修正・削除もできる |
-| 建築のタイムラプス | ✅ 地図を更新するたびに1コマ増える(直近12回分を保存) |
+| 建築のタイムラプス | ✅ 1日1コマ(その日の最新の状態)、30日分を保存 |
+| 最終更新時刻の表示 | ✅ 地図の右下 |
 | チャンク線の表示 | ✅ |
 | スマホ・PC両対応 | ✅ |
-| GitHub Pages での無料公開 | ✅ 設定ファイルは用意済み(下の「はじめの準備」を参照) |
 
 ### これから作るもの
 
@@ -34,34 +36,47 @@ Realmsで遊んでいるワールドを、スマホやPCのブラウザで見ら
 | 機能 | 検証すること |
 |---|---|
 | プレイヤーの現在位置(リアルタイム) | ゲームの `/connect` 機能がRealmsで使えるか。チート有効が必要で、実績が解除されなくなる |
-| ログイン中の人の一覧 | 上と同じ仕組みで取れるか |
+| ログイン中の人の一覧 | Realmsの情報から取れるか |
 | 死んだ場所の自動マーカー | 上と同じ仕組みで取れるか。今は「死んだ場所」の印を手で付けられる |
-
-### Realmsでは難しいもの
-
-- 建築がその場で自動的に地図に反映されること。Realmsは外からワールドの中身を読めないため、地図の更新は「ダウンロードして変換」の手動になります。
 
 ## はじめの準備(1回だけ)
 
-1. **GitHubで新しいリポジトリを作る**
-   - github.com の右上「+」→「New repository」。名前は例えば `minecraft_be_livemap`
-   - 無料で公開するには **Public(公開)** にします。Private のままだと GitHub Pages は有料プランが必要です
-   - Public にすると、URLを知っている人は地図を見られます(Realmsに入れるのは招待された人だけなので、ゲーム自体は安全です)
-2. **このフォルダの中身をリポジトリに入れる**(済み)
-3. **公開を有効にする**: リポジトリの「Settings」→「Pages」→「Source」を **GitHub Actions** にする
-   - 数分後、`https://<あなたのユーザー名>.github.io/minecraft_be_livemap/` で地図が見られます
-4. **PCに2つのソフトを入れる**
-   - [Python](https://www.python.org/downloads/): インストール画面の最初で「Add python.exe to PATH」に必ずチェック
-   - [GitHub Desktop](https://desktop.github.com/): ログインして、作ったリポジトリを「Clone」(PCにコピー)する
+### 1. 合言葉を登録する
 
-## 地図の更新(毎回)
+ログイン情報を暗号化するための合言葉です。
 
-1. Windows版マイクラで、Realmsの設定画面から **ワールドをダウンロード** する(Realmsの持ち主の操作が必要)
-2. PCにコピーしたフォルダの **`update-map.bat` をダブルクリック**
-3. ワールドの一覧が出るので、ダウンロードしたワールドの番号を入れて Enter
-4. 地図が作られて、自動でGitHubに送られます。数分後にサイトに反映されます
+1. リポジトリの「Settings」→ 左の「Secrets and variables」→「Actions」
+2. 「New repository secret」を押す
+3. Name に `REALMS_CACHE_KEY`、Secret に **20文字以上のでたらめな文字列**を入れて「Add secret」
 
-`.mcworld` ファイルから作りたいときは、`update-map.bat --world ファイルの場所` のように指定できます。
+合言葉は自分で覚えておく必要はありません。他の人に見せないでください。
+
+### 2. Realmsにログインする
+
+1. リポジトリの「Actions」→ 左の「地図サイト」→ 右の「Run workflow」
+2. 「やること」を **Realmsにログイン** にして、緑の「Run workflow」を押す
+3. 少し待ってから、一覧に出た実行中の項目 →「login」→「Realmsにログイン(下に出るコードを入力してください)」を開く
+4. 表示された `https://www.microsoft.com/link` をスマホで開き、表示されたコードを入れて、**Realmsの持ち主のアカウント**でログインする(15分以内)
+5. 「ログインできました」と出れば完了です
+
+これで、1時間おきに自動で地図が更新されます。すぐに更新したいときは「Run workflow」で **地図を更新** を選びます。
+
+## 安全のための工夫
+
+- ログイン情報は**暗号化**して、GitHub Actions のキャッシュにだけ置きます。鍵(合言葉)は GitHub の Secrets にあり、外からは読めません
+- 自動処理は**このリポジトリ自身の操作でしか動きません**。他人が出した変更依頼(プルリクエスト)では動かないので、合言葉が渡ることはありません
+- ログインのコードが表示されるのは「Realmsにログイン」を自分で実行したときだけです。自動更新中にログインが切れても、コードは出さずに止まります
+- ここで使うログインは Xbox Live(マイクラ)用のものです。メールやOneDriveには使えない種類です
+- 心配になったら、Microsoftアカウントの「セキュリティ」→「サインインしているデバイス」から、いつでも無効にできます
+
+## うまく動かないとき
+
+| 症状(Actions の画面に出る文字) | 対処 |
+|---|---|
+| ログイン情報がありません / 有効期限が切れました | 「Realmsにログイン」をもう一度実行 |
+| Realmが2個以上あります | 「Settings」→「Secrets and variables」→「Actions」→「Variables」に `REALM_NAME`(Realmの名前)を追加 |
+| 合言葉が設定されていない | 準備の1をやり直す |
+| 自動更新が止まっている | 60日間リポジトリに変化がないと、GitHubが自動更新を止めることがあります。「Actions」で再開ボタンを押してください |
 
 ## 使い方
 
@@ -80,17 +95,25 @@ Realmsで遊んでいるワールドを、スマホやPCのブラウザで見ら
 
 ## 仕組み(詳しい人向け)
 
-- `tools/render_map.py`: ワールドの `db` フォルダ(Mojang版LevelDB)を Python だけで読み、各列のいちばん上のブロックの色で地図を描きます。高低差の陰影と、水の深さによる色の違いをつけています。ネザーは天井の岩盤を飛ばして、その下の地面を描きます
-- `tools/block_colors.py`: ブロックごとの色の表。知らないブロックは灰色になるので、気になる色はここに足せます
-- `tools/update_map.py`: 部品の自動インストール → 地図作成 → 古い地図の削除 → GitHubへの送信
-- 地図画像は256×256ピクセルのタイルです。拡大段階 `z` が0のとき1ブロック=1ピクセルで、`tiles/<保存名>/<overworld|nether|end>/<z>/<x>/<y>.png` に置かれます。`config.json` の `snapshots` が空のときは、デモ地形が表示されます
+```
+1時間おき(GitHub Actions)
+  Realmsからワールドをダウンロード(tools/realms, prismarine-realms)
+  → 前回と同じなら終わり
+  → 地図タイルを作る(tools/render_map.py)
+  → map-data ブランチに保存(常に1コミットだけにして容量を増やさない)
+  → サイトと合わせて GitHub Pages に公開(tools/build_site.py)
+```
 
-手元で動かすには、このフォルダで `python -m http.server 8765` を実行し、ブラウザで `http://localhost:8765/` を開きます。
+- `tools/render_map.py`: ワールドの `db`(Mojang版LevelDB)を Python だけで読み、各列のいちばん上のブロックの色で描きます。高低差の陰影と水の深さの色分けつき。ネザーは天井の岩盤を飛ばして地面を描きます
+- `tools/block_colors.py`: ブロックごとの色の表。知らないブロックは灰色になるので、ここに足せます
+- `tools/realms/`: Realmsへのログインとダウンロード。ログイン情報は AES-256-GCM で暗号化します
+- 地図タイルは `tiles/<日付>/<overworld|nether|end>/<z>/<x>/<y>.png`。拡大段階 `z` が0のとき1ブロック=1ピクセル
+- Realmsの仕組みは公式に公開されていないもので、Microsoftの変更で使えなくなる可能性があります
+- 手元で動かすには `python tools/build_site.py <地図データ> _site` のあと `_site` で `python -m http.server`
 
 ## 使っているもの
 
 - [Leaflet](https://leafletjs.com/) 1.9.4: 地図の表示(BSD-2-Clause)
 - [Leaflet-Geoman](https://geoman.io/) 2.17.0 free: 図形の描画と編集(MIT)
-- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/): 地図画像の作成(PCで自動インストール)
-
-`vendor/` に同梱しているので、サイトが外部のサービスに頼ることはありません。
+- [prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) / [prismarine-realms](https://github.com/PrismarineJS/prismarine-realms): Microsoftログインと Realms API(MIT)
+- [NumPy](https://numpy.org/) / [Pillow](https://python-pillow.org/): 地図画像の作成

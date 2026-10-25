@@ -1,0 +1,9 @@
+{
+  "name": "mc-map-realms",
+  "private": true,
+  "description": "Realmsからワールドをダウンロードする部品",
+  "dependencies": {
+    "prismarine-auth": "3.1.1",
+    "prismarine-realms": "1.6.0"
+  }
+}
