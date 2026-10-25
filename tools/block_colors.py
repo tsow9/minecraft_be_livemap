@@ -16,6 +16,7 @@ WOODS = {
     'acacia': ((168, 90, 50), (103, 96, 86)), 'dark_oak': ((66, 43, 20), (60, 46, 26)),
     'mangrove': ((117, 54, 48), (84, 66, 36)), 'cherry': ((226, 178, 172), (54, 33, 44)),
     'pale_oak': ((227, 217, 216), (87, 79, 75)), 'bamboo': ((193, 173, 80), (127, 145, 58)),
+    'poplar': ((205, 192, 150), (120, 112, 92)),
     'crimson': ((101, 48, 70), (92, 25, 29)), 'warped': ((43, 104, 99), (58, 58, 77)),
 }
 LEAVES = {
@@ -74,7 +75,7 @@ KEYWORDS = [
     ('mud_brick', (137, 103, 79)), ('glass', (200, 220, 230)), ('ice', (145, 183, 253)), ('snow', (249, 254, 254)),
     ('coral', (200, 80, 120)), ('flower', (200, 60, 60)), ('tulip', (200, 60, 60)), ('sapling', (70, 130, 40)),
     ('mushroom', (150, 110, 80)), ('stone', (125, 125, 125)), ('sand', (219, 207, 163)), ('wool', (233, 236, 236)),
-    ('sculk', (12, 29, 36)), ('amethyst', (133, 97, 191)), ('rail', (125, 110, 90)),
+    ('sculk', (12, 29, 36)), ('sulfur', (205, 190, 70)), ('amethyst', (133, 97, 191)), ('rail', (125, 110, 90)),
 ]
 
 GRASS = (95, 159, 53)
@@ -128,6 +129,12 @@ EXACT.update({
     'lodestone': (140, 140, 145), 'crafter': (110, 100, 100), 'trial_spawner': (60, 70, 80), 'vault': (60, 70, 80),
     'mob_spawner': (40, 50, 60), 'ender_chest': (40, 50, 50), 'trapped_chest': (165, 117, 40), 'jukebox': (110, 75, 55),
     'noteblock': (110, 75, 55), 'end_portal_frame': (90, 120, 100), 'cinnabar': (170, 50, 40),
+    'lit_furnace': (130, 115, 100), 'lit_blast_furnace': (120, 105, 100), 'lit_smoker': (120, 100, 80),
+    'piston_arm_collision': (150, 130, 100), 'sticky_piston_arm_collision': (130, 150, 100),
+    'portal': (110, 40, 200), 'raw_iron_block': (165, 135, 105), 'raw_gold_block': (220, 170, 50),
+    'raw_copper_block': (155, 105, 80), 'smooth_basalt': (72, 72, 78), 'straw_bed': (200, 180, 100),
+    'trip_wire': (150, 150, 150), 'tripwire_hook': (140, 120, 90), 'weeping_vines': (130, 20, 20),
+    'twisting_vines': (20, 140, 130),
 })
 
 # name: (young color, ripe color, max growth). Color shifts with the growth/age state.
