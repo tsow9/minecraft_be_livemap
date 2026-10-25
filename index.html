@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
+<title>マイクラ地図</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="vendor/geoman/leaflet-geoman.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="map"></div>
+<div id="crosshair" aria-hidden="true"></div>
+
+<header id="topbar">
+  <div class="search">
+    <input id="search" type="search" placeholder="座標(例: 120 -340)か名前で検索" autocomplete="off">
+    <ul id="search-results" hidden></ul>
+  </div>
+  <div id="dims" class="seg" role="group" aria-label="ディメンション">
+    <button data-dim="overworld" class="on">地上</button>
+    <button data-dim="nether">ネザー</button>
+    <button data-dim="end">エンド</button>
+  </div>
+</header>
+
+<div id="sidebuttons">
+  <button id="btn-tools" title="描く・編集">✏️</button>
+  <button id="btn-nether" title="ネザー座標の換算">🔥</button>
+  <button id="btn-time" title="タイムラプス">🕒</button>
+  <button id="btn-grid" title="チャンク線">#</button>
+  <button id="btn-data" title="データの保存・読込">💾</button>
+</div>
+
+<div id="tools" hidden>
+  <div class="row modes">
+    <button data-mode="none" class="on" title="通常">👆</button>
+    <button data-mode="waypoint" title="ウェイポイント">📍</button>
+    <button data-mode="text" title="テキスト">T</button>
+    <button data-mode="freehand" title="手書き">〰️</button>
+    <button data-mode="Line" title="線">／</button>
+    <button data-mode="Polygon" title="多角形">⬠</button>
+    <button data-mode="Rectangle" title="四角">▭</button>
+    <button data-mode="Circle" title="円">◯</button>
+    <button data-mode="edit" title="形を直す">✎</button>
+    <button data-mode="drag" title="動かす">✥</button>
+    <button data-mode="remove" title="消す">🗑</button>
+  </div>
+  <div class="row style">
+    <div id="colors"></div>
+    <label class="width">太さ <input id="width" type="range" min="1" max="12" value="4"></label>
+  </div>
+  <div id="mode-hint"></div>
+</div>
+
+<div id="coords">
+  <div><span class="lbl">中心</span> <b id="c-center">X 0 / Z 0</b> <button id="copy-center" class="mini">コピー</button></div>
+  <div class="sub" id="c-center-other"></div>
+  <div class="sub" id="c-mouse"></div>
+</div>
+
+<section id="panel-nether" class="panel" hidden>
+  <h2>ネザー座標の換算 <button class="close">×</button></h2>
+  <p class="help">ネザーで1ブロック進むと、地上では8ブロック進みます。</p>
+  <div class="conv">
+    <div>
+      <h3>地上</h3>
+      <label>X <input id="ow-x" type="number" inputmode="numeric"></label>
+      <label>Z <input id="ow-z" type="number" inputmode="numeric"></label>
+      <button id="ow-go" class="mini">地図で見る</button>
+    </div>
+    <div class="arrow">⇄</div>
+    <div>
+      <h3>ネザー</h3>
+      <label>X <input id="ne-x" type="number" inputmode="numeric"></label>
+      <label>Z <input id="ne-z" type="number" inputmode="numeric"></label>
+      <button id="ne-go" class="mini">地図で見る</button>
+    </div>
+  </div>
+  <button id="conv-from-center" class="mini">今の地図の中心を入れる</button>
+</section>
+
+<section id="panel-time" class="panel" hidden>
+  <h2>タイムラプス <button class="close">×</button></h2>
+  <p class="help">ワールドを保存した日ごとに地図を切り替えて、建築の変化を見られます。</p>
+  <div class="time">
+    <button id="time-play" class="mini">▶ 再生</button>
+    <input id="time-range" type="range" min="0" max="0" value="0">
+    <b id="time-label"></b>
+  </div>
+</section>
+
+<section id="panel-data" class="panel" hidden>
+  <h2>データ <button class="close">×</button></h2>
+  <p class="help">書き込んだウェイポイントや図形は、今はこの端末の中だけに保存されています。別の端末や友だちに渡すときはファイルに書き出してください。</p>
+  <p id="data-count"></p>
+  <button id="export" class="mini">ファイルに書き出す</button>
+  <label class="mini filebtn">ファイルを読み込む<input id="import" type="file" accept="application/json,.json" hidden></label>
+</section>
+
+<dialog id="editor">
+  <form method="dialog" id="editor-form">
+    <h2 id="ed-title">編集</h2>
+    <label id="ed-name-row">名前 <input id="ed-name" maxlength="60"></label>
+    <label id="ed-text-row">文字 <textarea id="ed-text" rows="2" maxlength="200"></textarea></label>
+    <label id="ed-icon-row">種類 <select id="ed-icon"></select></label>
+    <label id="ed-y-row">高さ Y(わかれば) <input id="ed-y" type="number" inputmode="numeric"></label>
+    <label>メモ <textarea id="ed-note" rows="2" maxlength="500"></textarea></label>
+    <div class="ed-colors" id="ed-colors"></div>
+    <div class="btns">
+      <button value="delete" id="ed-delete" class="danger">削除</button>
+      <span class="grow"></span>
+      <button value="cancel">やめる</button>
+      <button value="save" class="primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" hidden></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/geoman/leaflet-geoman.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

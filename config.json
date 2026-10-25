@@ -1,0 +1,7 @@
+{
+  "title": "マイクラ地図",
+  "tileUrl": "tiles/{snapshot}/{dim}/{z}/{x}/{y}.png",
+  "minNativeZoom": -4,
+  "maxNativeZoom": 0,
+  "snapshots": []
+}
