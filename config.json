@@ -3,5 +3,6 @@
   "tileUrl": "tiles/{snapshot}/{dim}/{z}/{x}/{y}.png",
   "minNativeZoom": -6,
   "maxNativeZoom": 0,
-  "snapshots": []
+  "snapshots": [],
+  "shareUrl": "https://blockmap-share.ixim129.workers.dev"
 }
