@@ -294,7 +294,6 @@ function renderShareStatus() {
     ? (share.pending.size ? `送信待ち ${share.pending.size}件(つながると自動で送ります)` : 'みんなと共有中・書き込めます')
     : '見るだけ(招待リンクを開くと書き込めます)';
   $('#share-login').hidden = !!getPass();
-  $('#share-logout').hidden = !getPass();
   $('#share-invite').hidden = !getPass();
   const lo = $('#local-only');
   lo.hidden = !share.localOnly.length;
@@ -328,11 +327,6 @@ function setupShare() {
   loadSyncState();
   renderAll();
   $('#share-login').addEventListener('click', () => askPass());
-  $('#share-logout').addEventListener('click', () => {
-    setPass('');
-    toast('この端末では書き込めないようにしました');
-    renderShareStatus();
-  });
   $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '招待リンクをコピーしました。仲間にだけ送ってください'));
   $('#local-only-send').addEventListener('click', async () => {
     if (!(await ensureWriter())) return;
