@@ -1651,29 +1651,23 @@ async function travelEstimate(f, t) {
   }));
   const water = new Set(['water', 'flowing_water'].map((nm) => blockNames.indexOf(nm)).filter((i) => i > 0));
   const lava = new Set(['lava', 'flowing_lava'].map((nm) => blockNames.indexOf(nm)).filter((i) => i > 0));
-  let sec = 0, wet = 0, up = 0, unknown = 0, hot = false, prev = null;
+  let sec = 0, hot = false, prev = null;
   for (const [x, z] of pts.slice(1)) {
     const top = blockAtNow(x, z).raw;
     const g = ground.get(`${Math.floor(x / 256)},${Math.floor(z / 256)}`);
     const h = g ? g[(z - Math.floor(z / 256) * 256) * 256 + (x - Math.floor(x / 256) * 256)] : NO_GROUND;
     if (top && lava.has(top.id)) hot = true;
-    if (top && water.has(top.id)) { sec += 1 / SWIM; wet++; prev = null; continue; }
-    if (!top && h === NO_GROUND) { sec += 1 / SPRINT; unknown++; continue; }
+    if (top && water.has(top.id)) { sec += 1 / SWIM; prev = null; continue; }
+    if (!top && h === NO_GROUND) { sec += 1 / SPRINT; continue; }
     sec += 1 / SPRINT;
     if (h !== NO_GROUND && prev !== null && h > prev) {
       const rise = h - prev;
       sec += rise === 1 ? STEP_UP : rise * CLIMB;
-      up += rise;
     }
     if (h !== NO_GROUND) prev = h;
   }
   const time = sec < 60 ? `${Math.max(1, Math.round(sec))}秒` : `${Math.floor(sec / 60)}分${Math.round(sec % 60) ? `${Math.round(sec % 60)}秒` : ''}`;
-  const notes = [];
-  if (wet) notes.push(`泳ぎ${wet}ブロック`);
-  if (up >= 3) notes.push(`のぼり${up}ブロック`);
-  if (hot) notes.push('途中に溶岩あり');
-  if (unknown > n * 0.2) notes.push('地図にない場所を含む');
-  return `走って約${time}${notes.length ? `(${notes.join('・')})` : ''}`;
+  return `走って約${time}${hot ? '・途中に溶岩あり' : ''}`;
 }
 
 // Everything on the map that a route can start from or go to, in one dimension.
@@ -1740,6 +1734,7 @@ function startRoute(a) {
   for (const t of routeTargets()) sel.append(new Option(`${t.name}(${t.kind}・${Math.round(t.dist)}ブロック)`, t.id));
   $('#route-result').hidden = true;
   $('#route').hidden = false;
+  showRoutePoints();
   toast('行き先を一覧から選ぶか、地図でタップしてください');
 }
 
@@ -1762,12 +1757,11 @@ function setRouteTarget(id, point) {
     { color: '#fff', weight: 3, opacity: 0.95, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
   $('#route-dist').textContent = `${Math.round(t.dist)}ブロック`;
   const nether = f.dim === 'overworld' && t.dist >= 200 ? `ネザー経由なら約${Math.round(t.dist / 8)}ブロック` : '';
-  $('#route-more').textContent = ['走って…計算中', nether].filter(Boolean).join('・');
+  $('#route-time').textContent = '走って…計算中';
+  $('#route-nether').textContent = nether;
   const job = ++route.job;
-  travelEstimate(f, t).then((est) => {
-    if (job !== route.job) return;
-    $('#route-more').textContent = [est, nether].filter(Boolean).join('・');
-  });
+  travelEstimate(f, t).then((est) => { if (job === route.job) $('#route-time').textContent = est; });
+  showRoutePoints();
   $('#route-result').hidden = false;
   // Keep both ends clear of the route card (top on a computer, bottom on a phone).
   const phone = window.matchMedia('(max-width: 700px)').matches;
@@ -1776,7 +1770,27 @@ function setRouteTarget(id, point) {
     : { paddingTopLeft: [60, 290], paddingBottomRight: [90, 70], maxZoom: 2 });
 }
 
+// A spot picked on empty ground (not a pin or other mark) gets its own small mark while the route is open.
+const routePoints = L.layerGroup();
+const POINT_SVG = '<svg class="gm-svg" viewBox="0 0 26 20" width="24" height="18"><ellipse class="gm-shadow" cx="13" cy="17" rx="8" ry="1.6"/>'
+  + '<g class="gm-body"><ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#1b1d22" stroke-width="5"/>'
+  + '<ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#f4f1ea" stroke-width="2.4"/>'
+  + '<ellipse cx="13" cy="10" rx="3" ry="2" fill="#ffd36e" stroke="#1b1d22" stroke-width="1.6"/></g></svg>';
+
+function showRoutePoints() {
+  routePoints.clearLayers();
+  for (const p of [route.from, route.to]) {
+    if (!p || !String(p.id).startsWith('point:')) continue;
+    routePoints.addLayer(L.marker(ll(p.x + 0.5, p.z + 0.5), {
+      pmIgnore: true, interactive: false, zIndexOffset: 1500,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="gm" style="transform:translate(-50%,-9px)">${POINT_SVG}</div>` }),
+    }));
+  }
+  if (!map.hasLayer(routePoints)) routePoints.addTo(map);
+}
+
 function stopRoute() {
+  routePoints.clearLayers();
   if (route.line) map.removeLayer(route.line);
   route.from = null; route.to = null; route.line = null; route.job++;
   $('#route').hidden = true;
