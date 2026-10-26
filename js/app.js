@@ -1301,8 +1301,15 @@ function setupCoords() {
   open.addEventListener('click', () => show(true));
   // Phones: the readout reaches right up to the dimension switch beside it.
   const dims = $('#dims');
-  const keepWidth = () => document.documentElement.style.setProperty('--dims-left', `${Math.floor(dims.getBoundingClientRect().left)}px`);
-  if (window.ResizeObserver) new ResizeObserver(keepWidth).observe(dims);
+  // …and the side buttons start just below the switch (or the clock under it), never on top of them.
+  const keepWidth = () => {
+    const root = document.documentElement.style;
+    root.setProperty('--dims-left', `${Math.floor(dims.getBoundingClientRect().left)}px`);
+    const clock = $('#clock');
+    const above = clock.hidden || getComputedStyle(clock).position !== 'static' ? dims : clock;
+    root.setProperty('--side-top', `${Math.ceil(above.getBoundingClientRect().bottom + 8)}px`);
+  };
+  if (window.ResizeObserver) { const ro = new ResizeObserver(keepWidth); ro.observe(dims); ro.observe($('#clock')); }
   window.addEventListener('resize', keepWidth);
   keepWidth();
   let saved = null;
@@ -1550,6 +1557,12 @@ function setupSearch() {
   };
   input.addEventListener('input', suggest);
   input.addEventListener('focus', suggest);
+  // Phones: while the search is in use, the X/Z search opens right under it.
+  const bar = $('#topbar');
+  bar.addEventListener('focusin', (e) => { if (e.target.closest('.search, #find')) document.body.classList.add('searching'); });
+  bar.addEventListener('focusout', () => setTimeout(() => {
+    if (!document.activeElement?.closest?.('.search, #find')) document.body.classList.remove('searching');
+  }, 200));
   input.addEventListener('keydown', (e) => {
     if (list.hidden) return;
     if (e.key === 'ArrowDown') { active = Math.min(items.length - 1, active + 1); render(); e.preventDefault(); }
