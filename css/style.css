@@ -384,28 +384,3 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #coords-open { left: 10px; bottom: auto; }
   #toast { top: 50%; }
 }
-
-/* ---------- 3D view (try-out) ---------- */
-#street { position: fixed; inset: 0; z-index: 3000; background: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
-#street canvas { display: block; width: 100%; height: 100%; cursor: grab; }
-#street canvas:active { cursor: grabbing; }
-#street .st-hud { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px;
-  border-radius: var(--radius); background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  box-shadow: var(--shadow); font-variant-numeric: tabular-nums; pointer-events: none; }
-#street .st-pos { font-size: 15px; font-weight: 600; white-space: pre; }
-#street .st-dir { font-size: 13px; color: var(--sub); }
-#street .st-close { position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 12px; color: var(--fg);
-  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--shadow); }
-#street .st-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px;
-  border-radius: var(--radius); background: var(--glass); pointer-events: none; }
-#street .st-hint { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-  max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 999px; background: var(--glass); font-size: 13px;
-  color: var(--sub); text-align: center; pointer-events: none; transition: opacity 0.8s; }
-#street .st-hint.fade { opacity: 0; }
-#street .st-stick { position: absolute; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(0, 0, 0, 0.18); pointer-events: none; }
-#street .st-knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55); }
-#street .st-jump { display: none; position: absolute; right: 18px; bottom: calc(70px + env(safe-area-inset-bottom)); width: 72px; height: 72px;
-  border-radius: 50%; border: 0; background: var(--glass); color: var(--fg); font-size: 13px; font-weight: 600; box-shadow: var(--shadow); }
-#street.touch .st-jump { display: block; }

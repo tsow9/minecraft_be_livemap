@@ -1403,12 +1403,6 @@ function setupPanels() {
     else toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示');
   });
 
-  $('#btn-street').hidden = !streetEnabled();
-  $('#btn-street').addEventListener('click', () => {
-    const { x, z } = block(map.getCenter());
-    openStreet(x, z);
-  });
-
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }
     else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 5, updateWhenZooming: false }).addTo(map);
@@ -1768,16 +1762,16 @@ async function travelEstimate(f, t) {
 function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, icon: flagSvg(a.color), color: a.color });
+    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
   }
   for (const p of state.players) {
     const c = playerColor(p.key);
-    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim, icon: playerSvg(c), color: c });
-    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c), color: c });
-    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG, color: '#ffffff' });
+    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim, icon: playerSvg(c) });
+    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c) });
+    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, icon: PORTAL_SVG, color: '#a45cf0' });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }
@@ -1809,38 +1803,9 @@ function popupWithRoute(html, place) {
     el.innerHTML = html;
     const acts = document.createElement('div'); acts.className = 'acts';
     acts.append(routeButton(place));
-    if (streetEnabled()) acts.append(button('3Dで見る', () => openStreet(place.x, place.z), 'cube'));
     el.append(acts);
     return el;
   };
-}
-
-// ---------- 3D view (try-out) ----------
-// Turned off by setting "streetView": false in config.json; the view itself lives in street.js.
-function streetEnabled() {
-  return state.config.streetView !== false && !state.demo;
-}
-
-function mapTileUrl(tx, tz) {
-  const m = manifests.get(snapshots()[state.snapshotIndex]?.id);
-  const key = `${state.dim}/0/${tx}/${tz}`;
-  const hit = m && m[key];
-  return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
-}
-
-async function openStreet(x, z) {
-  if (!streetEnabled()) return;
-  map.closePopup();
-  let mod;
-  try { mod = await import(`./street.js?v=${encodeURIComponent(APP_VERSION)}`); } catch { toast('3Dビューを読み込めませんでした'); return; }
-  const dim = state.dim;
-  mod.openStreet({
-    dim, x, z,
-    places: routePlaces(dim),
-    names: blockNames,
-    tileUrl: (kind, tx, tz) => (kind === 'map' ? mapTileUrl(tx, tz) : infoUrl(tx, tz, kind)),
-    onClose: (p) => { if (state.dim === dim) map.setView(ll(p.x + 0.5, p.z + 0.5), Math.max(map.getZoom(), 1)); },
-  });
 }
 
 function routeButton(place) {
@@ -2338,7 +2303,6 @@ async function main() {
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
-    streetView: cfg.streetView !== false,
     liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
     shareUrl: typeof cfg.shareUrl === 'string' && /^https:\/\/[\w.-]+(:\d+)?$/.test(cfg.shareUrl.replace(/\/$/, '')) ? cfg.shareUrl.replace(/\/$/, '') : null,
     liveApiUrl: typeof cfg.liveApiUrl === 'string' && /^https:\/\/api\.github\.com\//.test(cfg.liveApiUrl) ? cfg.liveApiUrl : null,
