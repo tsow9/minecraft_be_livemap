@@ -79,9 +79,11 @@ jobs:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: ワールドの中のプレイヤー情報を調べる
+        env:
+          CHECK: ${{ vars.CHECK_SPOT }}
         run: |
           pip install --quiet numpy pillow
-          CHECK=19,67,-9 python3 tools/inspect_world.py world.mcworld
+          python3 tools/inspect_world.py world.mcworld
 
   update:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == '地図を更新')
