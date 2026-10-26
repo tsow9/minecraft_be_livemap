@@ -1572,8 +1572,20 @@ function setupSearch() {
   bar.addEventListener('focusout', (e) => {
     if (e.relatedTarget && !e.relatedTarget.closest('.search, #find')) close();
   });
+  // A touch outside while typing only puts the keyboard away (search stays open); the next touch outside closes it.
+  // Those touches only close things; the map underneath does not also react (no coordinate bubble).
+  let swallow = false;
   document.addEventListener('pointerdown', (e) => {
-    if (!e.target.closest?.('.search, #find')) close();
+    swallow = false;
+    if (e.target.closest?.('.search, #find')) return;
+    const open = document.body.classList.contains('searching') || !list.hidden;
+    if (document.activeElement?.closest?.('.search, #find')) { document.activeElement.blur(); swallow = true; return; }
+    if (open) { close(); swallow = true; }
+  }, true);
+  document.addEventListener('click', (e) => {
+    if (!swallow) return;
+    swallow = false;
+    if (!e.target.closest?.('.search, #find')) { e.stopPropagation(); e.preventDefault(); }
   }, true);
   input.addEventListener('keydown', (e) => {
     if (list.hidden) return;
@@ -2199,10 +2211,16 @@ function setupMobileView() {
   document.addEventListener('touchmove', (e) => {
     if (e.touches.length > 1 && !e.target.closest?.('#map')) e.preventDefault();
   }, { passive: false });
+  // The page keeps its full height when the on-screen keyboard opens (only the search suggestions shrink, via --vv-h).
+  let lastH = 0;
   const fit = () => {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
-    map.invalidateSize({ pan: false });
+    const root = document.documentElement.style;
+    const vv = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    root.setProperty('--vv-h', `${Math.round(vv)}px`);
+    const keyboard = !!document.activeElement?.matches?.('input, textarea') && vv < window.innerHeight * 0.85;
+    if (keyboard) return;
+    const h = Math.round(vv);
+    if (h !== lastH) { lastH = h; root.setProperty('--app-h', `${h}px`); map.invalidateSize({ pan: false }); }
   };
   window.visualViewport?.addEventListener('resize', fit);
   window.addEventListener('resize', fit);

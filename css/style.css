@@ -338,7 +338,7 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   .coordfind input { width: 100%; min-width: 0; }
   /* The suggestions sit under the X/Z search and stop above the on-screen keyboard. */
   #search-results { right: auto; width: calc(100vw - 20px); margin-top: 52px;
-    max-height: calc(var(--app-h, 100dvh) - max(10px, env(safe-area-inset-top)) - 118px); }
+    max-height: calc(var(--vv-h, 100dvh) - max(10px, env(safe-area-inset-top)) - 118px); }
   #dims { grid-column: 2; grid-row: 2; justify-self: end; }
   #clock { grid-column: 2; grid-row: 3; position: static; justify-self: end; margin-top: -2px; height: 26px; gap: 4px;
     padding: 0 10px 0 8px; font-size: 12px; pointer-events: auto; }
