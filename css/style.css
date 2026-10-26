@@ -306,13 +306,12 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #clock { top: 180px; left: 10px; }
   /* 16px or larger keeps iPhone from zooming the page when a box is tapped */
   input, select, textarea, #search, .coordfind input { font-size: 16px; }
-  /* Row 1: search and X/Z side by side. Row 2: the dimension switch across the full width. */
-  .search { flex: 1 1 0; min-width: 0; }
-  #search { padding-left: 34px; background-position: 11px center; }
-  .coordfind { flex: 0 0 auto; padding-left: 10px; }
-  .coordfind input { width: 50px; }
-  #dims { flex: 1 1 100%; }
-  #dims button { flex: 1; }
+  /* Row 1: search across the full width. Row 2: X/Z and the dimension switch side by side. */
+  .search { flex: 1 1 100%; }
+  .coordfind { flex: 1 1 0; min-width: 0; padding-left: 10px; }
+  .coordfind label { flex: 1; min-width: 0; }
+  .coordfind input { width: 100%; min-width: 0; }
+  #dims { flex: 0 0 auto; }
   .coordfind label { gap: 4px; }
   .coordfind input { padding: 0 6px; }
   .seg button { padding: 0 9px; font-size: 13px; }
