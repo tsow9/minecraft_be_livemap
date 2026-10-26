@@ -1677,7 +1677,7 @@ function renderPortals() {
           // No gate on the other side yet: where the game will make one when someone goes through.
           line.textContent = `${name}側のゲートはまだ見つかっていません`;
           const spot = document.createElement('div'); spot.className = 'sub';
-          spot.textContent = `${name}でゲートができる場所 X ${link.tx} Z ${link.tz}`;
+          spot.textContent = `${name}のゲート生成目安 X ${link.tx} Z ${link.tz}`;
           el.append(line, spot);
           acts.append(button('その場所を見る', () => goTo(link.tx, link.tz, link.other, 1)));
         }
