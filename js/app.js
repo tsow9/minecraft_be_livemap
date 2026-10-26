@@ -1475,7 +1475,7 @@ function setupPanels() {
     if (!state.slimeLayer) toast('スライムチャンクを非表示');
     else if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
     else if (map.getZoom() < SLIME_MIN_ZOOM) toast('スライムチャンクはもう少し拡大すると表示されます');
-    else toast('スライムチャンクを表示・Y40より下で湧きます');
+    else toast('スライムチャンクを表示');
   });
 
   $('#btn-grid').addEventListener('click', () => {
