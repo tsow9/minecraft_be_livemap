@@ -25,6 +25,7 @@ async function main () {
     try {
       const sub = await api.getRealmSubscriptionInfo?.(realm.id)
       console.log('subscription の項目:', sub ? Object.keys(sub).join(', ') : 'なし')
+      if (sub) console.log('  startDate:', sub.startDate, new Date(sub.startDate < 1e12 ? sub.startDate * 1000 : sub.startDate).toISOString(), 'daysLeft:', sub.daysLeft, 'type:', sub.subscriptionType)
     } catch (e) { console.log('subscription 取得失敗:', e.message) }
     try {
       const backups = await api.getRealmBackups(realm.id, full.activeSlot)
