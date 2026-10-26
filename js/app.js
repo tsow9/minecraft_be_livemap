@@ -406,6 +406,15 @@ async function copyText(text, message) {
 // "~" lets the copied text work directly in /tp when Y is unknown.
 const coordText = (x, z, y) => `${x} ${y ?? '~'} ${z}`;
 
+// The readout's second line: the same spot in the other dimension, written like the main X / Z.
+function showOtherDim(x, z) {
+  const el = $('#c-center-other');
+  const part = (k, v) => `<span><i>${k}</i>${v}</span>`;
+  if (state.dim === 'overworld') el.innerHTML = `<b>ネザー</b>${part('X', Math.floor(x / 8))}${part('Z', Math.floor(z / 8))}`;
+  else if (state.dim === 'nether') el.innerHTML = `<b>地上</b>${part('X', x * 8)}${part('Z', z * 8)}`;
+  else el.innerHTML = '';
+}
+
 function otherDimLine(x, z, dim = state.dim) {
   if (dim === 'overworld') return `ネザー X ${Math.floor(x / 8)} / Z ${Math.floor(z / 8)}`;
   if (dim === 'nether') return `地上 X ${x * 8} / Z ${z * 8}`;
@@ -1270,7 +1279,7 @@ function setupCoords() {
     frame = requestAnimationFrame(() => {
       frame = 0;
       const { x, z } = block(map.getCenter());
-      $('#c-center-other').textContent = otherDimLine(x, z);
+      showOtherDim(x, z);
       updateCenterInfo();
     });
   };
@@ -1320,7 +1329,7 @@ function setDim(dim) {
   renderPortals();
   stopRoute();
   refreshExplore();
-  $('#c-center-other').textContent = otherDimLine(block(map.getCenter()).x, block(map.getCenter()).z);
+  showOtherDim(block(map.getCenter()).x, block(map.getCenter()).z);
 }
 
 function goTo(x, z, dim, zoom) {

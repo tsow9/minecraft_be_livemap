@@ -158,10 +158,12 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #coords-close { grid-column: 2; grid-row: 1; }
 #copy-center { grid-column: 2; grid-row: 3; }
 #coords .xyz { display: flex; gap: 10px; font-size: 15px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
-#coords .xyz i { font-style: normal; font-size: 10px; font-weight: 700; color: var(--sub); margin-right: 3px; }
+#coords .xyz i, #coords .sub i { font-style: normal; font-size: 13px; font-weight: 700; color: var(--sub); margin-right: 4px; }
 #coords .blk { grid-column: 1; grid-row: 3; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #coords .blk:empty { display: none; }
-#coords .sub { grid-column: 1 / -1; grid-row: 2; color: var(--sub); font-size: 12px; margin-top: -2px; }
+#coords .sub { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: baseline; gap: 10px; color: var(--sub); font-size: 13px; font-weight: 600; margin-top: -1px; }
+#coords .sub b { font-size: 11px; font-weight: 700; }
+#coords .sub i { font-size: 11px; margin-right: 3px; }
 #coords .sub:empty { display: none; }
 .icon-btn { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--sub); flex: none; }
 .icon-btn:hover { background: var(--hover); color: var(--fg); }
@@ -321,6 +323,10 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #dims button { padding: 0 8px; font-size: 12px; }
   #coords, #coords-open { top: calc(max(10px, env(safe-area-inset-top)) + 50px) !important; }
   #coords { padding: 6px 4px 4px 10px !important; }
+  #coords { grid-template-columns: minmax(0, 1fr) auto; }
+  #coords .xyz { gap: 7px !important; margin-right: 0; }
+  #coords .xyz i { margin-right: 2px; }
+  #coords .sub { gap: 7px; }
   /* As wide as the pin search above it (screen − side padding − gap − the X/Z box). */
   #coords { width: calc(100vw - 212px); }
   #coords .icon-btn { width: 26px; height: 26px; }
