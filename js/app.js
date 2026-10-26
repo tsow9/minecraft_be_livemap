@@ -1299,10 +1299,11 @@ function setupCoords() {
   };
   $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
   open.addEventListener('click', () => show(true));
-  // Phones line the readout up with the search above it, which ends where the dimension switch starts.
+  // Phones: the readout reaches right up to the dimension switch beside it.
   const dims = $('#dims');
-  const keepWidth = () => document.documentElement.style.setProperty('--dims-w', `${Math.ceil(dims.getBoundingClientRect().width)}px`);
+  const keepWidth = () => document.documentElement.style.setProperty('--dims-left', `${Math.floor(dims.getBoundingClientRect().left)}px`);
   if (window.ResizeObserver) new ResizeObserver(keepWidth).observe(dims);
+  window.addEventListener('resize', keepWidth);
   keepWidth();
   let saved = null;
   try { saved = localStorage.getItem('mcmap.coords'); } catch { /* private mode */ }
