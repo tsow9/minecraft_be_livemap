@@ -59,6 +59,26 @@ def main():
         if spawn:
             print('  リスポーン関連:', spawn)
     print('プレイヤー記録の項目(出てきた数):', sorted(names.items()))
+    # Where nether portal blocks are, by raw bytes and by the map maker's decoder.
+    raw = collections.Counter()
+    found = collections.Counter()
+    for key, value in bedrock_db.scan(db, lambda k: render_map.parse_key(k) is not None):
+        if b'minecraft:portal' not in value:
+            continue
+        dim, cx, cz, sy = render_map.parse_key(key)
+        raw[(dim, cx, cz, sy)] += 1
+        try:
+            dec = render_map.decode_subchunk(value)
+        except Exception as e:  # noqa: BLE001 - diagnostics only
+            print('  ゲートを含む区画を読めない', (dim, cx, cz, sy), e, '版', value[0], value[1] if len(value) > 1 else None)
+            continue
+        if dec is None:
+            print('  ゲートを含む区画が空扱い', (dim, cx, cz, sy), '版', value[0], value[1] if len(value) > 1 else None)
+        elif dec[3] is not None and dec[3].any():
+            found[(dim, cx, cz, sy)] += int(dec[3].sum())
+        else:
+            print('  ゲートの名前はあるのに見つからない区画', (dim, cx, cz, sy), '版', value[0], value[1], '層の頭', value[2:4].hex())
+    print('ゲートのブロック名を含む区画:', sorted(raw), ' 読み取れた:', dict(found))
     level = os.path.join(os.path.dirname(db), 'level.dat')
     if os.path.exists(level):
         with open(level, 'rb') as f:
