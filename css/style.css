@@ -309,7 +309,7 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   /* Row 1: pin search and X/Z search. Row 2: the crosshair readout (left) and the dimension switch (right). */
   .search { flex: 1 1 0; min-width: 0; }
   #search { padding-left: 34px; background-position: 11px center; }
-  .coordfind { flex: 0 0 auto; padding-left: 10px; }
+  .coordfind { flex: 0 0 184px; padding-left: 10px; }
   .coordfind input { width: 50px; }
   #dims { position: absolute; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 50px); height: 38px; }
   #dims button { padding: 0 8px; font-size: 12px; }
@@ -317,9 +317,10 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   /* The readout: X/Y/Z on top, block name with the copy and close buttons below, so it stays narrow. */
   #coords { display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 2px; padding: 6px 4px 4px 10px !important; }
   #coords .line { display: contents; }
-  #coords .xyz { grid-column: 1 / -1; grid-row: 1; margin: 0; font-size: 13px !important; gap: 7px !important; }
-  #coords { max-width: calc(100vw - 196px); }
-  #coords .blk { grid-column: 1; grid-row: 2; margin: 0; max-width: 130px !important; }
+  #coords .xyz { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+  /* As wide as the pin search above it (screen − side padding − gap − the X/Z box). */
+  #coords { width: calc(100vw - 212px); }
+  #coords .blk { grid-column: 1; grid-row: 2; margin: 0; max-width: none !important; min-width: 0; }
   #copy-center { grid-column: 2; grid-row: 2; }
   #coords-close { grid-column: 3; grid-row: 2; }
   #coords .sub { grid-column: 1 / -1; grid-row: 3; }
