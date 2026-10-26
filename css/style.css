@@ -48,7 +48,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #toast,
 .leaflet-control-zoom { background: var(--glass);
   border: 1px solid var(--line); box-shadow: var(--shadow); }
-.search { position: relative; z-index: 2; flex: 1 1 260px; max-width: 420px; }
+.search { position: relative; z-index: 2; flex: 0 1 240px; min-width: 0; }
 #search { width: 100%; height: 42px; padding: 0 14px 0 40px; border-radius: 999px; outline: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: 14px center; background-size: 18px; transition: border-color .15s; }
@@ -306,10 +306,15 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #clock { top: 180px; left: 10px; }
   /* 16px or larger keeps iPhone from zooming the page when a box is tapped */
   input, select, textarea, #search, .coordfind input { font-size: 16px; }
-  .search { flex-basis: 100%; max-width: none; }
-  .coordfind { flex: 1 1 0; min-width: 0; padding-left: 10px; }
-  .coordfind label { flex: 1; min-width: 0; gap: 4px; }
-  .coordfind input { width: 100%; min-width: 0; padding: 0 6px; }
+  /* Row 1: search and X/Z side by side. Row 2: the dimension switch across the full width. */
+  .search { flex: 1 1 0; min-width: 0; }
+  #search { padding-left: 34px; background-position: 11px center; }
+  .coordfind { flex: 0 0 auto; padding-left: 10px; }
+  .coordfind input { width: 50px; }
+  #dims { flex: 1 1 100%; }
+  #dims button { flex: 1; }
+  .coordfind label { gap: 4px; }
+  .coordfind input { padding: 0 6px; }
   .seg button { padding: 0 9px; font-size: 13px; }
   #topbar { padding: 10px; padding-top: max(10px, env(safe-area-inset-top)); }
   #sidebuttons { top: 112px; right: 10px; padding: 4px; }
