@@ -46,6 +46,7 @@
     <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/><path d="M18 3.5l2.5 2.5L18 8.5"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
@@ -55,7 +56,9 @@
 <div id="crosshair" aria-hidden="true"></div>
 <div id="route" hidden>
   <div class="r-row"><span class="r-label">出発</span><b id="route-from"></b></div>
-  <div class="r-row"><span class="r-label">行き先</span><select id="route-to" aria-label="行き先"></select></div>
+  <div class="r-row"><span class="r-label">行き先</span>
+    <div id="route-pick"><button id="route-to" type="button" aria-label="行き先"><span class="s-icon"></span><span class="pick-name"></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+      <ul id="route-list" hidden></ul></div></div>
   <div id="route-result" hidden><div class="r-main"><b id="route-dist"></b><span id="route-time"></span></div><div id="route-nether"></div></div>
   <button id="route-close" class="icon-btn" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button>
 </div>

@@ -1762,15 +1762,16 @@ async function travelEstimate(f, t) {
 function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim });
+    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
   }
   for (const p of state.players) {
-    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim });
-    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim });
-    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim });
+    const c = playerColor(p.key);
+    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim, icon: playerSvg(c) });
+    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c) });
+    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }
@@ -1816,10 +1817,7 @@ function startRoute(a) {
   route.from = { id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim };
   map.closePopup();
   $('#route-from').textContent = route.from.name;
-  const sel = $('#route-to');
-  sel.innerHTML = '';
-  sel.append(new Option('行き先を選んでください', ''));
-  for (const t of routeTargets()) sel.append(new Option(t.name, t.id));
+  showRouteChoice(null);
   $('#route-result').hidden = true;
   $('#route').hidden = false;
   showRoutePoints();
@@ -1831,14 +1829,8 @@ function setRouteTarget(id, point) {
   if (!t) return;
   t.dist = Math.hypot(t.x - route.from.x, t.z - route.from.z);
   route.to = t;
-  const sel = $('#route-to');
-  if (point) {
-    sel.querySelector('option[data-point]')?.remove();
-    const o = new Option(t.name, t.id);
-    o.dataset.point = '1';
-    sel.append(o);
-  }
-  sel.value = t.id;
+  if (point) t.icon = GOAL_SVG;
+  showRouteChoice(t);
   const f = route.from;
   if (route.line) map.removeLayer(route.line);
   route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
@@ -1881,6 +1873,14 @@ function showRoutePoints() {
   if (!map.hasLayer(routePoints)) routePoints.addTo(map);
 }
 
+function showRouteChoice(t) {
+  const btn = $('#route-to');
+  btn.querySelector('.s-icon').innerHTML = t?.icon || '';
+  btn.querySelector('.pick-name').textContent = t ? t.name : '行き先を選んでください';
+  btn.classList.toggle('placeholder', !t);
+  $('#route-list').hidden = true;
+}
+
 function stopRoute() {
   routePoints.clearLayers();
   if (route.line) map.removeLayer(route.line);
@@ -1889,7 +1889,24 @@ function stopRoute() {
 }
 
 function setupRoute() {
-  $('#route-to').addEventListener('change', (e) => { if (e.target.value) setRouteTarget(e.target.value); });
+  // The destination list looks like the search suggestions (icon + name), on every screen.
+  const btn = $('#route-to'), list = $('#route-list');
+  btn.addEventListener('click', () => {
+    if (!list.hidden) { list.hidden = true; return; }
+    list.innerHTML = '';
+    const targets = routeTargets();
+    for (const t of targets) {
+      const li = document.createElement('li');
+      if (route.to?.id === t.id) li.className = 'active';
+      li.innerHTML = `<span class="s-icon">${t.icon || ''}</span><span class="s-title"></span>`;
+      li.querySelector('.s-title').textContent = t.name;
+      li.addEventListener('click', () => { list.hidden = true; setRouteTarget(t.id); });
+      list.append(li);
+    }
+    if (!targets.length) list.innerHTML = '<li class="empty">選べる行き先がありません。地図をタップして選べます</li>';
+    list.hidden = false;
+  });
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest?.('#route-pick')) list.hidden = true; }, true);
   $('#route-close').addEventListener('click', stopRoute);
 }
 
