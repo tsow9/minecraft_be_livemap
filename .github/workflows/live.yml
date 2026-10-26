@@ -33,7 +33,10 @@ jobs:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
       - name: 参加中の人を調べる
-        run: node tools/realms/live.js members.json
+        run: |
+          mkdir -p live
+          if git fetch --depth 1 origin live-data; then git archive FETCH_HEAD | tar -x -C live; fi
+          node tools/realms/live.js members.json live/live.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
@@ -41,8 +44,6 @@ jobs:
       - name: 前回の状態を取得
         id: prev
         run: |
-          mkdir -p live
-          if git fetch --depth 1 origin live-data; then git archive FETCH_HEAD | tar -x -C live; fi
           echo "need_world=$(python3 tools/live_update.py need-world live/live.json members.json)" >> "$GITHUB_OUTPUT"
       - name: プレイ中ならワールドをダウンロード
         if: steps.prev.outputs.need_world == 'true'

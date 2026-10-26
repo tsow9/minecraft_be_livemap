@@ -126,6 +126,7 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
   const realm = await api.getRealm(realmId)
   const info = realmInfo(realm)
   if (withBackups) {
+    info.extrasAt = Date.now()
     try { info.backups = await realmBackups(api, realm) } catch (e) { console.error('バックアップ情報を取得できませんでした:', e.message) }
     try {
       const sub = await api.getRealmSubscriptionInfo(realm.id)
