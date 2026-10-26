@@ -36,6 +36,12 @@ def read_records(db_dir, secret):
             'x': math.floor(pos[0]), 'y': math.floor(pos[1] - 1.62), 'z': math.floor(pos[2]),
             'death': None,
         }
+        # The bed (or respawn anchor) the player last used; NaturalSpawn = 1 means "no bed, world spawn".
+        if root.get('NaturalSpawn') == 0 and 'SpawnBlockPositionX' in root and abs(root['SpawnBlockPositionX']) < 30_000_000:
+            rec['bed'] = {
+                'dim': DIM_NAMES.get(root.get('SpawnDimension', 0), 'overworld'),
+                'x': root['SpawnBlockPositionX'], 'y': root.get('SpawnBlockPositionY', 64), 'z': root['SpawnBlockPositionZ'],
+            }
         if root.get('HasDiedBefore') and 'DeathPositionX' in root:
             rec['death'] = {
                 'dim': DIM_NAMES.get(root.get('DeathDimension', 0), 'overworld'),

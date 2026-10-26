@@ -47,6 +47,7 @@ def _palette_lut(data, pos):
     colors = np.zeros((max(count, 1), 3), np.uint8)
     ids = np.zeros(max(count, 1), np.uint16)
     ground = np.zeros(max(count, 1), bool)
+    portal = np.zeros(max(count, 1), bool)
     for i in range(count):
         entry, pos = root_compound(data, pos)
         states = entry.get('states') if isinstance(entry.get('states'), dict) else {}
@@ -56,14 +57,17 @@ def _palette_lut(data, pos):
         colors[i] = rgb
         ids[i] = block_ids.id_of(name, states)
         ground[i] = kind == 'solid' and not is_foliage(name)
+        portal[i] = name == 'minecraft:portal'
+    hit = (kinds, colors, ids, ground, portal if portal.any() else None)
     if len(_palette_cache) > 20000:
         _palette_cache.clear()
-    _palette_cache[key] = (kinds, colors, ids, ground)
-    return kinds, colors, ids, ground
+    _palette_cache[key] = hit
+    return hit
 
 
 def decode_subchunk(data):
-    """Return (block_kind[16,16,16], palette_index[16,16,16], (colors, ids)) indexed [x][z][y], or None."""
+    """Return (block_kind[16,16,16], palette_index[16,16,16], (colors, ids, ground), nether-portal mask or None)
+    indexed [x][z][y], or None."""
     version = data[0]
     if version == 1:
         pos = 1
@@ -88,9 +92,9 @@ def decode_subchunk(data):
         pos += 4 * n_words
         shifts = (np.arange(per_word, dtype=np.uint32) * bits)
         idx = ((words[:, None] >> shifts) & ((1 << bits) - 1)).reshape(-1)[:4096].astype(np.uint16)
-    kinds, colors, ids, ground = _palette_lut(data, pos)
+    kinds, colors, ids, ground, portal = _palette_lut(data, pos)
     idx = np.minimum(idx, len(kinds) - 1).reshape(16, 16, 16)
-    return kinds[idx], idx, (colors, ids, ground)
+    return kinds[idx], idx, (colors, ids, ground), (portal[idx] if portal is not None else None)
 
 
 # ---------- per-chunk surface ----------
@@ -166,8 +170,13 @@ def parse_key(key):
     return None
 
 
+# Nether portal blocks found while reading, per dimension id: [(x, y, z), ...]
+portal_blocks = {}
+
+
 def read_surfaces(db_dir, dims):
     want_ids = {DIM_IDS[d] for d in dims}
+    portal_blocks.clear()
     surfaces = {d: {} for d in want_ids}
     nether_raw = {}
     seen = 0
@@ -185,6 +194,11 @@ def read_surfaces(db_dir, dims):
             continue
         if decoded is None:
             continue
+        *decoded, portal = decoded
+        if portal is not None and portal.any():
+            xs, zs, ys = np.nonzero(portal)
+            portal_blocks.setdefault(dim, []).extend(
+                zip((cx * 16 + xs).tolist(), (sy * 16 + ys).tolist(), (cz * 16 + zs).tolist()))
         if dim == 1:
             if 0 <= sy <= NETHER_TOP // 16:
                 nether_raw.setdefault((cx, cz), {})[sy] = decoded
@@ -199,6 +213,36 @@ def read_surfaces(db_dir, dims):
     for pos, subs in nether_raw.items():
         surfaces[1][pos] = nether_surface(subs)
     return surfaces
+
+
+def group_portals(blocks):
+    """Joins touching portal blocks into gates; returns [{x, y, z, w, h}] (bottom centre of each gate)."""
+    left = set(blocks)
+    gates = []
+    while left:
+        start = left.pop()
+        todo, gate = [start], [start]
+        while todo:
+            x, y, z = todo.pop()
+            for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
+                n = (x + d[0], y + d[1], z + d[2])
+                if n in left:
+                    left.remove(n)
+                    todo.append(n)
+                    gate.append(n)
+        xs, ys, zs = zip(*gate)
+        gates.append({'x': (min(xs) + max(xs)) // 2, 'y': min(ys), 'z': (min(zs) + max(zs)) // 2,
+                      'w': max(max(xs) - min(xs), max(zs) - min(zs)) + 1, 'h': max(ys) - min(ys) + 1})
+    return sorted(gates, key=lambda g: (g['x'], g['z'], g['y']))
+
+
+def write_portals(site):
+    names = {v: k for k, v in DIM_IDS.items()}
+    out = {'updatedAt': int(time.time() * 1000),
+           'dims': {names[d]: group_portals(b) for d, b in portal_blocks.items() if d in names}}
+    with open(os.path.join(site, 'portals.json'), 'w', encoding='utf-8') as f:
+        json.dump(out, f, separators=(',', ':'))
+    return sum(len(v) for v in out['dims'].values())
 
 
 # ---------- tiles ----------
@@ -421,6 +465,7 @@ def main():
         if total == 0:
             sys.exit('地図にできるデータがありませんでした。')
         block_ids.save(args.site, _official_japanese())
+        print(f'ネザーゲート: {write_portals(args.site)} か所')
         update_config(args.site, snap_id, staging)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

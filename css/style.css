@@ -200,6 +200,20 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   padding: 6px 6px 6px 16px; border-radius: 999px; background: rgba(60, 46, 12, .85); border-color: rgba(240, 190, 70, .55);
   color: #ffe2a0; font-weight: 600; white-space: nowrap; }
 #past-banner[hidden] { display: none; }
+#clock { position: absolute; z-index: 900; left: 12px; top: 66px; display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 9px;
+  border-radius: 999px; background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12px; pointer-events: none; }
+#clock b { font-variant-numeric: tabular-nums; }
+#clock span { color: var(--sub); }
+#clock .ic { width: 16px; height: 16px; color: #ffd36e; }
+#clock.frozen { opacity: .75; }
+#measure { position: absolute; z-index: 1055; left: 50%; transform: translateX(-50%); top: 118px; display: flex; flex-direction: column; gap: 1px;
+  padding: 7px 40px 8px 16px; border-radius: 16px; background: var(--glass-strong); border: 1px solid var(--line); box-shadow: var(--shadow);
+  min-width: 220px; max-width: calc(100vw - 24px); }
+#measure .m-main { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+#measure-route { color: var(--sub); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+#measure-dist { font-size: 18px; font-variant-numeric: tabular-nums; }
+#measure-more { color: var(--sub); font-size: 11px; }
+#measure .icon-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
 #update-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 10px; align-items: center;
   padding: 6px 6px 6px 16px; border-radius: 999px; background: var(--glass-strong); border: 1px solid rgba(62, 207, 142, .5);
   box-shadow: var(--shadow); font-weight: 600; white-space: nowrap; }
@@ -276,6 +290,9 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #tools { left: 248px; right: 72px; transform: none; max-width: none; }
 }
 @media (max-width: 700px) {
+  #clock { top: auto; bottom: 16px; left: 10px; }
+  body.tools-open #clock { display: none; }
+  #measure { top: auto; bottom: 64px; }
   /* 16px or larger keeps iPhone from zooming the page when a box is tapped */
   input, select, textarea, #search, .coordfind input { font-size: 16px; }
   .search { flex-basis: 100%; max-width: none; }

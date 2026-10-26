@@ -39,6 +39,9 @@
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11"/><path d="M5.6 14.4l8.3-8.3a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L13 19.1a3 3 0 0 1-2.1.9H9.4a3 3 0 0 1-2.1-.9l-1.7-1.7a2 2 0 0 1 0-3z"/><path d="M10 10l6 6"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3 16.5L16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l2 2M13 6.5l2 2"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-grave" viewBox="0 0 24 24"><path d="M6.5 20V10a5.5 5.5 0 0 1 11 0v10z"/><path d="M12 8.5v6M9.5 11h5M4 20h16"/></symbol>
@@ -46,6 +49,9 @@
 </svg>
 <div id="map"></div>
 <div id="crosshair" aria-hidden="true"></div>
+<div id="clock" hidden></div>
+<div id="measure" hidden><div class="m-main"><span id="measure-route"></span><b id="measure-dist"></b></div><div id="measure-more"></div>
+  <button id="measure-close" class="icon-btn" title="測るのをやめる"><svg class="ic"><use href="#i-close"/></svg></button></div>
 <div id="update-bar" hidden>新しいバージョンがあります <button id="update-go" class="mini">更新する</button></div>
 <div id="past-banner" hidden><span id="past-text"></span> <button id="past-back" class="mini">最新に戻る</button></div>
 
@@ -131,6 +137,7 @@
     </div>
   </div>
   <button id="conv-from-center" class="mini">今の地図の中心を入れる</button>
+  <label class="check" style="margin-top:12px"><input type="checkbox" id="show-portals" checked> ネザーゲートを地図に表示</label>
 </section>
 
 <section id="panel-players" class="panel" hidden>
@@ -140,6 +147,8 @@
   <h3>地図上の位置 <span class="sub" id="players-updated"></span></h3>
   <ul id="player-list" class="plist"></ul>
   <label class="check"><input type="checkbox" id="show-deaths" checked> 死んだ場所を表示</label>
+  <label class="check"><input type="checkbox" id="show-trails" checked> 24時間の足あとを表示</label>
+  <label class="check"><input type="checkbox" id="show-beds" checked> ベッド(リスポーン地点)を表示</label>
   <p class="help">誰かがプレイ中のあいだ、5分おきにプレイヤーの位置を更新します。ログアウトした人は、最後にいた場所を表示します。</p>
 </section>
 

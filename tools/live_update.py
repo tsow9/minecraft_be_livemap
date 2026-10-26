@@ -8,11 +8,13 @@ import glob
 import json
 import os
 import shutil
+import struct
 import sys
 import tempfile
 import time
 import zipfile
 
+import nbt
 import players
 
 MAP_EVERY_MS = 55 * 60 * 1000
@@ -25,6 +27,24 @@ def load(path, default):
             return json.load(f)
     except (OSError, ValueError):
         return default
+
+
+def read_clock(path):
+    """Time of day and weather from level.dat (8-byte header, then little-endian NBT)."""
+    try:
+        with open(path, 'rb') as f:
+            root, _ = nbt.root_compound(f.read(), 8)
+    except (OSError, ValueError, IndexError, KeyError, struct.error):
+        return None
+    if not isinstance(root.get('Time'), int):
+        return None
+    rain = float(root.get('rainLevel') or 0) > 0
+    return {
+        'time': root['Time'] % 24000,
+        'rain': rain,
+        'thunder': rain and float(root.get('lightningLevel') or 0) > 0,
+        'cycle': bool(root.get('dodaylightcycle', 1)),
+    }
 
 
 def main():
@@ -42,9 +62,12 @@ def main():
         tmp = tempfile.mkdtemp()
         try:
             with zipfile.ZipFile(sys.argv[4]) as z:
-                z.extractall(tmp, [n for n in z.namelist() if '/db/' in '/' + n])
+                z.extractall(tmp, [n for n in z.namelist() if '/db/' in '/' + n or n.endswith('level.dat')])
             db = next(p for p in glob.glob(os.path.join(tmp, '**', 'db'), recursive=True) if os.path.isdir(p))
             records = players.read_records(db, secret)
+            clock = read_clock(os.path.join(os.path.dirname(db), 'level.dat'))
+            if clock:
+                state['world'] = {**clock, 'at': int(time.time() * 1000)}
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     now = int(time.time() * 1000)

@@ -706,6 +706,7 @@ function openCoordPopup(latlng) {
   acts.append(
     button('コピー', () => copyText(coordText(x, z)), 'copy'),
     button('ピン', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
+    button('ここから測る', () => startMeasure(x, z), 'ruler'),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -727,6 +728,7 @@ function openAnnPopup(id, at) {
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
   if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
+  if (a.type === 'waypoint') acts.append(button('距離', () => startMeasure(a.x, a.z, a.name || 'ピン'), 'ruler'));
   const del = button('削除', async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast('削除しました'); }, 'trash');
   del.classList.add('danger');
   acts.append(button('編集', async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
@@ -1300,6 +1302,8 @@ function setDim(dim) {
   refreshBase();
   renderAll();
   renderPlayers();
+  renderPortals();
+  stopMeasure();
   refreshExplore();
   $('#c-center-other').textContent = otherDimLine(block(map.getCenter()).x, block(map.getCenter()).z);
 }
@@ -1532,6 +1536,145 @@ function setupSearch() {
   update();
 }
 
+// ---------- nether portals (found in the world by the map maker) ----------
+const portalGroup = L.layerGroup();
+const PORTAL_SVG = `<svg class="gm-svg" viewBox="0 0 20 28" width="17" height="24"><ellipse class="gm-shadow" cx="10" cy="25.5" rx="7" ry="1.8"/>`
+  + '<g class="gm-body"><rect x="2.5" y="2.5" width="15" height="21" rx="1.5" fill="#7b3fe4" stroke="#1b1d22" stroke-width="3"/>'
+  + '<path d="M6 8c3-1 5 1 8 0M6 13c3-1 5 1 8 0M6 18c3-1 5 1 8 0" stroke="#d6b8ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g></svg>';
+
+async function loadPortals() {
+  state.portals = (await fetchJson(`portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
+  renderPortals();
+}
+
+// Where a gate leads: the nearest gate on the other side around x/8 (or x*8), as the game looks for it.
+function portalLink(g, dim) {
+  const other = dim === 'overworld' ? 'nether' : dim === 'nether' ? 'overworld' : null;
+  if (!other) return null;
+  const k = dim === 'overworld' ? 1 / 8 : 8;
+  const tx = Math.floor(g.x * k), tz = Math.floor(g.z * k);
+  const range = dim === 'overworld' ? 16 : 128;
+  let best = null;
+  for (const o of state.portals?.[other] || []) {
+    const d = Math.max(Math.abs(o.x - tx), Math.abs(o.z - tz));
+    if (d <= range && (!best || d < best.d)) best = { ...o, d };
+  }
+  return { other, tx, tz, gate: best };
+}
+
+function renderPortals() {
+  portalGroup.clearLayers();
+  if (!$('#show-portals').checked) return;
+  for (const g of state.portals?.[state.dim] || []) {
+    const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
+      pmIgnore: true, zIndexOffset: 400,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}</div>` }),
+    });
+    m.bindPopup(() => {
+      const el = document.createElement('div'); el.className = 'pop';
+      el.innerHTML = `<h4>ネザーゲート</h4><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      const link = portalLink(g, state.dim);
+      if (link) {
+        const name = DIMS[link.other].name;
+        const line = document.createElement('div'); line.className = 'sub';
+        if (link.gate) {
+          line.textContent = `つながり先(推定): ${name} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          el.append(line);
+          const acts = document.createElement('div'); acts.className = 'acts';
+          acts.append(button('つながり先を見る', () => goTo(link.gate.x, link.gate.z, link.other, 1)));
+          el.append(acts);
+        } else {
+          line.textContent = `${name}側のゲートはまだ見つかっていません(できる場所の目安: X ${link.tx} / Z ${link.tz})`;
+          el.append(line);
+        }
+      }
+      return el;
+    });
+    portalGroup.addLayer(m);
+  }
+}
+
+// ---------- the game's clock and weather (from the latest world save) ----------
+// Realms only runs while someone plays, so the clock moves on from the save only while someone is online.
+function worldTimeNow() {
+  const w = state.world;
+  if (!w) return null;
+  let t = w.time;
+  if (state.anyoneOnline && w.cycle !== false) t += Math.max(0, Date.now() - w.at) * 0.02;
+  return ((Math.floor(t) % 24000) + 24000) % 24000;
+}
+
+function renderClock() {
+  const el = $('#clock');
+  const t = worldTimeNow();
+  if (t === null) { el.hidden = true; return; }
+  const minutes = Math.floor(((t / 1000 + 6) % 24) * 60);
+  const hh = Math.floor(minutes / 60), mm = minutes % 60;
+  const phase = t < 12000 ? '昼' : t < 13000 ? '夕方' : t < 23000 ? '夜' : '朝';
+  const w = state.world;
+  const weather = w.thunder ? '雷雨' : w.rain ? '雨' : '晴れ';
+  const night = t >= 12000 && t < 23500;
+  el.innerHTML = `<svg class="ic"><use href="#i-${night ? 'moon' : 'sun'}"/></svg><b>${phase} ${hh}:${String(mm).padStart(2, '0')}</b><span>${weather}</span>`;
+  el.title = state.anyoneOnline ? 'ゲーム内の時刻と天気(だいたい)' : 'ゲーム内の時刻と天気(最後に遊んだとき)';
+  el.classList.toggle('frozen', !state.anyoneOnline);
+  el.hidden = false;
+}
+
+// ---------- measuring: from a pin (or any point) to the crosshair ----------
+const measure = { from: null, line: null, frame: 0 };
+const SPRINT = 5.6, WALK = 4.3;
+
+function startMeasure(x, z, name) {
+  stopMeasure();
+  measure.from = { x: x + 0.5, z: z + 0.5, name: name || `X ${x} / Z ${z}` };
+  measure.line = L.polyline([], { color: '#fff', weight: 3, opacity: 0.9, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
+  map.closePopup();
+  $('#measure').hidden = false;
+  updateMeasure();
+  toast('地図を動かして、十字を測りたい場所に合わせてください');
+}
+
+function stopMeasure() {
+  if (measure.line) map.removeLayer(measure.line);
+  measure.from = null; measure.line = null;
+  $('#measure').hidden = true;
+}
+
+function durationText(sec) {
+  if (sec < 60) return `${Math.max(1, Math.round(sec))}秒`;
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return s ? `${m}分${s}秒` : `${m}分`;
+}
+
+function updateMeasure() {
+  if (!measure.from) return;
+  // Snap to a pin near the crosshair.
+  const c = map.getCenter(), cp = map.latLngToContainerPoint(c);
+  let to = { x: c.lng, z: -c.lat, name: '十字の位置' };
+  let best = 22;
+  for (const a of state.annotations) {
+    if (a.type !== 'waypoint' || a.dim !== state.dim) continue;
+    const d = map.latLngToContainerPoint(ll(a.x + 0.5, a.z + 0.5)).distanceTo(cp);
+    if (d < best) { best = d; to = { x: a.x + 0.5, z: a.z + 0.5, name: a.name || 'ピン' }; }
+  }
+  const f = measure.from;
+  measure.line.setLatLngs([ll(f.x, f.z), ll(to.x, to.z)]);
+  const dist = Math.hypot(to.x - f.x, to.z - f.z);
+  $('#measure-route').textContent = `${f.name} → ${to.name}`;
+  let more = `走って約${durationText(dist / SPRINT)}・歩いて約${durationText(dist / WALK)}`;
+  if (state.dim === 'overworld' && dist >= 200) more += `・ネザー経由なら約${Math.round(dist / 8)}ブロック`;
+  $('#measure-dist').textContent = `${Math.round(dist)}ブロック`;
+  $('#measure-more').textContent = more;
+}
+
+function setupMeasure() {
+  map.on('move', () => {
+    if (!measure.from || measure.frame) return;
+    measure.frame = requestAnimationFrame(() => { measure.frame = 0; updateMeasure(); });
+  });
+  $('#measure-close').addEventListener('click', stopMeasure);
+}
+
 // ---------- players, deaths, explorers, who's online ----------
 // Clearly different colors first: the first people get the easiest ones to tell apart.
 const PLAYER_COLORS = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#8e24aa', '#fb8c00', '#00acc1', '#d81b60', '#c0ca33', '#6d4c41'];
@@ -1592,9 +1735,60 @@ function placeText(p) {
   return '最後に記録された位置(誰の記録かまだ分かりません)';
 }
 
+const TRAIL_HOURS = 24;
+const BED_SVG = (c) => `<svg class="gm-svg" viewBox="0 0 30 24" width="24" height="19"><ellipse class="gm-shadow" cx="15" cy="21.5" rx="11" ry="1.8"/>`
+  + `<g class="gm-body"><path d="M4 19V6M26 19v-5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/>`
+  + `<path d="M3.5 11.5h23v5h-23z" fill="${c}" stroke="#1b1d22" stroke-width="2.4" stroke-linejoin="round"/>`
+  + `<path d="M5.5 9.5h6v2h-6z" fill="#f4f1ea" stroke="#1b1d22" stroke-width="2" stroke-linejoin="round"/>`
+  + `<path d="M4 19V6M26 19v-5" stroke="#b07a3f" stroke-width="2" stroke-linecap="round"/></g></svg>`;
+
 function renderPlayers() {
   playerGroup.clearLayers();
   const showDeaths = $('#show-deaths').checked;
+  const showTrails = $('#show-trails').checked;
+  const showBeds = $('#show-beds').checked;
+  // Footprints of the last day, one line per stretch in this dimension.
+  if (showTrails) {
+    const since = Date.now() - TRAIL_HOURS * 3600 * 1000;
+    for (const p of state.players) {
+      const color = playerColor(p.key);
+      let run = [];
+      const flush = () => {
+        if (run.length >= 2) {
+          playerGroup.addLayer(L.polyline(run, { color, weight: 3, opacity: 0.75, dashArray: '2 7', lineCap: 'round', pmIgnore: true, interactive: false }));
+        }
+        run = [];
+      };
+      const pts = (Array.isArray(p.trail) ? p.trail : []).filter((t) => t[0] >= since);
+      if (pts.length && p.dim === state.dim) pts.push([Date.now(), p.dim, p.x, p.z]);
+      for (const [, dim, x, z] of pts) {
+        if (dim !== state.dim) { flush(); continue; }
+        run.push(ll(x + 0.5, z + 0.5));
+      }
+      flush();
+    }
+  }
+  // Beds: players sharing one bed get one mark.
+  if (showBeds) {
+    const beds = new Map();
+    for (const p of state.players) {
+      const b = p.bed;
+      if (!b || b.dim !== state.dim) continue;
+      const k = `${b.x},${b.y},${b.z}`;
+      if (!beds.has(k)) beds.set(k, { ...b, who: [] });
+      beds.get(k).who.push(p);
+    }
+    for (const b of beds.values()) {
+      const names = b.who.map((p) => p.name).join('・');
+      const m = L.marker(ll(b.x + 0.5, b.z + 0.5), {
+        pmIgnore: true, zIndexOffset: 500,
+        icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+          html: `<div class="bed-icon gm" style="transform:translate(-50%,-17px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
+      });
+      m.bindPopup(() => `<div class="pop"><h4>${esc(names)}のベッド</h4><div class="sub">リスポーン地点</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div></div>`);
+      playerGroup.addLayer(m);
+    }
+  }
   for (const p of state.players) {
     const color = playerColor(p.key);
     if (p.dim === state.dim) {
@@ -1708,6 +1902,7 @@ async function refreshConfig() {
   refreshBase();
   state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   refreshExplore();
+  loadPortals();
 }
 
 async function refreshLive() {
@@ -1737,6 +1932,9 @@ async function refreshLive() {
   const players = Array.isArray(data.players) ? data.players : [];
   const json = JSON.stringify(players);
   state.worldAt = data.worldAt;
+  state.world = data.world && typeof data.world.time === 'number' ? data.world : null;
+  state.anyoneOnline = online.length > 0;
+  renderClock();
   $('#players-updated').textContent = data.worldAt ? `${timeText(data.worldAt)} の記録` : '';
   if (json !== lastPlayersJson) {
     lastPlayersJson = json;
@@ -1749,8 +1947,14 @@ async function refreshLive() {
 async function setupPlayers() {
   state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   playerGroup.addTo(map);
+  portalGroup.addTo(map);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
+  $('#show-trails').addEventListener('change', renderPlayers);
+  $('#show-beds').addEventListener('change', renderPlayers);
+  $('#show-portals').addEventListener('change', renderPortals);
+  await loadPortals();
+  setInterval(renderClock, 15000);
   await refreshLive();
   setInterval(refreshLive, 60000);
   setInterval(refreshConfig, 60000);
@@ -1864,6 +2068,7 @@ async function main() {
   setMode('none');
   setupUpdates();
   setupMobileView();
+  setupMeasure();
   window.mcmap = { state, map, refreshConfig, refreshLive };
 }
 
