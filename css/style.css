@@ -148,7 +148,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #mode-hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 6px; min-height: 1em; }
 
 #coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 6px 6px 7px 12px; border-radius: var(--radius);
-  font-variant-numeric: tabular-nums; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none; }
 #coords[hidden] { display: none; }
 #coords .line { display: flex; align-items: center; gap: 2px; }
 #coords .xyz { display: flex; gap: 10px; font-size: 15px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
