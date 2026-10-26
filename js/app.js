@@ -1544,9 +1544,8 @@ function setupSearch() {
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
-        const title = `${g.name || 'ネザーゲート'}${g.planned ? '(予定地)' : ''}`;
-        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title, hay: `${g.name || ''} ネザーゲート ゲート`,
-          icon: PORTAL_SVG, meta: `${g.planned ? 'ネザーゲート予定地' : 'ネザーゲート'} ・ ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || 'ネザーゲート', hay: `${g.name || ''} ネザーゲート ゲート`,
+          icon: PORTAL_SVG, meta: `ネザーゲート ・ ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
     return out;
@@ -1646,20 +1645,9 @@ function portalLink(g, dim) {
   return { other, tx, tz, gate: best };
 }
 
-// Gates follow the Overworld: every Overworld gate is shown, and in the Nether only the gate it leads to.
-// When it leads nowhere yet, the Nether shows where the game will make one (a faint "planned" gate).
-// Nether gates that no Overworld gate leads to (their partner was broken) are left out.
+// Every gate found in the world is shown in its own dimension.
 function shownGates(dim) {
-  const over = state.portals?.overworld || [];
-  if (dim === 'overworld') return over.map((g) => ({ ...g }));
-  if (dim !== 'nether') return [];
-  const out = new Map();
-  for (const g of over) {
-    const link = portalLink(g, 'overworld');
-    if (link.gate) out.set(`${link.gate.x},${link.gate.y},${link.gate.z}`, { ...link.gate, name: link.gate.name || g.name });
-    else out.set(`plan:${link.tx},${link.tz}`, { x: link.tx, y: null, z: link.tz, name: g.name, planned: true, from: g });
-  }
-  return [...out.values()];
+  return (state.portals?.[dim] || []).map((g) => ({ ...g }));
 }
 
 function renderPortals() {
@@ -1669,21 +1657,8 @@ function renderPortals() {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="portal-icon gm${g.planned ? ' planned' : ''}" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || 'ゲート')}${g.planned ? '(予定地)' : ''}</span></div>` }),
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || 'ゲート')}</span></div>` }),
     });
-    if (g.planned) {
-      const place = { id: `gate:plan:${g.x}:${g.z}`, name: `${g.name}(予定地)`, x: g.x, z: g.z, dim: 'nether' };
-      m.bindPopup(() => {
-        const el = document.createElement('div'); el.className = 'pop';
-        el.innerHTML = `<h4>${esc(g.name)}のネザー側(予定地)</h4><div class="sub">地上の「${esc(g.name)}」を通ると、このあたりにネザー側のゲートができます</div><div class="xyz">X ${g.x} / Z ${g.z}</div>`;
-        const acts = document.createElement('div'); acts.className = 'acts';
-        acts.append(routeButton(place), button('地上のゲートを見る', () => goTo(g.from.x, g.from.z, 'overworld', 1)));
-        el.append(acts);
-        return el;
-      });
-      portalGroup.addLayer(routeAware(m, place.id));
-      continue;
-    }
     const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
@@ -1699,8 +1674,12 @@ function renderPortals() {
           el.append(line);
           acts.append(button('つながり先を見る', () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
+          // No gate on the other side yet: where the game will make one when someone goes through.
           line.textContent = `${name}側のゲートはまだ見つかっていません`;
-          el.append(line);
+          const spot = document.createElement('div'); spot.className = 'sub';
+          spot.textContent = `${name}でゲートができる場所 X ${link.tx} Z ${link.tz}`;
+          el.append(line, spot);
+          acts.append(button('その場所を見る', () => goTo(link.tx, link.tz, link.other, 1)));
         }
       }
       el.append(acts);
@@ -1791,7 +1770,7 @@ function routePlaces(dim) {
     if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: g.planned ? `gate:plan:${g.x}:${g.z}` : `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: `${g.name || 'ネザーゲート'}${g.planned ? '(予定地)' : ''}`, x: g.x, z: g.z, dim });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim });
   }
   return out;
 }
