@@ -1772,22 +1772,22 @@ function setRouteTarget(id, point) {
 
 // A spot picked on empty ground (not a pin or other mark) gets its own small mark while the route is open.
 const routePoints = L.layerGroup();
-// Start: a ring on the ground. Destination: a red cross. Both only for spots picked on empty ground.
-const START_SVG = '<svg class="gm-svg" viewBox="0 0 26 20" width="24" height="18"><ellipse class="gm-shadow" cx="13" cy="17" rx="8" ry="1.6"/>'
-  + '<g class="gm-body"><ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#1b1d22" stroke-width="5"/>'
-  + '<ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#f4f1ea" stroke-width="2.4"/>'
-  + '<ellipse cx="13" cy="10" rx="3" ry="2" fill="#ffd36e" stroke="#1b1d22" stroke-width="1.6"/></g></svg>';
+// Start: a green flag (pin style). Destination: a red cross. Both only for spots picked on empty ground.
 const GOAL_SVG = '<svg class="gm-svg" viewBox="0 0 22 24" width="20" height="22"><ellipse class="gm-shadow" cx="11" cy="21.5" rx="6" ry="1.6"/>'
   + '<g class="gm-body"><path d="M5 5l12 12M17 5L5 17" stroke="#1b1d22" stroke-width="7" stroke-linecap="round"/>'
   + '<path d="M5 5l12 12M17 5L5 17" stroke="#e5484d" stroke-width="3.6" stroke-linecap="round"/></g></svg>';
 
 function showRoutePoints() {
   routePoints.clearLayers();
-  for (const [p, svg, dy] of [[route.from, START_SVG, 9], [route.to, GOAL_SVG, 10]]) {
+  const marks = [
+    [route.from, `<div class="wp-icon gm" style="transform:translate(-50%,-28.4px)">${flagSvg('#3ecf8e')}</div>`],
+    [route.to, `<div class="gm" style="transform:translate(-50%,-10px)">${GOAL_SVG}</div>`],
+  ];
+  for (const [p, html] of marks) {
     if (!p || !String(p.id).startsWith('point:')) continue;
     routePoints.addLayer(L.marker(ll(p.x + 0.5, p.z + 0.5), {
       pmIgnore: true, interactive: false, zIndexOffset: 1500,
-      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="gm" style="transform:translate(-50%,-${dy}px)">${svg}</div>` }),
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html }),
     }));
   }
   if (!map.hasLayer(routePoints)) routePoints.addTo(map);
