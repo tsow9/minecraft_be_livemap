@@ -1628,7 +1628,53 @@ function renderClock() {
 }
 
 // ---------- route: from a pin to a chosen destination (like a map app) ----------
-const route = { from: null, to: null, line: null };
+const route = { from: null, to: null, line: null, job: 0 };
+
+// Sprinting time along the straight line, using the map's heights and surface blocks:
+// open ground at sprint speed, extra time for climbing, swimming through water, and a warning for lava.
+const SPRINT = 5.6, SWIM = 2.2, STEP_UP = 0.25, CLIMB = 0.6;
+async function travelEstimate(f, t) {
+  const n = Math.max(1, Math.ceil(Math.hypot(t.x - f.x, t.z - f.z)));
+  if (n > 20000) return '';
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    pts.push([Math.floor(f.x + 0.5 + (t.x - f.x) * i / n), Math.floor(f.z + 0.5 + (t.z - f.z) * i / n)]);
+  }
+  // Load every map piece the line crosses (heights and surface blocks).
+  const tiles = new Set(pts.map(([x, z]) => `${Math.floor(x / 256)},${Math.floor(z / 256)}`));
+  const ground = new Map();
+  await Promise.all([...tiles].map(async (k) => {
+    const [tx, tz] = k.split(',').map(Number);
+    const gu = infoUrl(tx, tz, 'ground'), iu = infoUrl(tx, tz, 'info');
+    const [g] = await Promise.all([gu ? loadGroundGrid(gu) : null, iu ? loadInfoTile(iu) : null]);
+    ground.set(k, g);
+  }));
+  const water = new Set(['water', 'flowing_water'].map((nm) => blockNames.indexOf(nm)).filter((i) => i > 0));
+  const lava = new Set(['lava', 'flowing_lava'].map((nm) => blockNames.indexOf(nm)).filter((i) => i > 0));
+  let sec = 0, wet = 0, up = 0, unknown = 0, hot = false, prev = null;
+  for (const [x, z] of pts.slice(1)) {
+    const top = blockAtNow(x, z).raw;
+    const g = ground.get(`${Math.floor(x / 256)},${Math.floor(z / 256)}`);
+    const h = g ? g[(z - Math.floor(z / 256) * 256) * 256 + (x - Math.floor(x / 256) * 256)] : NO_GROUND;
+    if (top && lava.has(top.id)) hot = true;
+    if (top && water.has(top.id)) { sec += 1 / SWIM; wet++; prev = null; continue; }
+    if (!top && h === NO_GROUND) { sec += 1 / SPRINT; unknown++; continue; }
+    sec += 1 / SPRINT;
+    if (h !== NO_GROUND && prev !== null && h > prev) {
+      const rise = h - prev;
+      sec += rise === 1 ? STEP_UP : rise * CLIMB;
+      up += rise;
+    }
+    if (h !== NO_GROUND) prev = h;
+  }
+  const time = sec < 60 ? `${Math.max(1, Math.round(sec))}秒` : `${Math.floor(sec / 60)}分${Math.round(sec % 60) ? `${Math.round(sec % 60)}秒` : ''}`;
+  const notes = [];
+  if (wet) notes.push(`泳ぎ${wet}ブロック`);
+  if (up >= 3) notes.push(`のぼり${up}ブロック`);
+  if (hot) notes.push('途中に溶岩あり');
+  if (unknown > n * 0.2) notes.push('地図にない場所を含む');
+  return `走って約${time}${notes.length ? `(${notes.join('・')})` : ''}`;
+}
 
 // Everything on the map that a route can start from or go to, in one dimension.
 function routePlaces(dim) {
@@ -1715,8 +1761,13 @@ function setRouteTarget(id, point) {
   route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
     { color: '#fff', weight: 3, opacity: 0.95, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
   $('#route-dist').textContent = `${Math.round(t.dist)}ブロック`;
-  const more = f.dim === 'overworld' && t.dist >= 200 ? `ネザー経由なら約${Math.round(t.dist / 8)}ブロック` : '';
-  $('#route-more').textContent = more;
+  const nether = f.dim === 'overworld' && t.dist >= 200 ? `ネザー経由なら約${Math.round(t.dist / 8)}ブロック` : '';
+  $('#route-more').textContent = ['走って…計算中', nether].filter(Boolean).join('・');
+  const job = ++route.job;
+  travelEstimate(f, t).then((est) => {
+    if (job !== route.job) return;
+    $('#route-more').textContent = [est, nether].filter(Boolean).join('・');
+  });
   $('#route-result').hidden = false;
   // Keep both ends clear of the route card (top on a computer, bottom on a phone).
   const phone = window.matchMedia('(max-width: 700px)').matches;
@@ -1727,7 +1778,7 @@ function setRouteTarget(id, point) {
 
 function stopRoute() {
   if (route.line) map.removeLayer(route.line);
-  route.from = null; route.to = null; route.line = null;
+  route.from = null; route.to = null; route.line = null; route.job++;
   $('#route').hidden = true;
 }
 
