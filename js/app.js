@@ -1282,13 +1282,12 @@ function setupCoords() {
     const { x, z } = block(map.getCenter());
     copyText(coordText(x, z, centerInfo?.y));
   });
-  // Small by default; tap for the Nether line, or close it and bring it back with the small button.
+  // Close it and bring it back with the small button.
   const box = $('#coords'), open = $('#coords-open');
   const show = (visible) => {
     box.hidden = !visible; open.hidden = visible;
     try { localStorage.setItem('mcmap.coords', visible ? 'open' : 'closed'); } catch { /* private mode */ }
   };
-  box.addEventListener('click', () => box.classList.toggle('detail'));
   $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
   open.addEventListener('click', () => show(true));
   let saved = null;

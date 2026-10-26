@@ -155,8 +155,8 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #coords .xyz i { font-style: normal; font-size: 10px; font-weight: 700; color: var(--sub); margin-right: 3px; }
 #coords .blk { font-size: 12px; color: var(--sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 #coords .blk:empty { display: none; }
-#coords .sub { display: none; color: var(--sub); font-size: 12px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
-#coords.detail .sub:not(:empty) { display: block; }
+#coords .sub { color: var(--sub); font-size: 12px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
+#coords .sub:empty { display: none; }
 .icon-btn { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--sub); flex: none; }
 .icon-btn:hover { background: var(--hover); color: var(--fg); }
 .icon-btn .ic { width: 16px; height: 16px; }
