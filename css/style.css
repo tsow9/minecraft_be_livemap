@@ -206,14 +206,17 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #clock span { color: var(--sub); }
 #clock .ic { width: 16px; height: 16px; color: #ffd36e; }
 #clock.frozen { opacity: .75; }
-#measure { position: absolute; z-index: 1055; left: 50%; transform: translateX(-50%); top: 118px; display: flex; flex-direction: column; gap: 1px;
-  padding: 7px 40px 8px 16px; border-radius: 16px; background: var(--glass-strong); border: 1px solid var(--line); box-shadow: var(--shadow);
-  min-width: 220px; max-width: calc(100vw - 24px); }
-#measure .m-main { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
-#measure-route { color: var(--sub); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-#measure-dist { font-size: 18px; font-variant-numeric: tabular-nums; }
-#measure-more { color: var(--sub); font-size: 11px; }
-#measure .icon-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+#route { position: absolute; z-index: 1055; left: 50%; transform: translateX(-50%); top: 118px; display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 44px 10px 14px; border-radius: 16px; background: var(--glass-strong); border: 1px solid var(--line); box-shadow: var(--shadow);
+  width: min(380px, calc(100vw - 24px)); }
+#route .r-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#route .r-label { flex: none; width: 3.5em; color: var(--sub); font-size: 12px; font-weight: 600; }
+#route-from { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#route-to { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0,0,0,.3); color: var(--fg); }
+#route-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+#route-dist { font-size: 18px; font-variant-numeric: tabular-nums; }
+#route-more { color: var(--sub); font-size: 11px; }
+#route .icon-btn { position: absolute; right: 8px; top: 8px; }
 #update-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 10px; align-items: center;
   padding: 6px 6px 6px 16px; border-radius: 999px; background: var(--glass-strong); border: 1px solid rgba(62, 207, 142, .5);
   box-shadow: var(--shadow); font-weight: 600; white-space: nowrap; }
@@ -292,7 +295,7 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
 @media (max-width: 700px) {
   #clock { top: auto; bottom: 16px; left: 10px; }
   body.tools-open #clock { display: none; }
-  #measure { top: auto; bottom: 64px; }
+  #route { top: auto; bottom: 64px; }
   /* 16px or larger keeps iPhone from zooming the page when a box is tapped */
   input, select, textarea, #search, .coordfind input { font-size: 16px; }
   .search { flex-basis: 100%; max-width: none; }

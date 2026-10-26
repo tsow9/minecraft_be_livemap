@@ -632,6 +632,7 @@ function renderAnn(a) {
   layer.on('click', (e) => {
     if (state.mode !== 'none') return;
     L.DomEvent.stop(e);
+    if (route.from && a.type === 'waypoint' && a.id !== route.from.id && a.dim === route.from.dim) { setRouteTarget(a.id); return; }
     openAnnPopup(a.id, e.latlng);
   });
   layer.on('pm:edit pm:dragend', () => updateGeometry(a.id, layer));
@@ -706,7 +707,6 @@ function openCoordPopup(latlng) {
   acts.append(
     button('コピー', () => copyText(coordText(x, z)), 'copy'),
     button('ピン', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
-    button('ここから測る', () => startMeasure(x, z), 'ruler'),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -728,7 +728,7 @@ function openAnnPopup(id, at) {
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
   if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
-  if (a.type === 'waypoint') acts.append(button('距離', () => startMeasure(a.x, a.z, a.name || 'ピン'), 'ruler'));
+  if (a.type === 'waypoint') acts.append(button('行き先を選ぶ', () => startRoute(a), 'route'));
   const del = button('削除', async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast('削除しました'); }, 'trash');
   del.classList.add('danger');
   acts.append(button('編集', async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
@@ -1303,7 +1303,7 @@ function setDim(dim) {
   renderAll();
   renderPlayers();
   renderPortals();
-  stopMeasure();
+  stopRoute();
   refreshExplore();
   $('#c-center-other').textContent = otherDimLine(block(map.getCenter()).x, block(map.getCenter()).z);
 }
@@ -1620,25 +1620,9 @@ function renderClock() {
   el.hidden = false;
 }
 
-// ---------- measuring: from a pin (or any point) to the crosshair ----------
-const measure = { from: null, line: null, frame: 0 };
+// ---------- route: from a pin to a chosen destination (like a map app) ----------
+const route = { from: null, to: null, line: null };
 const SPRINT = 5.6, WALK = 4.3;
-
-function startMeasure(x, z, name) {
-  stopMeasure();
-  measure.from = { x: x + 0.5, z: z + 0.5, name: name || `X ${x} / Z ${z}` };
-  measure.line = L.polyline([], { color: '#fff', weight: 3, opacity: 0.9, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
-  map.closePopup();
-  $('#measure').hidden = false;
-  updateMeasure();
-  toast('地図を動かして、十字を測りたい場所に合わせてください');
-}
-
-function stopMeasure() {
-  if (measure.line) map.removeLayer(measure.line);
-  measure.from = null; measure.line = null;
-  $('#measure').hidden = true;
-}
 
 function durationText(sec) {
   if (sec < 60) return `${Math.max(1, Math.round(sec))}秒`;
@@ -1646,33 +1630,64 @@ function durationText(sec) {
   return s ? `${m}分${s}秒` : `${m}分`;
 }
 
-function updateMeasure() {
-  if (!measure.from) return;
-  // Snap to a pin near the crosshair.
-  const c = map.getCenter(), cp = map.latLngToContainerPoint(c);
-  let to = { x: c.lng, z: -c.lat, name: '十字の位置' };
-  let best = 22;
+// Places you can go to from the starting pin: other pins and players in the same dimension.
+function routeTargets() {
+  const f = route.from;
+  const out = [];
   for (const a of state.annotations) {
-    if (a.type !== 'waypoint' || a.dim !== state.dim) continue;
-    const d = map.latLngToContainerPoint(ll(a.x + 0.5, a.z + 0.5)).distanceTo(cp);
-    if (d < best) { best = d; to = { x: a.x + 0.5, z: a.z + 0.5, name: a.name || 'ピン' }; }
+    if (a.type === 'waypoint' && a.dim === f.dim && a.id !== f.id) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, kind: 'ピン' });
   }
-  const f = measure.from;
-  measure.line.setLatLngs([ll(f.x, f.z), ll(to.x, to.z)]);
-  const dist = Math.hypot(to.x - f.x, to.z - f.z);
-  $('#measure-route').textContent = `${f.name} → ${to.name}`;
-  let more = `走って約${durationText(dist / SPRINT)}・歩いて約${durationText(dist / WALK)}`;
-  if (state.dim === 'overworld' && dist >= 200) more += `・ネザー経由なら約${Math.round(dist / 8)}ブロック`;
-  $('#measure-dist').textContent = `${Math.round(dist)}ブロック`;
-  $('#measure-more').textContent = more;
+  for (const p of state.players) {
+    if (p.dim === f.dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, kind: p.online === true ? '現在地' : '最後の位置' });
+  }
+  for (const t of out) t.dist = Math.hypot(t.x - f.x, t.z - f.z);
+  return out.sort((p, q) => p.dist - q.dist);
 }
 
-function setupMeasure() {
-  map.on('move', () => {
-    if (!measure.from || measure.frame) return;
-    measure.frame = requestAnimationFrame(() => { measure.frame = 0; updateMeasure(); });
-  });
-  $('#measure-close').addEventListener('click', stopMeasure);
+function startRoute(a) {
+  stopRoute();
+  route.from = { id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim };
+  map.closePopup();
+  $('#route-from').textContent = route.from.name;
+  const sel = $('#route-to');
+  sel.innerHTML = '';
+  sel.append(new Option('行き先を選んでください', ''));
+  for (const t of routeTargets()) sel.append(new Option(`${t.name}(${t.kind}・${Math.round(t.dist)}ブロック)`, t.id));
+  $('#route-result').hidden = true;
+  $('#route').hidden = false;
+  toast('行き先を選ぶか、地図でピンをタップしてください');
+}
+
+function setRouteTarget(id) {
+  const t = routeTargets().find((v) => v.id === id);
+  if (!t) return;
+  route.to = t;
+  $('#route-to').value = id;
+  const f = route.from;
+  if (route.line) map.removeLayer(route.line);
+  route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
+    { color: '#fff', weight: 3, opacity: 0.95, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
+  $('#route-dist').textContent = `${Math.round(t.dist)}ブロック`;
+  let more = `走って約${durationText(t.dist / SPRINT)}・歩いて約${durationText(t.dist / WALK)}`;
+  if (f.dim === 'overworld' && t.dist >= 200) more += `・ネザー経由なら約${Math.round(t.dist / 8)}ブロック`;
+  $('#route-more').textContent = more;
+  $('#route-result').hidden = false;
+  // Keep both ends clear of the route card (top on a computer, bottom on a phone).
+  const phone = window.matchMedia('(max-width: 700px)').matches;
+  map.fitBounds(route.line.getBounds(), phone
+    ? { paddingTopLeft: [50, 130], paddingBottomRight: [70, 260], maxZoom: 2 }
+    : { paddingTopLeft: [60, 290], paddingBottomRight: [90, 70], maxZoom: 2 });
+}
+
+function stopRoute() {
+  if (route.line) map.removeLayer(route.line);
+  route.from = null; route.to = null; route.line = null;
+  $('#route').hidden = true;
+}
+
+function setupRoute() {
+  $('#route-to').addEventListener('change', (e) => { if (e.target.value) setRouteTarget(e.target.value); });
+  $('#route-close').addEventListener('click', stopRoute);
 }
 
 // ---------- players, deaths, explorers, who's online ----------
@@ -1745,7 +1760,7 @@ const BED_SVG = (c) => `<svg class="gm-svg" viewBox="0 0 30 24" width="24" heigh
 function renderPlayers() {
   playerGroup.clearLayers();
   const showDeaths = $('#show-deaths').checked;
-  const showTrails = $('#show-trails').checked;
+  const showTrails = $('#btn-trails').classList.contains('on');
   const showBeds = $('#show-beds').checked;
   // Footprints of the last day, one line per stretch in this dimension.
   if (showTrails) {
@@ -1950,7 +1965,12 @@ async function setupPlayers() {
   portalGroup.addTo(map);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
-  $('#show-trails').addEventListener('change', renderPlayers);
+  $('#btn-trails').addEventListener('click', () => {
+    const on = !$('#btn-trails').classList.contains('on');
+    $('#btn-trails').classList.toggle('on', on);
+    renderPlayers();
+    toast(on ? `足あとを表示(${TRAIL_HOURS}時間)` : '足あとを非表示');
+  });
   $('#show-beds').addEventListener('change', renderPlayers);
   $('#show-portals').addEventListener('change', renderPortals);
   await loadPortals();
@@ -2068,7 +2088,7 @@ async function main() {
   setMode('none');
   setupUpdates();
   setupMobileView();
-  setupMeasure();
+  setupRoute();
   window.mcmap = { state, map, refreshConfig, refreshLive };
 }
 
