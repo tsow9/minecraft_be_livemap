@@ -1495,7 +1495,13 @@ function setupSearch() {
   const input = $('#search'), list = $('#search-results');
   let items = [], active = 0;
   const hide = () => { list.hidden = true; };
-  const pick = (i) => { const it = items[i]; if (!it) return; hide(); input.blur(); it.go(); };
+  // Searching ends only by picking, jumping, Escape, or touching somewhere else, not when the keyboard is put away.
+  const close = () => {
+    hide();
+    document.body.classList.remove('searching');
+    if (document.activeElement?.closest?.('.search, #find')) document.activeElement.blur();
+  };
+  const pick = (i) => { const it = items[i]; if (!it) return; close(); it.go(); };
   const render = () => {
     list.innerHTML = '';
     items.forEach((it, i) => {
@@ -1562,17 +1568,20 @@ function setupSearch() {
   // Phones: while the search is in use, the X/Z search opens right under it.
   const bar = $('#topbar');
   bar.addEventListener('focusin', (e) => { if (e.target.closest('.search, #find')) document.body.classList.add('searching'); });
-  bar.addEventListener('focusout', () => setTimeout(() => {
-    if (!document.activeElement?.closest?.('.search, #find')) document.body.classList.remove('searching');
-  }, 200));
+  // Tabbing away with a keyboard (focus moves to something else) also ends it.
+  bar.addEventListener('focusout', (e) => {
+    if (e.relatedTarget && !e.relatedTarget.closest('.search, #find')) close();
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest?.('.search, #find')) close();
+  }, true);
   input.addEventListener('keydown', (e) => {
     if (list.hidden) return;
     if (e.key === 'ArrowDown') { active = Math.min(items.length - 1, active + 1); render(); e.preventDefault(); }
     else if (e.key === 'ArrowUp') { active = Math.max(0, active - 1); render(); e.preventDefault(); }
     else if (e.key === 'Enter') { pick(active); e.preventDefault(); }
-    else if (e.key === 'Escape') hide();
+    else if (e.key === 'Escape') close();
   });
-  input.addEventListener('blur', () => setTimeout(hide, 150));
 
   // Coordinates: type X and Z, then jump there.
   const cx = $('#find-x'), cz = $('#find-z'), go = $('#find-go');
@@ -1581,7 +1590,7 @@ function setupSearch() {
   const jump = () => {
     if (!ready()) return;
     const x = Math.floor(Number(cx.value)), z = Math.floor(Number(cz.value));
-    cx.blur(); cz.blur();
+    close();
     goTo(x, z, null, 1);
     openCoordPopup(ll(x + 0.5, z + 0.5));
   };
