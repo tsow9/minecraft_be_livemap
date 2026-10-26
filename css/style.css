@@ -323,8 +323,8 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #find { grid-column: 1; grid-row: 2; min-width: 0; padding-left: 12px; }
   .coordfind label { flex: 1; min-width: 0; }
   .coordfind input { width: 100%; min-width: 0; }
-  /* A small pill (original text size), lined up with the left edge of the switch above it. */
-  #clock { grid-column: 2; grid-row: 2; position: static; align-self: center; justify-self: start; height: 32px;
+  /* A small pill (original text size), lined up with the right edge of the switch above it. */
+  #clock { grid-column: 2; grid-row: 2; position: static; align-self: center; justify-self: end; height: 32px;
     padding: 0 12px 0 9px; font-size: 13px; pointer-events: auto; }
   #clock[hidden] { display: none; }
   /* The crosshair readout under the left column, as wide as it; the side buttons start at the same height. */
