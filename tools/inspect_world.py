@@ -6,6 +6,7 @@ import collections
 import glob
 import os
 import re
+import struct
 import sys
 import tempfile
 import zipfile
@@ -79,6 +80,35 @@ def main():
         else:
             print('  ゲートの名前はあるのに見つからない区画', (dim, cx, cz, sy), '版', value[0], value[1], '層の頭', value[2:4].hex())
     print('ゲートのブロック名を含む区画:', sorted(raw), ' 読み取れた:', dict(found))
+    # What blocks are at a given spot (CHECK=x,y,z in the environment), for checking a reported build.
+    spot = os.environ.get('CHECK')
+    if spot:
+        x0, y0, z0 = (int(v) for v in spot.split(','))
+        cx, cz, sy = x0 // 16, z0 // 16, y0 // 16
+        for key, value in bedrock_db.scan(db, lambda k: render_map.parse_key(k) in ((0, cx, cz, sy), (0, cx, cz, sy + 1))):
+            dim, _, _, y_sub = render_map.parse_key(key)
+            pos = 3 if value[0] == 9 else 2
+            names = []
+            p_ = pos + 1
+            bits = value[pos] >> 1
+            if bits:
+                p_ += 4 * -(-4096 // (32 // bits))
+            try:
+                count = struct.unpack_from('<I', value, p_)[0]
+                q = p_ + 4
+                for _ in range(count):
+                    e, q = nbt.root_compound(value, q)
+                    names.append(str(e.get('name')))
+            except Exception as e:  # noqa: BLE001 - diagnostics only
+                names.append(f'(読めない {e})')
+            print(f'  地上 区画 ({cx},{cz}) 高さ{y_sub * 16}〜: 版{value[0]} 層{value[1]} ブロックの種類 {names}')
+            dec = render_map.decode_subchunk(value)
+            if dec:
+                _, idx, _, _ = dec
+                for yy in range(max(y0 - 2, y_sub * 16), min(y0 + 4, y_sub * 16 + 16)):
+                    row = [names[idx[x - cx * 16, z0 - cz * 16, yy - y_sub * 16]].replace('minecraft:', '')
+                           for x in range(max(x0 - 3, cx * 16), min(x0 + 4, cx * 16 + 16))]
+                    print(f'    y={yy} z={z0} x={max(x0 - 3, cx * 16)}..: {row}')
     level = os.path.join(os.path.dirname(db), 'level.dat')
     if os.path.exists(level):
         with open(level, 'rb') as f:

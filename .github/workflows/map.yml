@@ -81,7 +81,7 @@ jobs:
       - name: ワールドの中のプレイヤー情報を調べる
         run: |
           pip install --quiet numpy pillow
-          python3 tools/inspect_world.py world.mcworld
+          CHECK=19,67,-9 python3 tools/inspect_world.py world.mcworld
 
   update:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == '地図を更新')
