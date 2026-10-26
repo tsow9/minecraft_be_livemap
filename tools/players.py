@@ -15,7 +15,7 @@ import nbt
 DIM_NAMES = {0: 'overworld', 1: 'nether', 2: 'end'}
 BEFORE = '_'
 UNKNOWN = '?'
-TRAIL_MAX = 200
+TRAIL_MAX = 600
 
 
 def _hash(secret, value):

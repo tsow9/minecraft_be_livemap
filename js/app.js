@@ -632,7 +632,7 @@ function renderAnn(a) {
   layer.on('click', (e) => {
     if (state.mode !== 'none') return;
     L.DomEvent.stop(e);
-    if (route.from && a.type === 'waypoint' && a.id !== route.from.id && a.dim === route.from.dim) { setRouteTarget(a.id); return; }
+    if (pickRouteTarget(a.id)) return;
     openAnnPopup(a.id, e.latlng);
   });
   layer.on('pm:edit pm:dragend', () => updateGeometry(a.id, layer));
@@ -707,6 +707,7 @@ function openCoordPopup(latlng) {
   acts.append(
     button('コピー', () => copyText(coordText(x, z)), 'copy'),
     button('ピン', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
+    routeButton({ id: `point:${x}:${z}`, name: `X ${x} / Z ${z}`, x, z, dim: state.dim }),
   );
   el.append(acts);
   L.popup({ autoPan: false }).setLatLng(ll(x + 0.5, z + 0.5)).setContent(el).openOn(map);
@@ -728,7 +729,7 @@ function openAnnPopup(id, at) {
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
   const acts = document.createElement('div'); acts.className = 'acts';
   if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
-  if (a.type === 'waypoint') acts.append(button('行き先を選ぶ', () => startRoute(a), 'route'));
+  if (a.type === 'waypoint') acts.append(routeButton({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim }));
   const del = button('削除', async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast('削除しました'); }, 'trash');
   del.classList.add('danger');
   acts.append(button('編集', async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
@@ -906,7 +907,10 @@ function setupTools() {
   map.on('preclick', () => { popupWasOpen = !!map._popup && map.hasLayer(map._popup); });
   map.on('click', (e) => {
     const { x, z } = block(e.latlng);
-    if (state.mode === 'none') { if (!popupWasOpen) openCoordPopup(e.latlng); }
+    if (state.mode === 'none' && route.from && !popupWasOpen) {
+      // Choosing a destination: a tap on an empty spot of the map picks that spot.
+      setRouteTarget(null, { id: `point:${x}:${z}`, name: `X ${x} / Z ${z}`, x, z, dim: state.dim });
+    } else if (state.mode === 'none') { if (!popupWasOpen) openCoordPopup(e.latlng); }
     else if (state.mode === 'waypoint') createWaypoint(x, z);
     else if (state.mode === 'text') createText(x, z);
   });
@@ -1568,29 +1572,32 @@ function renderPortals() {
   for (const g of state.portals?.[state.dim] || []) {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
-      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}</div>` }),
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || 'ゲート')}</span></div>` }),
     });
+    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>ネザーゲート</h4><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      el.innerHTML = `<h4>${esc(g.name || 'ネザーゲート')}</h4><div class="sub">ネザーゲート</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      const acts = document.createElement('div'); acts.className = 'acts';
+      acts.append(routeButton(place));
       const link = portalLink(g, state.dim);
       if (link) {
         const name = DIMS[link.other].name;
         const line = document.createElement('div'); line.className = 'sub';
         if (link.gate) {
-          line.textContent = `つながり先(推定): ${name} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          line.textContent = `つながり先(推定): ${name}の「${link.gate.name || 'ゲート'}」 X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
           el.append(line);
-          const acts = document.createElement('div'); acts.className = 'acts';
           acts.append(button('つながり先を見る', () => goTo(link.gate.x, link.gate.z, link.other, 1)));
-          el.append(acts);
         } else {
           line.textContent = `${name}側のゲートはまだ見つかっていません(できる場所の目安: X ${link.tx} / Z ${link.tz})`;
           el.append(line);
         }
       }
+      el.append(acts);
       return el;
     });
-    portalGroup.addLayer(m);
+    portalGroup.addLayer(routeAware(m, place.id));
   }
 }
 
@@ -1630,18 +1637,57 @@ function durationText(sec) {
   return s ? `${m}分${s}秒` : `${m}分`;
 }
 
-// Places you can go to from the starting pin: other pins and players in the same dimension.
-function routeTargets() {
-  const f = route.from;
+// Everything on the map that a route can start from or go to, in one dimension.
+function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === f.dim && a.id !== f.id) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, kind: 'ピン' });
+    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, kind: 'ピン' });
   }
   for (const p of state.players) {
-    if (p.dim === f.dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, kind: p.online === true ? '現在地' : '最後の位置' });
+    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim, kind: p.online === true ? '現在地' : '最後の位置' });
+    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}のベッド`, x: p.bed.x, z: p.bed.z, dim, kind: 'ベッド' });
+    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}の最終死亡地点`, x: p.death.x, z: p.death.z, dim, kind: '死亡地点' });
   }
+  for (const g of state.portals?.[dim] || []) {
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, kind: 'ゲート' });
+  }
+  return out;
+}
+
+function routeTargets() {
+  const f = route.from;
+  const out = routePlaces(f.dim).filter((t) => t.id !== f.id);
   for (const t of out) t.dist = Math.hypot(t.x - f.x, t.z - f.z);
   return out.sort((p, q) => p.dist - q.dist);
+}
+
+// While choosing a destination, tapping something on the map picks it instead of opening its bubble.
+function pickRouteTarget(id) {
+  if (!route.from || id === route.from.id || !routeTargets().some((t) => t.id === id)) return false;
+  setRouteTarget(id);
+  return true;
+}
+
+// Markers other than pins: pick as destination when a route is open, otherwise show the bubble.
+function routeAware(marker, id) {
+  marker.on('popupopen', () => { if (pickRouteTarget(id)) marker.closePopup(); });
+  return marker;
+}
+
+// A bubble from HTML plus a "choose destination" button for this place.
+function popupWithRoute(html, place) {
+  return () => {
+    const el = document.createElement('div'); el.className = 'pop';
+    el.innerHTML = html;
+    const acts = document.createElement('div'); acts.className = 'acts';
+    acts.append(routeButton(place));
+    el.append(acts);
+    return el;
+  };
+}
+
+function routeButton(place) {
+  return button('行き先を選ぶ', () => startRoute(place), 'route');
 }
 
 function startRoute(a) {
@@ -1655,14 +1701,22 @@ function startRoute(a) {
   for (const t of routeTargets()) sel.append(new Option(`${t.name}(${t.kind}・${Math.round(t.dist)}ブロック)`, t.id));
   $('#route-result').hidden = true;
   $('#route').hidden = false;
-  toast('行き先を選ぶか、地図でピンをタップしてください');
+  toast('行き先を一覧から選ぶか、地図でタップしてください');
 }
 
-function setRouteTarget(id) {
-  const t = routeTargets().find((v) => v.id === id);
+function setRouteTarget(id, point) {
+  const t = point || routeTargets().find((v) => v.id === id);
   if (!t) return;
+  t.dist = Math.hypot(t.x - route.from.x, t.z - route.from.z);
   route.to = t;
-  $('#route-to').value = id;
+  const sel = $('#route-to');
+  if (point) {
+    sel.querySelector('option[data-point]')?.remove();
+    const o = new Option(`${t.name}(地図で選んだ場所)`, t.id);
+    o.dataset.point = '1';
+    sel.append(o);
+  }
+  sel.value = t.id;
   const f = route.from;
   if (route.line) map.removeLayer(route.line);
   route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
@@ -1776,9 +1830,14 @@ function renderPlayers() {
       };
       const pts = (Array.isArray(p.trail) ? p.trail : []).filter((t) => t[0] >= since);
       if (pts.length && p.dim === state.dim) pts.push([Date.now(), p.dim, p.x, p.z]);
-      for (const [, dim, x, z] of pts) {
+      for (const [t, dim, x, z] of pts) {
         if (dim !== state.dim) { flush(); continue; }
         run.push(ll(x + 0.5, z + 0.5));
+        // Each recorded spot gets a small dot that tells when the player was there.
+        if (t < Date.now() - 1000) {
+          playerGroup.addLayer(L.circleMarker(ll(x + 0.5, z + 0.5), { radius: 3, color: '#1b1d22', weight: 1, fillColor: color, fillOpacity: 1, pmIgnore: true })
+            .bindTooltip(`${p.name} ${timeText(t)}`, { direction: 'top', offset: [0, -4] }));
+        }
       }
       flush();
     }
@@ -1800,8 +1859,9 @@ function renderPlayers() {
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="bed-icon gm" style="transform:translate(-50%,-17px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4>${esc(names)}のベッド</h4><div class="sub">リスポーン地点</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div></div>`);
-      playerGroup.addLayer(m);
+      const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}のベッド`, x: b.x, z: b.z, dim: b.dim };
+      m.bindPopup(popupWithRoute(`<h4>${esc(names)}のベッド</h4><div class="sub">リスポーン地点</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div>`, place));
+      playerGroup.addLayer(routeAware(m, place.id));
     }
   }
   for (const p of state.players) {
@@ -1814,8 +1874,9 @@ function renderPlayers() {
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-18px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div></div>`);
-      playerGroup.addLayer(m);
+      const place = { id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim: p.dim };
+      m.bindPopup(popupWithRoute(`<h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div>`, place));
+      playerGroup.addLayer(routeAware(m, place.id));
     }
     const d = p.death;
     if (showDeaths && d && d.dim === state.dim) {
@@ -1823,8 +1884,9 @@ function renderPlayers() {
         pmIgnore: true,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon gm" style="transform:translate(-50%,-25px)">${DEATH_SVG}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      m.bindPopup(() => `<div class="pop"><h4 class="death-h">${DEATH_SVG} ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div></div>`);
-      playerGroup.addLayer(m);
+      const place = { id: `death:${p.key}`, name: `${p.name}の最終死亡地点`, x: d.x, z: d.z, dim: d.dim };
+      m.bindPopup(popupWithRoute(`<h4 class="death-h">${DEATH_SVG} ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div>`, place));
+      playerGroup.addLayer(routeAware(m, place.id));
     }
   }
   const list = $('#player-list');

@@ -6,7 +6,9 @@ import argparse
 import datetime
 import glob
 import json
+import math
 import os
+import re
 import shutil
 import struct
 import sys
@@ -236,12 +238,56 @@ def group_portals(blocks):
     return sorted(gates, key=lambda g: (g['x'], g['z'], g['y']))
 
 
+def _link(g, dim, gates):
+    """The gate on the other side that this one leads to (the nearest one around x/8 or x*8), or None."""
+    other, k, reach = ('nether', 1 / 8, 16) if dim == 'overworld' else ('overworld', 8, 128)
+    tx, tz = math.floor(g['x'] * k), math.floor(g['z'] * k)
+    best = None
+    for o in gates.get(other, []):
+        d = max(abs(o['x'] - tx), abs(o['z'] - tz))
+        if d <= reach and (best is None or d < best[0]):
+            best = (d, o)
+    return best[1] if best else None
+
+
+def name_portals(gates, previous):
+    """Keeps each gate's name from the last run; gates that lead to each other share one name (ゲート1, ゲート2…)."""
+    def same(a, b):
+        return abs(a['x'] - b['x']) <= 3 and abs(a['y'] - b['y']) <= 3 and abs(a['z'] - b['z']) <= 3
+    for dim, list_ in gates.items():
+        for g in list_:
+            old = next((o for o in previous.get(dim, []) if o.get('name') and same(o, g)), None)
+            if old:
+                g['name'] = old['name']
+    used = [int(m.group(1)) for list_ in previous.values() for o in list_
+            if (m := re.fullmatch(r'ゲート(\d+)', str(o.get('name', ''))))]
+    counter = max(used, default=0)
+    for dim in ('overworld', 'nether'):
+        for g in gates.get(dim, []):
+            partner = _link(g, dim, gates) if dim in ('overworld', 'nether') else None
+            if not g.get('name'):
+                if partner is not None and partner.get('name'):
+                    g['name'] = partner['name']
+                else:
+                    counter += 1
+                    g['name'] = f'ゲート{counter}'
+            if partner is not None and not partner.get('name'):
+                partner['name'] = g['name']
+    for g in gates.get('end', []):
+        if not g.get('name'):
+            counter += 1
+            g['name'] = f'ゲート{counter}'
+    return gates
+
+
 def write_portals(site):
     names = {v: k for k, v in DIM_IDS.items()}
-    out = {'updatedAt': int(time.time() * 1000),
-           'dims': {names[d]: group_portals(b) for d, b in portal_blocks.items() if d in names}}
-    with open(os.path.join(site, 'portals.json'), 'w', encoding='utf-8') as f:
-        json.dump(out, f, separators=(',', ':'))
+    path = os.path.join(site, 'portals.json')
+    previous = (_load_json(path) or {}).get('dims') or {}
+    gates = {names[d]: group_portals(b) for d, b in portal_blocks.items() if d in names}
+    out = {'updatedAt': int(time.time() * 1000), 'dims': name_portals(gates, previous)}
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
     return sum(len(v) for v in out['dims'].values())
 
 
