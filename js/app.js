@@ -1299,6 +1299,11 @@ function setupCoords() {
   };
   $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
   open.addEventListener('click', () => show(true));
+  // Phones line the readout up with the search above it, which ends where the dimension switch starts.
+  const dims = $('#dims');
+  const keepWidth = () => document.documentElement.style.setProperty('--dims-w', `${Math.ceil(dims.getBoundingClientRect().width)}px`);
+  if (window.ResizeObserver) new ResizeObserver(keepWidth).observe(dims);
+  keepWidth();
   let saved = null;
   try { saved = localStorage.getItem('mcmap.coords'); } catch { /* private mode */ }
   if (saved === 'closed') show(false);
