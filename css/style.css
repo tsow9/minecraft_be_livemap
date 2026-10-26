@@ -150,12 +150,18 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 6px 6px 7px 12px; border-radius: var(--radius);
   font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none; }
 #coords[hidden] { display: none; }
-#coords .line { display: flex; align-items: center; gap: 2px; }
+/* Layout: X/Y/Z with the close button at the top right, the other dimension's X/Z right below,
+   then the block name with the copy button. */
+#coords { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 4px; }
+#coords .line { display: contents; }
+#coords .xyz { grid-column: 1; grid-row: 1; }
+#coords-close { grid-column: 2; grid-row: 1; }
+#copy-center { grid-column: 2; grid-row: 3; }
 #coords .xyz { display: flex; gap: 10px; font-size: 15px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
 #coords .xyz i { font-style: normal; font-size: 10px; font-weight: 700; color: var(--sub); margin-right: 3px; }
-#coords .blk { font-size: 12px; color: var(--sub); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+#coords .blk { grid-column: 1; grid-row: 3; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #coords .blk:empty { display: none; }
-#coords .sub { color: var(--sub); font-size: 12px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
+#coords .sub { grid-column: 1 / -1; grid-row: 2; color: var(--sub); font-size: 12px; margin-top: -2px; }
 #coords .sub:empty { display: none; }
 .icon-btn { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--sub); flex: none; }
 .icon-btn:hover { background: var(--hover); color: var(--fg); }
@@ -314,16 +320,9 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #dims { position: absolute; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 50px); height: 38px; }
   #dims button { padding: 0 8px; font-size: 12px; }
   #coords, #coords-open { top: calc(max(10px, env(safe-area-inset-top)) + 50px) !important; }
-  /* The readout: X/Y/Z on top, block name with the copy and close buttons below, so it stays narrow. */
-  #coords { display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 2px; padding: 6px 4px 4px 10px !important; }
-  #coords .line { display: contents; }
-  #coords .xyz { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+  #coords { padding: 6px 4px 4px 10px !important; }
   /* As wide as the pin search above it (screen − side padding − gap − the X/Z box). */
   #coords { width: calc(100vw - 212px); }
-  #coords .blk { grid-column: 1; grid-row: 2; margin: 0; max-width: none !important; min-width: 0; }
-  #copy-center { grid-column: 2; grid-row: 2; }
-  #coords-close { grid-column: 3; grid-row: 2; }
-  #coords .sub { grid-column: 1 / -1; grid-row: 3; }
   #coords .icon-btn { width: 26px; height: 26px; }
   #sidebuttons { top: calc(max(10px, env(safe-area-inset-top)) + 98px) !important; }
   #clock { top: calc(max(10px, env(safe-area-inset-top)) + 116px); }
@@ -339,7 +338,6 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   .modes button { width: 36px; height: 36px; }
   #coords { top: 112px; left: 10px; bottom: auto; padding: 5px 4px 6px 10px; }
   #coords .xyz { font-size: 14px; gap: 8px; }
-  #coords .blk { max-width: 200px; }
   #coords-open { top: 112px; left: 10px; bottom: auto; }
   #toast { top: 50%; }
 }
