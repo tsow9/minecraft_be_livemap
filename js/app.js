@@ -1573,14 +1573,15 @@ function setupSearch() {
   bar.addEventListener('focusout', (e) => {
     if (e.relatedTarget && !e.relatedTarget.closest('.search, #find')) close();
   });
-  // A touch outside while typing only puts the keyboard away (search stays open); the next touch outside closes it.
+  // Outside touches: while typing, the first only puts the keyboard away (search stays open); the next one closes it.
   // Those touches only close things; the map underneath does not also react (no coordinate bubble).
   let swallow = false;
   document.addEventListener('pointerdown', (e) => {
     swallow = false;
     if (e.target.closest?.('.search, #find')) return;
     const open = document.body.classList.contains('searching') || !list.hidden;
-    if (document.activeElement?.closest?.('.search, #find')) { document.activeElement.blur(); swallow = true; return; }
+    // Touch: the first touch only puts the on-screen keyboard away. Mouse: one click closes right away.
+    if (e.pointerType === 'touch' && document.activeElement?.closest?.('.search, #find')) { document.activeElement.blur(); swallow = true; return; }
     if (open) { close(); swallow = true; }
   }, true);
   document.addEventListener('click', (e) => {
