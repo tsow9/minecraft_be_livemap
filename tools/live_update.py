@@ -39,7 +39,9 @@ def read_clock(path):
     if not isinstance(root.get('Time'), int):
         return None
     rain = float(root.get('rainLevel') or 0) > 0
+    saved = root.get('LastPlayed')
     return {
+        'saved': int(saved) * 1000 if isinstance(saved, int) and saved > 0 else None,
         'time': root['Time'] % 24000,
         'rain': rain,
         'thunder': rain and float(root.get('lightningLevel') or 0) > 0,
@@ -68,6 +70,11 @@ def main():
             clock = read_clock(os.path.join(os.path.dirname(db), 'level.dat'))
             if clock:
                 state['world'] = {**clock, 'at': int(time.time() * 1000)}
+                # A log of when Realms actually saved the world (level.dat LastPlayed), to learn its save interval.
+                saves = [t for t in state.get('saves', []) if isinstance(t, int)]
+                if clock['saved'] and clock['saved'] not in saves:
+                    saves.append(clock['saved'])
+                state['saves'] = saves[-300:]
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     now = int(time.time() * 1000)

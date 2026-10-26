@@ -85,7 +85,7 @@ def main():
             data = f.read()
         try:
             root, _ = nbt.root_compound(data, 8)
-            keep = {k: v for k, v in root.items() if re.search(r'time|tick|rain|lightning|weather|daylight', k, re.I)
+            keep = {k: v for k, v in root.items() if re.search(r'time|tick|rain|lightning|weather|daylight|played', k, re.I)
                     and isinstance(v, (int, float))}
             print('level.dat の時刻・天気:', keep)
         except Exception as e:  # noqa: BLE001 - diagnostics only
