@@ -35,12 +35,32 @@ export default {
         return json({ items, rev: items.length ? items[items.length - 1].rev : since, now: Date.now() });
       }
 
+      // Latest player data, relayed here so pages can check every few seconds without GitHub's limits.
+      if (req.method === 'GET' && url.pathname === '/live') {
+        const since = Number(url.searchParams.get('since')) || 0;
+        const row = await env.DB.prepare('SELECT v, at FROM kv WHERE k = ?').bind('live').first();
+        if (!row) return json({ error: 'none' }, 404);
+        if (row.at <= since) return json({ unchanged: true, at: row.at });
+        return new Response(`{"at":${row.at},"live":${row.v}}`, {
+          headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+        });
+      }
+
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
       if (!fromSite) return json({ error: 'origin' }, 403);
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
       if (!(await passOk(req, env, ip))) return json({ error: 'passphrase' }, 401);
 
       if (url.pathname === '/check') return json({ ok: true });
+
+      if (url.pathname === '/live') {
+        const text = await req.text();
+        if (text.length > 900 * 1024) return json({ error: 'too big' }, 413);
+        try { JSON.parse(text); } catch { return json({ error: 'bad json' }, 400); }
+        await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
+          .bind('live', text, Date.now()).run();
+        return json({ ok: true });
+      }
 
       if (url.pathname === '/items') {
         const body = await req.json().catch(() => null);

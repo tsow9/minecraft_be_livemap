@@ -2088,14 +2088,26 @@ function refreshExplore() {
 let lastPlayersJson = '';
 
 // The GitHub API answers "unchanged" (304) for free, so polling it stays fresh without the file server's 5-minute cache.
+// The live check also sends its data to the group's server, which pages can ask every few seconds.
+let liveAt = 0, liveCache = null;
 async function fetchLive() {
+  if (share.url) {
+    try {
+      const res = await fetch(`${share.url}/live?since=${liveAt}`, { cache: 'no-store' });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.unchanged && liveCache) return liveCache;
+        if (d.live) { liveAt = d.at; liveCache = d.live; return d.live; }
+      }
+    } catch { /* fall back to GitHub */ }
+  }
   if (state.config.liveApiUrl) {
     try {
       const res = await fetch(state.config.liveApiUrl, { cache: 'no-cache', headers: { Accept: 'application/vnd.github.raw' } });
       if (res.ok) return await res.json();
     } catch { /* fall back to the file server */ }
   }
-  return fetchJson(state.config.liveUrl);
+  return state.config.liveUrl ? fetchJson(state.config.liveUrl) : null;
 }
 
 async function refreshConfig() {
@@ -2124,7 +2136,7 @@ async function refreshConfig() {
 async function refreshLive() {
   const badge = $('#online-badge');
   const list = $('#live-list');
-  if (!state.config.liveUrl) {
+  if (!state.config.liveUrl && !share.url) {
     $('#live-title').textContent = '参加中の人(まだ設定されていません)';
     return;
   }
@@ -2177,7 +2189,9 @@ async function setupPlayers() {
   await loadPortals();
   setInterval(renderClock, 15000);
   await refreshLive();
-  setInterval(refreshLive, 60000);
+  // Every 15 seconds through the group's server (cheap), otherwise every minute from GitHub.
+  setInterval(() => { if (document.visibilityState === 'visible') refreshLive(); }, share.url ? 15000 : 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
   setInterval(refreshConfig, 60000);
   // Phones pause background tabs, so also check right away when the page comes back into view.
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshConfig(); });

@@ -184,5 +184,12 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      # Another deployment may still be finishing; wait a little and try again instead of failing.
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: 公開をもう一度試す
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4

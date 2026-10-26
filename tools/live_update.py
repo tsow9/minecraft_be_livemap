@@ -18,7 +18,7 @@ import nbt
 import players
 
 MAP_EVERY_MS = 55 * 60 * 1000
-MAP_WHILE_PLAYING_MS = 4 * 60 * 1000
+MAP_WHILE_PLAYING_MS = 60 * 1000
 
 
 def load(path, default):

@@ -6,6 +6,12 @@ CREATE TABLE IF NOT EXISTS items (
   rev INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS items_rev ON items (rev);
+-- Small shared values; "live" holds the latest who-is-online / where-players-are data, sent by the live check.
+CREATE TABLE IF NOT EXISTS kv (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL,
+  at INTEGER NOT NULL
+);
 -- Wrong passphrases per address, to slow down guessing.
 CREATE TABLE IF NOT EXISTS fails (
   ip TEXT PRIMARY KEY,

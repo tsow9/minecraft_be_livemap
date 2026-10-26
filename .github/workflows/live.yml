@@ -78,6 +78,17 @@ jobs:
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: 共有サーバーにも送る(サイトが数秒おきに読めるように)
+        env:
+          SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
+        run: |
+          url=$(python3 -c "import json; print(json.load(open('config.json')).get('shareUrl') or '')")
+          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          if [ -n "$url" ] && [ -n "$SHARE_PASSPHRASE" ]; then
+            curl -sS --max-time 20 -o /dev/null -w '共有サーバー: %{http_code}\n' -X POST "$url/live" \
+              -H "Origin: https://$owner.github.io" -H "X-Passphrase: $SHARE_PASSPHRASE" \
+              -H 'Content-Type: application/json' --data-binary @live/live.json || true
+          fi
       - name: 地図の更新を始める(プレイ中は毎回、それ以外は1時間おき)
         if: steps.update.outputs.run_map == 'true'
         run: gh workflow run map.yml --ref main -f action=地図を更新
