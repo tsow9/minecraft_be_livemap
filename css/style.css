@@ -185,7 +185,6 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   border: 1px solid var(--line); background: var(--field); font-size: 13px; font-weight: 500; transition: background .15s; }
 .mini:hover { background: rgba(255,255,255,.12); }
 .mini .ic { width: 15px; height: 15px; margin-right: 5px; }
-.filebtn { cursor: pointer; }
 
 .panel { position: absolute; z-index: 1100; right: 72px; top: 72px; width: 330px; max-width: calc(100vw - 20px);
   background: var(--glass-strong); border-radius: 18px; padding: 14px 16px 16px; max-height: calc(100vh - 100px); overflow: auto;
@@ -279,11 +278,7 @@ dialog.box .btns { display: flex; gap: 8px; }
 dialog.box .grow { flex: 1; }
 dialog.box .btns button { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--field); font-weight: 600; }
 dialog.box .primary { background: var(--accent) !important; border-color: var(--accent) !important; color: #06130d; }
-body:not(.shared) .only-shared, body.shared .only-local { display: none; }
 .share-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font-weight: 600; }
-.notice { background: rgba(240, 190, 70, .12); border: 1px solid rgba(240, 190, 70, .35); border-radius: 12px; padding: 10px 12px;
-  font-size: 13px; margin-bottom: 12px; line-height: 1.7; }
-#trash-list li .mini { margin-left: 4px; }
 #editor h2 { margin: 0 0 14px; font-size: 17px; }
 #editor label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; color: var(--sub); font-size: 12px; font-weight: 600; }
 #editor input, #editor textarea, #editor select { padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line);
@@ -385,3 +380,15 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #coords-open { left: 10px; bottom: auto; }
   #toast { top: 50%; }
 }
+
+/* Realm information panel */
+#realm-info .realm-name { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+#realm-info h3 { margin-top: 12px; }
+#realm-info .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 2px; font-size: 13px; border-bottom: 1px solid var(--line); }
+#realm-info .kv span { color: var(--sub); }
+#realm-info .kv b { font-weight: 600; text-align: right; }
+#realm-info .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #666; margin-right: 6px; vertical-align: 1px; }
+#realm-info .dot.on { background: var(--accent); }
+#realm-info .warn { color: var(--danger); }
+#realm-info > .help:last-child { margin: 10px 0 0; }
+#panel-realm .share-row { margin: 12px 0 0; }

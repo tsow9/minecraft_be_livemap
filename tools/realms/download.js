@@ -2,15 +2,15 @@
 // Downloads the current Realm world as .mcworld and writes the member list (hashed IDs) next to it.
 const crypto = require('crypto')
 const fs = require('fs')
-const { withSavedLogin, pickOwnedRealm, realmMembers } = require('./common')
+const { withSavedLogin, pickOwnedRealm, realmStatus } = require('./common')
 
 async function main () {
   const out = process.argv[2] || 'world.mcworld'
   const membersFile = process.argv[3] || 'members.json'
   await withSavedLogin(async (auth, api) => {
     const realm = await pickOwnedRealm(api, auth)
-    const members = await realmMembers(api, auth, realm.id)
-    fs.writeFileSync(membersFile, JSON.stringify({ fetchedAt: Date.now(), members }))
+    const { members, realm: info } = await realmStatus(api, auth, realm.id)
+    fs.writeFileSync(membersFile, JSON.stringify({ fetchedAt: Date.now(), members, realm: info }))
     const download = await api.getRealmWorldDownload(realm.id, realm.activeSlot, 'latest')
     const buf = await download.getBuffer()
     fs.writeFileSync(out, buf)

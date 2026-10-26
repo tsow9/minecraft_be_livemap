@@ -47,6 +47,7 @@
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
     <symbol id="i-slime" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><rect x="7.5" y="9.5" width="3" height="3" rx=".5"/><rect x="13.5" y="9.5" width="3" height="3" rx=".5"/><path d="M11 16h2"/></symbol>
+    <symbol id="i-realm" viewBox="0 0 24 24"><path d="M4 21V9l3 2V6l5 3 5-3v5l3-2v12z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
@@ -96,7 +97,7 @@
   <button id="btn-contour" title="等高線"><svg class="ic"><use href="#i-mountain"/></svg></button>
   <button id="btn-slime" title="スライムチャンク"><svg class="ic"><use href="#i-slime"/></svg></button>
   <button id="btn-grid" title="チャンク線"><svg class="ic"><use href="#i-grid"/></svg></button>
-  <button id="btn-data" title="データの保存・読込"><svg class="ic"><use href="#i-save"/></svg></button>
+  <button id="btn-realm" title="Realms情報"><svg class="ic"><use href="#i-realm"/></svg></button>
 </div>
 
 <div id="tools" hidden>
@@ -186,22 +187,10 @@
   </div>
 </section>
 
-<section id="panel-data" class="panel" hidden>
-  <h2>データ・共有 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
-  <p class="help only-local">書き込んだピンや図形は、今はこの端末の中だけに保存されています。別の端末や友だちに渡すときはファイルに書き出してください。</p>
-  <div class="only-shared">
-    <p class="help">ピンや図形は、みんなと自動で共有されます(10秒ほどで反映)。書き込めるのは、招待リンクを開いた端末だけです。</p>
-    <p class="share-row"><span id="share-status"></span></p>
-    <p class="share-row">
-      <button id="share-invite" class="mini" hidden>招待リンクをコピー</button>
-      <button id="share-login" class="mini" hidden>招待リンクを貼り付ける</button></p>
-    <div id="local-only" class="notice" hidden>この端末だけにあるデータが <b id="local-only-count">0</b> 件あります。
-      <button id="local-only-send" class="mini">みんなと共有する</button></div>
-    <div id="trash" hidden><h3>最近消したもの(30日間は戻せます)</h3><ul id="trash-list" class="plist"></ul></div>
-  </div>
-  <p id="data-count"></p>
-  <button id="export" class="mini">ファイルに書き出す</button>
-  <label class="mini filebtn">ファイルを読み込む<input id="import" type="file" accept="application/json,.json" hidden></label>
+<section id="panel-realm" class="panel" hidden>
+  <h2>Realms情報 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
+  <div id="realm-info"><p class="help">まだ情報がありません。少し待つと表示されます。</p></div>
+  <p class="share-row"><button id="share-invite" class="mini" hidden>ピン・図形の招待リンクをコピー</button></p>
 </section>
 
 <dialog id="pass-dialog" class="box">

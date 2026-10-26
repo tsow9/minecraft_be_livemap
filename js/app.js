@@ -61,7 +61,6 @@ const store = {
   saveLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state.annotations)); }
     catch { toast('この端末に保存できませんでした'); }
-    updateDataCount();
   },
 };
 
@@ -70,7 +69,7 @@ const store = {
 const PASS_KEY = 'mcmap.pass';
 const SYNC_KEY = 'mcmap.sync.v1';
 const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
-const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), trash: new Map(), pushing: false, localOnly: [] };
+const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false };
 
 function sharing() { return !!share.url; }
 function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
@@ -85,17 +84,17 @@ function saveSyncState() {
 function loadSyncState() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch { /* ignore */ }
-  try { share.localOnly = sanitizeList(JSON.parse(localStorage.getItem(LOCAL_ONLY_KEY) || '[]')); } catch { share.localOnly = []; }
   if (saved) {
     share.rev = Number(saved.rev) || 0;
     share.synced = new Map(Array.isArray(saved.synced) ? saved.synced : []);
     share.pending = new Map(Array.isArray(saved.pending) ? saved.pending : []);
     return;
   }
-  // First time sharing on this device: what was drawn before stays aside until someone chooses to share it.
+  // First time sharing on this device: what was drawn before is kept aside on this device, not shared.
   if (state.annotations.length) {
-    share.localOnly = sanitizeList([...share.localOnly, ...state.annotations]);
-    try { localStorage.setItem(LOCAL_ONLY_KEY, JSON.stringify(share.localOnly)); } catch { /* ignore */ }
+    let kept = [];
+    try { kept = sanitizeList(JSON.parse(localStorage.getItem(LOCAL_ONLY_KEY) || '[]')); } catch { /* ignore */ }
+    try { localStorage.setItem(LOCAL_ONLY_KEY, JSON.stringify(sanitizeList([...kept, ...state.annotations]))); } catch { /* ignore */ }
   }
   state.annotations = [];
   store.saveLocal();
@@ -142,11 +141,10 @@ async function pushChanges() {
       retry = 0;
       for (const [id, p] of batch) {
         if (share.pending.get(id) === p) share.pending.delete(id);
-        if (p.deleted) { share.synced.delete(id); share.trash.set(id, { data: p.data, at: Date.now() }); }
-        else { share.synced.set(id, p.json); share.trash.delete(id); }
+        if (p.deleted) share.synced.delete(id);
+        else share.synced.set(id, p.json);
       }
       saveSyncState();
-      renderShareStatus();
     }
   } catch { /* offline: try again shortly */ }
   share.pushing = false;
@@ -176,12 +174,10 @@ async function pullChanges(full = false) {
     const clean = sanitize({ ...it.data, id: it.id });
     if (!clean) continue;
     if (it.deleted) {
-      share.trash.set(it.id, { data: clean, at: Math.floor(it.rev / 1000) });
       share.synced.delete(it.id);
       removeLocal(it.id);
       continue;
     }
-    share.trash.delete(it.id);
     const j = JSON.stringify(clean);
     if (share.synced.get(it.id) === j && state.annotations.some((a) => a.id === it.id)) continue;
     share.synced.set(it.id, j);
@@ -198,7 +194,6 @@ async function pullChanges(full = false) {
   share.rev = Math.max(share.rev, Number(data.rev) || 0);
   saveSyncState();
   if (changed) store.saveLocal();
-  renderShareStatus();
 }
 
 // Asks for the passphrase (once per device). Resolves true when this device may write.
@@ -228,7 +223,7 @@ function askPass() {
           setPass(pass);
           dlg.close();
           toast('書き込めるようになりました');
-          renderShareStatus();
+      $('#share-invite').hidden = false;
           pushChanges();
           return;
         }
@@ -269,7 +264,7 @@ async function joinFromLink() {
     if (res.ok) {
       setPass(pass);
       toast('招待リンクを確認しました。ピンや図形を書き込めます');
-      renderShareStatus();
+      $('#share-invite').hidden = false;
       pushChanges();
     } else if (res.status === 401) {
       toast('この招待リンクは使えません。合言葉が合っているか確かめてください');
@@ -287,59 +282,15 @@ async function ensureWriter() {
   return askPass();
 }
 
-function renderShareStatus() {
-  if (!sharing()) return;
-  const st = $('#share-status');
-  st.textContent = getPass()
-    ? (share.pending.size ? `送信待ち ${share.pending.size}件(つながると自動で送ります)` : 'みんなと共有中・書き込めます')
-    : '見るだけ(招待リンクを開くと書き込めます)';
-  $('#share-login').hidden = !!getPass();
-  $('#share-invite').hidden = !getPass();
-  const lo = $('#local-only');
-  lo.hidden = !share.localOnly.length;
-  $('#local-only-count').textContent = share.localOnly.length;
-  const list = $('#trash-list');
-  list.innerHTML = '';
-  const items = [...share.trash.values()].sort((a, b) => b.at - a.at).slice(0, 30);
-  for (const t of items) {
-    const li = document.createElement('li');
-    const kind = { waypoint: 'ピン', text: '文字' }[t.data.type] || '図形';
-    li.innerHTML = `<span class="dot" style="background:${esc(t.data.color)}"></span><span class="grow"></span><span class="sub"></span>`;
-    li.querySelector('.grow').textContent = t.data.name || t.data.text || kind;
-    li.querySelector('.sub').textContent = `${kind}・${timeText(t.at)}`;
-    li.append(button('戻す', async () => {
-      if (!(await ensureWriter())) return;
-      share.trash.delete(t.data.id);
-      addAnn({ ...t.data, updatedAt: Date.now() });
-      toast('元に戻しました');
-      renderShareStatus();
-    }));
-    list.append(li);
-  }
-  $('#trash').hidden = !items.length;
-}
-
 function setupShare() {
   // Pasting the link into the address bar of an open page only changes the part after #, so watch for that too.
   window.addEventListener('hashchange', joinFromLink);
   if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
+  $('#share-invite').hidden = !getPass();
+  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '招待リンクをコピーしました。仲間にだけ送ってください'));
   loadSyncState();
   renderAll();
-  $('#share-login').addEventListener('click', () => askPass());
-  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '招待リンクをコピーしました。仲間にだけ送ってください'));
-  $('#local-only-send').addEventListener('click', async () => {
-    if (!(await ensureWriter())) return;
-    const ids = new Set(state.annotations.map((a) => a.id));
-    for (const a of share.localOnly) if (!ids.has(a.id)) state.annotations.push(a);
-    const n = share.localOnly.length;
-    share.localOnly = [];
-    try { localStorage.removeItem(LOCAL_ONLY_KEY); } catch { /* ignore */ }
-    store.save();
-    renderAll();
-    toast(`${n}件をみんなと共有しました`);
-  });
-  renderShareStatus();
   joinFromLink();
   pullChanges(true).then(() => { if (share.pending.size && getPass()) pushChanges(); });
   setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
@@ -1447,7 +1398,7 @@ function renderTimeline() {
 // ---------- panels ----------
 function setupPanels() {
   $('#past-back').addEventListener('click', () => setSnapshotIndex(snapshots().length - 1));
-  const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-data': 'panel-data' };
+  const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-realm': 'panel-realm' };
   const close = () => Object.entries(panels).forEach(([b, p]) => { $('#' + p).hidden = true; $('#' + b).classList.remove('on'); });
   for (const [b, p] of Object.entries(panels)) {
     $('#' + b).addEventListener('click', () => {
@@ -1528,41 +1479,6 @@ function setupPanels() {
     }, 1500);
   });
 
-  // data
-  $('#export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify({ app: 'mc-map', version: 1, exportedAt: new Date().toISOString(), annotations: state.annotations }, null, 1)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `mc-map-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  });
-  $('#import').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file || !(await ensureWriter())) return;
-    try {
-      const data = JSON.parse(await file.text());
-      const incoming = sanitizeList(Array.isArray(data) ? data : data.annotations);
-      const byId = new Map(state.annotations.map((a) => [a.id, a]));
-      for (const a of incoming) {
-        const cur = byId.get(a.id);
-        if (!cur || cur.updatedAt <= a.updatedAt) byId.set(a.id, a);
-      }
-      state.annotations = [...byId.values()];
-      store.save(); renderAll();
-      toast(`${incoming.length}件を読み込みました`);
-    } catch {
-      toast('読み込めないファイルでした');
-    }
-  });
-  updateDataCount();
-}
-
-function updateDataCount() {
-  const count = (t) => state.annotations.filter((a) => t.includes(a.type)).length;
-  const el = $('#data-count');
-  if (el) el.textContent = `保存中: 印 ${count(['waypoint'])}件 / 文字 ${count(['text'])}件 / 図形・手書き ${count(['line', 'draw', 'polygon', 'rect', 'circle'])}件`;
 }
 
 // ---------- search ----------
@@ -2259,6 +2175,8 @@ async function refreshLive() {
     list.append(li);
   }
 
+  renderRealm(data.realm, online.length, members.length);
+
   const players = Array.isArray(data.players) ? data.players : [];
   const json = JSON.stringify(players);
   state.worldAt = data.worldAt;
@@ -2272,6 +2190,49 @@ async function refreshLive() {
     renderPlayers();
     renderExploreLegend();
   }
+}
+
+// ---------- Realm information (settings read from Realms by the frequent check) ----------
+const DIFFICULTY = ['ピース', 'イージー', 'ノーマル', 'ハード'];
+const GAME_MODE = ['サバイバル', 'クリエイティブ', 'アドベンチャー'];
+const RULE_NAMES = [
+  ['keepInventory', '死んでも持ち物を失わない'], ['pvp', 'プレイヤー同士の攻撃'], ['showCoordinates', '座標を表示'],
+  ['mobGriefing', 'モブがブロックを壊す'], ['doImmediateRespawn', 'すぐにリスポーン'], ['playersSleepingPercentage', '朝にするのに寝る人の割合'],
+  ['doFireTick', '火が燃え広がる'], ['tntExplodes', 'TNTが爆発する'], ['naturalRegeneration', '体力の自然回復'],
+  ['showDeathMessages', '死亡メッセージ'], ['doDayLightCycle', '昼と夜が進む'], ['doWeatherCycle', '天気が変わる'],
+];
+
+function renderRealm(r, online, memberCount) {
+  const box = $('#realm-info');
+  if (!r || typeof r !== 'object') return;
+  const row = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+  const onOff = (v) => (v === true ? 'オン' : v === false ? 'オフ' : esc(v));
+  let html = `<div class="realm-name">${esc(r.name || 'Realm')}</div>`;
+  if (r.motd) html += `<p class="help">${esc(r.motd)}</p>`;
+  html += '<h3>状態</h3>';
+  html += row('サーバー', r.open ? '<i class="dot on"></i>開いている' : '<i class="dot"></i>閉じている');
+  html += row('参加中', `${online}人・メンバー ${memberCount}人${Number.isFinite(r.maxPlayers) ? `・最大 ${r.maxPlayers}人` : ''}`);
+  if (r.expired) html += row('期限', '<span class="warn">切れています</span>');
+  else if (Number.isFinite(r.daysLeft)) {
+    const end = new Date(Date.now() + r.daysLeft * 86400000);
+    html += row('残り', `${r.daysLeft}日・${end.getMonth() + 1}月${end.getDate()}日ごろまで`);
+  }
+  if (r.backups && Number.isFinite(r.backups.count)) {
+    html += row('バックアップ', `${r.backups.count}個${r.backups.latest ? `・最新 ${esc(timeText(r.backups.latest))}` : ''}`);
+  }
+  html += '<h3>ワールド</h3>';
+  if (r.slotName) html += row('名前', esc(r.slotName) + (r.slot ? ` <span class="sub">スロット${r.slot}</span>` : ''));
+  if (DIFFICULTY[r.difficulty]) html += row('難易度', DIFFICULTY[r.difficulty] + (r.hardcore ? '・ハードコア' : ''));
+  if (GAME_MODE[r.gameMode]) html += row('ゲームモード', GAME_MODE[r.gameMode]);
+  html += row('チート', r.cheats ? 'オン' : 'オフ');
+  const rules = r.rules && typeof r.rules === 'object' ? r.rules : {};
+  const known = RULE_NAMES.filter(([k]) => k in rules);
+  if (known.length) {
+    html += '<h3>ルール</h3>';
+    for (const [k, label] of known) html += row(label, k === 'playersSleepingPercentage' ? `${Number(rules[k])}%` : onOff(rules[k]));
+  }
+  if (r.at) html += `<p class="help">${esc(timeText(r.at))} 時点</p>`;
+  box.innerHTML = html;
 }
 
 async function setupPlayers() {

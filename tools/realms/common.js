@@ -80,7 +80,58 @@ function toMillis (v) {
 }
 
 async function realmMembers (api, auth, realmId) {
+  return (await realmStatus(api, auth, realmId)).members
+}
+
+// Settings of the Realm worth showing on the map site. No IDs; names are the ones members already see in game.
+const RULES = ['keepInventory', 'pvp', 'showCoordinates', 'mobGriefing', 'doImmediateRespawn', 'playersSleepingPercentage',
+  'doFireTick', 'tntExplodes', 'naturalRegeneration', 'showDeathMessages', 'doDayLightCycle', 'doWeatherCycle']
+function realmInfo (realm) {
+  const slot = (realm.slots || []).find(s => s.slotId === realm.activeSlot)
+  let opts = {}
+  try { opts = typeof slot?.options === 'string' ? JSON.parse(slot.options) : (slot?.options || {}) } catch { opts = {} }
+  const settings = opts.worldSettings || {}
+  const rules = {}
+  for (const k of RULES) {
+    const v = settings[k]?.value
+    if (typeof v === 'boolean' || typeof v === 'number') rules[k] = v
+  }
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  return {
+    name: String(realm.name || '').slice(0, 100),
+    motd: String(realm.motd || '').slice(0, 300),
+    open: realm.state === 'OPEN',
+    daysLeft: num(realm.daysLeft),
+    expired: realm.expired === true,
+    maxPlayers: num(realm.maxPlayers),
+    slot: num(realm.activeSlot),
+    slotName: typeof opts.slotName === 'string' ? opts.slotName.slice(0, 100) : null,
+    difficulty: num(opts.difficulty),
+    gameMode: num(opts.gameMode),
+    hardcore: opts.hardcore === true,
+    cheats: opts.cheatsAllowed === true,
+    rules
+  }
+}
+
+// Realm backups: how many, and when the newest was made.
+async function realmBackups (api, realm) {
+  const backups = await api.getRealmBackups(realm.id, realm.activeSlot)
+  const times = backups.map(b => toMillis(b.lastModifiedDate)).filter(Boolean)
+  return { count: backups.length, latest: times.length ? Math.max(...times) : null }
+}
+
+// Members and Realm settings from a single lookup.
+async function realmStatus (api, auth, realmId, withBackups = false) {
   const realm = await api.getRealm(realmId)
+  const info = realmInfo(realm)
+  if (withBackups) {
+    try { info.backups = await realmBackups(api, realm) } catch (e) { console.error('バックアップ情報を取得できませんでした:', e.message) }
+  }
+  return { members: await memberList(auth, realm), realm: info }
+}
+
+async function memberList (auth, realm) {
   const players = (realm.players || []).filter(p => p.uuid)
   let names = {}
   try {
@@ -96,4 +147,4 @@ async function realmMembers (api, auth, realmId) {
   }))
 }
 
-module.exports = { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, withSavedLogin, pickOwnedRealm, realmMembers }
+module.exports = { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, withSavedLogin, pickOwnedRealm, realmMembers, realmStatus }

@@ -52,7 +52,8 @@ def read_clock(path):
 def main():
     cmd, state_path, members_path = sys.argv[1:4]
     state = load(state_path, {})
-    members = load(members_path, {}).get('members', [])
+    fetched = load(members_path, {})
+    members = fetched.get('members', [])
     if cmd == 'need-world':
         # Also read the world once when the time of day has never been taken, so the clock shows up right away.
         need = players.anyone_online(state, members) or not state.get('players') or 'world' not in state
@@ -80,6 +81,12 @@ def main():
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     now = int(time.time() * 1000)
+    realm = fetched.get('realm')
+    if isinstance(realm, dict):
+        # Backups are looked up only now and then; keep the last answer in between.
+        if 'backups' not in realm and isinstance(state.get('realm'), dict) and 'backups' in state['realm']:
+            realm['backups'] = state['realm']['backups']
+        state['realm'] = {**realm, 'at': now}
     state = players.update_live(state, members, records, now)
     # The frequent check also starts the map update: every check while someone plays, hourly otherwise.
     gap = MAP_WHILE_PLAYING_MS if records is not None else MAP_EVERY_MS
