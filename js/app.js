@@ -1494,33 +1494,62 @@ function setupSearch() {
     items.forEach((it, i) => {
       const li = document.createElement('li');
       if (i === active) li.className = 'active';
-      li.innerHTML = `<span class="dot" style="background:${esc(it.color)}"></span><div class="grow"><div>${esc(it.title)}</div><div class="meta">${esc(it.kind)} ・ ${esc(it.meta)}</div></div>`;
+      li.innerHTML = `<span class="s-icon">${it.icon}</span><div class="grow"><div class="s-title"></div><div class="meta"></div></div>`;
+      li.querySelector('.s-title').textContent = it.title;
+      li.querySelector('.meta').textContent = it.meta;
       li.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(i); });
       list.append(li);
     });
     list.hidden = items.length === 0;
   };
-  input.addEventListener('input', () => {
-    const q = input.value.trim();
-    items = []; active = 0;
-    if (!q) { render(); return; }
-    const lq = q.toLowerCase();
-    const order = [...state.annotations].sort((p, q2) => (p.type !== 'waypoint') - (q2.type !== 'waypoint'));
-    for (const a of order) {
-      const hay = `${a.name || ''} ${a.text || ''} ${a.note || ''}`.toLowerCase();
-      if (!hay.includes(lq)) continue;
+  // Everything that can be found: pins, text and shapes, players, beds, last deaths and nether gates (all dimensions).
+  const where = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
+  const all = () => {
+    const out = [];
+    for (const a of state.annotations) {
       const c = annCenter(a);
-      items.push({
-        color: a.color,
-        kind: { waypoint: 'ピン', text: '文字' }[a.type] || '図形',
-        title: a.name || a.text || '(名前なし)',
-        meta: `${DIMS[a.dim].name}  X ${c.x} / Z ${c.z}`,
+      const shape = { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
+      out.push({
+        kind: 'pin', dim: a.dim, x: c.x, z: c.z,
+        title: a.name || a.text || shape || 'ピン',
+        hay: `${a.name || ''} ${a.text || ''} ${a.note || ''}`,
+        icon: a.type === 'waypoint' ? flagSvg(a.color) : `<span class="dot" style="background:${esc(a.color)}"></span>`,
+        meta: `${{ waypoint: 'ピン', text: '文字' }[a.type] || '図形'} ・ ${where(a.dim, c.x, c.z)}`,
         go: () => { goTo(c.x, c.z, a.dim, 0); openAnnPopup(a.id); },
       });
-      if (items.length >= 30) break;
     }
+    for (const p of state.players) {
+      const color = playerColor(p.key);
+      out.push({ kind: 'player', dim: p.dim, x: p.x, z: p.z, title: p.online === true ? p.name : `${p.name}・ログアウト`, hay: p.name,
+        icon: playerSvg(color), meta: `プレイヤー ・ ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
+      if (p.bed) out.push({ kind: 'bed', dim: p.bed.dim, x: p.bed.x, z: p.bed.z, title: `${p.name}・ベッド`, hay: `${p.name} ベッド`,
+        icon: BED_SVG(color), meta: `ベッド ・ ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
+      if (p.death) out.push({ kind: 'death', dim: p.death.dim, x: p.death.x, z: p.death.z, title: `${p.name}・最終死亡地点`, hay: `${p.name} 死亡 最終死亡地点`,
+        icon: DEATH_SVG, meta: `死亡地点 ・ ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
+    }
+    for (const [dim, gates] of Object.entries(state.portals || {})) {
+      for (const g of gates) {
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || 'ネザーゲート', hay: `${g.name || ''} ネザーゲート ゲート`,
+          icon: PORTAL_SVG, meta: `ネザーゲート ・ ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+      }
+    }
+    return out;
+  };
+  // With nothing typed: what is shown on the map right now, nearest to the crosshair first.
+  const shownNow = (it) => it.dim === state.dim && (
+    (it.kind === 'death' && $('#show-deaths').checked) || (it.kind === 'bed' && $('#show-beds').checked)
+    || (it.kind === 'gate' && $('#show-portals').checked) || it.kind === 'pin' || it.kind === 'player');
+  const suggest = () => {
+    const q = input.value.trim().toLowerCase();
+    const c = block(map.getCenter());
+    const near = (it) => (it.dim === state.dim ? 0 : 1e12) + Math.hypot(it.x - c.x, it.z - c.z);
+    items = (q ? all().filter((it) => `${it.title} ${it.hay}`.toLowerCase().includes(q)) : all().filter(shownNow))
+      .sort((p, r) => near(p) - near(r)).slice(0, 30);
+    active = 0;
     render();
-  });
+  };
+  input.addEventListener('input', suggest);
+  input.addEventListener('focus', suggest);
   input.addEventListener('keydown', (e) => {
     if (list.hidden) return;
     if (e.key === 'ArrowDown') { active = Math.min(items.length - 1, active + 1); render(); e.preventDefault(); }
@@ -1529,7 +1558,6 @@ function setupSearch() {
     else if (e.key === 'Escape') hide();
   });
   input.addEventListener('blur', () => setTimeout(hide, 150));
-  input.addEventListener('focus', () => { if (items.length) list.hidden = false; });
 
   // Coordinates: type X and Z, then jump there.
   const cx = $('#find-x'), cz = $('#find-z'), go = $('#find-go');

@@ -42,7 +42,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #crosshair::before { left: 11px; top: 0; width: 2px; height: 24px; }
 #crosshair::after { top: 11px; left: 0; height: 2px; width: 24px; }
 
-#topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 1000; display: flex; gap: 8px; padding: 12px;
+#topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 1050; display: flex; gap: 8px; padding: 12px;
   padding-top: max(12px, env(safe-area-inset-top)); pointer-events: none; flex-wrap: wrap; }
 #topbar > * { pointer-events: auto; }
 .glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #toast,
@@ -58,6 +58,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   background: var(--glass-strong); border-radius: var(--radius); max-height: 50vh; overflow: auto; }
 #search-results li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
 #search-results .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+#search-results { background: var(--bg-solid) !important; }
+#search-results .s-icon { display: grid; place-items: center; width: 24px; height: 24px; flex: none; }
+#search-results .s-icon svg { width: auto; height: 22px; max-width: 24px; margin: 0 !important; }
+#search-results .s-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #search-results .grow { min-width: 0; }
 #search-results li:hover, #search-results li.active { background: var(--hover); }
 #search-results .meta { color: var(--sub); font-size: 12px; }
@@ -319,6 +323,7 @@ body:not(.shared) .only-shared, body.shared .only-local { display: none; }
   #topbar { display: grid; grid-template-columns: minmax(0, 44fr) minmax(0, 56fr); gap: 8px; }
   .search { grid-column: 1; grid-row: 1; min-width: 0; }
   #search { padding-left: 34px; background-position: 11px center; }
+  #search-results { right: auto; width: calc(100vw - 20px); max-height: 55vh; }
   #find { grid-column: 2; grid-row: 1; min-width: 0; padding-left: 10px; }
   .coordfind label { flex: 1; min-width: 0; }
   .coordfind input { width: 100%; min-width: 0; }
