@@ -54,7 +54,9 @@ def main():
     state = load(state_path, {})
     members = load(members_path, {}).get('members', [])
     if cmd == 'need-world':
-        print('true' if players.anyone_online(state, members) or not state.get('players') else 'false')
+        # Also read the world once when the time of day has never been taken, so the clock shows up right away.
+        need = players.anyone_online(state, members) or not state.get('players') or 'world' not in state
+        print('true' if need else 'false')
         return
     secret = os.environ.get('CACHE_KEY') or ''
     if len(secret) < 20:
