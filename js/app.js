@@ -1504,7 +1504,9 @@ function setupSearch() {
       li.innerHTML = `<span class="s-icon">${it.icon}</span><div class="grow"><div class="s-title"></div><div class="meta"></div></div>`;
       li.querySelector('.s-title').textContent = it.title;
       li.querySelector('.meta').textContent = it.meta;
-      li.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(i); });
+      // Pick on a tap (click), not on touch-down, so a finger can scroll the list; mousedown keeps the box focused.
+      li.addEventListener('mousedown', (e) => e.preventDefault());
+      li.addEventListener('click', () => pick(i));
       list.append(li);
     });
     list.hidden = items.length === 0;
