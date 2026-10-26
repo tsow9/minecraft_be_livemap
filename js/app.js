@@ -1553,7 +1553,7 @@ function setupSearch() {
     const c = block(map.getCenter());
     const near = (it) => (it.dim === state.dim ? 0 : 1e12) + Math.hypot(it.x - c.x, it.z - c.z);
     items = (q ? all().filter((it) => `${it.title} ${it.hay}`.toLowerCase().includes(q)) : all().filter(shownNow))
-      .sort((p, r) => near(p) - near(r)).slice(0, 30);
+      .sort((p, r) => near(p) - near(r)).slice(0, 200);
     active = 0;
     render();
   };

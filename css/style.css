@@ -48,14 +48,15 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #toast,
 .leaflet-control-zoom { background: var(--glass);
   border: 1px solid var(--line); box-shadow: var(--shadow); }
-.search { position: relative; z-index: 2; flex: 0 1 240px; min-width: 0; }
+.search { position: relative; z-index: 10; flex: 0 1 240px; min-width: 0; }
 #search { width: 100%; height: 42px; padding: 0 14px 0 40px; border-radius: 999px; outline: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: 14px center; background-size: 18px; transition: border-color .15s; }
 #search:focus { border-color: var(--accent); }
 #search::placeholder { color: var(--sub); }
 #search-results { position: absolute; left: 0; right: 0; top: 100%; margin: 6px 0 0; padding: 6px; list-style: none;
-  background: var(--glass-strong); border-radius: var(--radius); max-height: 50vh; overflow: auto; }
+  background: var(--glass-strong); border-radius: var(--radius); max-height: min(60vh, 520px); overflow-y: auto; overscroll-behavior: contain;
+  min-width: 340px; z-index: 10; }
 #search-results li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
 #search-results .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
 #search-results { background: var(--bg-solid) !important; }
@@ -215,7 +216,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   color: #ffe2a0; font-weight: 600; white-space: nowrap; }
 #past-banner[hidden] { display: none; }
 #topbar .tb-break, .find-label { display: none; }
-#clock { position: absolute; z-index: 900; left: 12px; top: 66px; display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 9px;
+#clock { position: absolute; z-index: 1; left: 12px; top: 66px; display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 9px;
   border-radius: 999px; background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12px; pointer-events: none; }
 #clock b { font-variant-numeric: tabular-nums; }
 #clock span { color: var(--sub); }
