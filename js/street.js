@@ -4,6 +4,9 @@
 // insides of buildings are not shown; every column is drawn solid from the ground down.
 import * as THREE from '../vendor/three/three.module.min.js';
 
+// Same version tag as this file, so a site update never mixes old and new parts.
+const { TEX, TILE_COUNT, makeAtlas, kindOf, LOOK } = await import(`./street-textures.js${new URL(import.meta.url).search}`);
+
 // How far around you the land is built, in blocks (a little less on phones to stay smooth).
 const RADIUS = matchMedia('(pointer: coarse)').matches ? 72 : 96;
 const REBUILD_AFTER = 40;   // build again once you have walked this far from the last build
@@ -42,7 +45,7 @@ function loadPixels(url) {
 }
 
 // The land around (cx, cz) as flat arrays, one entry per block column.
-async function readLand(cx, cz, tileUrl) {
+async function readLand(cx, cz, tileUrl, names, dim) {
   const size = RADIUS * 2 + 1, x0 = cx - RADIUS, z0 = cz - RADIUS;
   const tiles = [];
   for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + size - 1) / 256); tx++) {
@@ -53,12 +56,15 @@ async function readLand(cx, cz, tileUrl) {
   }
   const n = size * size;
   const land = {
-    x0, z0, size,
+    x0, z0, size, dim,
     solid: new Int16Array(n).fill(-999),  // height of the walkable top (top face of the highest ground block)
     top: new Int16Array(n).fill(-999),    // the highest block (leaves, water surface, ...)
     kind: new Uint8Array(n),              // 0 nothing known, 1 ground, 2 something above the ground (trees), 3 water
+    plant: new Uint8Array(n),             // 1 = a plant or thin layer on the ground; the ground itself is not known
     rgb: new Uint8Array(n * 3),           // colour of the top block
+    look: new Array(n),                   // texture group of the top block (see LOOK)
     under: new Uint8Array(n * 3),         // colour of the ground itself
+    underLook: new Array(n),
   };
   for (const t of await Promise.all(tiles)) {
     if (!t.map || !t.info) continue;
@@ -79,6 +85,7 @@ async function readLand(cx, cz, tileUrl) {
         const g = gv ? gv - 65 : null;
         land.top[k] = topY;
         land.rgb.set([t.map[p], t.map[p + 1], t.map[p + 2]], k * 3);
+        land.look[k] = kindOf(names[v >> 9]);
         if (wet) {
           land.kind[k] = 3;
           land.solid[k] = g !== null && g < topY ? g + 1 : topY - 2;
@@ -88,6 +95,7 @@ async function readLand(cx, cz, tileUrl) {
         } else {
           land.kind[k] = 1;
           land.solid[k] = (g !== null ? g : topY) + 1;
+          land.plant[k] = topY >= land.solid[k] ? 1 : 0;
         }
       }
     }
@@ -111,17 +119,20 @@ function unshade(land) {
   }
 }
 
-// Under trees the ground colour is unknown: borrow it from the nearest open ground.
+// Under trees and plants the ground is unknown: borrow it from the nearest open natural ground.
 function groundColours(land) {
-  const { size, kind, rgb, under } = land;
+  const { size, kind, plant, rgb, look, under, underLook } = land;
   const known = new Uint8Array(size * size);
   for (let k = 0; k < size * size; k++) {
-    if (kind[k] === 1) { under.set(rgb.subarray(k * 3, k * 3 + 3), k * 3); known[k] = 1; }
-    else if (kind[k] === 3) { under.set(SEABED, k * 3); known[k] = 1; }
+    if (kind[k] === 1 && !plant[k] && LOOK[look[k]]?.natural) {
+      under.set(rgb.subarray(k * 3, k * 3 + 3), k * 3); underLook[k] = look[k]; known[k] = 1;
+    } else if (kind[k] === 3) {
+      under.set(SEABED, k * 3); underLook[k] = 'sand'; known[k] = 1;
+    }
   }
   const spread = (k, from) => {
     if (known[k] || !known[from] || kind[from] === 3) return;
-    under.copyWithin(k * 3, from * 3, from * 3 + 3); known[k] = 2;
+    under.copyWithin(k * 3, from * 3, from * 3 + 3); underLook[k] = underLook[from]; known[k] = 2;
   };
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 0; i < size; i++) {
@@ -133,7 +144,10 @@ function groundColours(land) {
       for (let i = size - 2; i >= 0; i--) spread(i * size + j, (i + 1) * size + j);
     }
   }
-  for (let k = 0; k < size * size; k++) if (!known[k]) under.set([96, 128, 62], k * 3);
+  const fallback = land.dim === 'overworld' ? 'grass' : 'stone';
+  for (let k = 0; k < size * size; k++) {
+    if (!known[k]) { under.set(land.dim === 'overworld' ? [96, 128, 62] : [110, 52, 50], k * 3); underLook[k] = fallback; }
+  }
 }
 
 // ---------- building the blocks ----------
@@ -143,38 +157,42 @@ const hash = (a, b, c = 0) => {
   return ((h ^ (h >>> 16)) & 255) / 255;
 };
 
-class Faces {
-  constructor() { this.pos = []; this.col = []; this.idx = []; }
+const atlas = makeAtlas();
+const INSET = 0.02 / (16 * TILE_COUNT);
 
-  // A rectangle given by its four corners (counter-clockwise seen from outside) and a colour.
-  quad(a, b, c, d, rgb, light) {
+class Faces {
+  constructor() { this.pos = []; this.col = []; this.uv = []; this.idx = []; }
+
+  // A rectangle given by its four corners (counter-clockwise seen from outside, starting bottom left),
+  // a colour, a texture and which part of the texture (v0..v1, bottom to top) it shows.
+  quad(a, b, c, d, rgb, light, tile, v0 = 0, v1 = 1) {
     const base = this.pos.length / 3;
     this.pos.push(...a, ...b, ...c, ...d);
-    const r = rgb[0] * light / 255, g = rgb[1] * light / 255, bl = rgb[2] * light / 255;
+    const l = light * atlas.boost[tile] / 255;
+    const r = rgb[0] * l, g = rgb[1] * l, bl = rgb[2] * l;
     for (let i = 0; i < 4; i++) this.col.push(r, g, bl);
+    const u0 = tile / TILE_COUNT + INSET, u1 = (tile + 1) / TILE_COUNT - INSET;
+    this.uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
     this.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
 
-  // Wall of a column on one side, from y0 up to y1, split per block so the blocks show.
-  wall(side, x, z, y0, y1, rgb, light) {
-    const step = y1 - y0 > 16 ? y1 - y0 : 1;
-    for (let y = y0; y < y1; y += step) {
-      const t = Math.min(y + step, y1);
-      const l = light * (0.94 + 0.08 * hash(x, z, y));
-      if (side === 0) this.quad([x + 1, y, z], [x, y, z], [x, t, z], [x + 1, t, z], rgb, l);              // north
-      else if (side === 1) this.quad([x, y, z + 1], [x + 1, y, z + 1], [x + 1, t, z + 1], [x, t, z + 1], rgb, l); // south
-      else if (side === 2) this.quad([x, y, z], [x, y, z + 1], [x, t, z + 1], [x, t, z], rgb, l);          // west
-      else this.quad([x + 1, y, z + 1], [x + 1, y, z], [x + 1, t, z], [x + 1, t, z + 1], rgb, l);           // east
-    }
+  // One block's face on a side of a column, between heights y and t (out = push it outwards a little).
+  side(side, x, z, y, t, rgb, light, tile, v0 = 0, v1 = 1, out = 0) {
+    if (side === 0) { z -= out; this.quad([x + 1, y, z], [x, y, z], [x, t, z], [x + 1, t, z], rgb, light, tile, v0, v1); }          // north
+    else if (side === 1) { z += 1 + out; this.quad([x, y, z], [x + 1, y, z], [x + 1, t, z], [x, t, z], rgb, light, tile, v0, v1); } // south
+    else if (side === 2) { x -= out; this.quad([x, y, z], [x, y, z + 1], [x, t, z + 1], [x, t, z], rgb, light, tile, v0, v1); }      // west
+    else { x += 1 + out; this.quad([x, y, z + 1], [x, y, z], [x, t, z], [x, t, z + 1], rgb, light, tile, v0, v1); }                   // east
   }
 
-  top(x, z, y, rgb, light) { this.quad([x, y, z + 1], [x + 1, y, z + 1], [x + 1, y, z], [x, y, z], rgb, light); }
-  bottom(x, z, y, rgb, light) { this.quad([x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1], rgb, light); }
+  top(x, z, y, rgb, light, tile) { this.quad([x, y, z + 1], [x + 1, y, z + 1], [x + 1, y, z], [x, y, z], rgb, light, tile); }
+  bottom(x, z, y, rgb, light, tile) { this.quad([x, y, z], [x + 1, y, z], [x + 1, y, z + 1], [x, y, z + 1], rgb, light, tile); }
 
   geometry() {
+    if (!this.idx.length) return null;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
     g.setIndex(this.idx);
     return g;
   }
@@ -182,48 +200,72 @@ class Faces {
 
 const SIDE_LIGHT = [0.8, 0.8, 0.64, 0.64];
 const NEIGHBOUR = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+const DIRT = [134, 96, 67], STONE = [126, 126, 126];
+const BAND = 11 / 16;  // the green edge of a grass block covers the top 5/16 of its sides
 
 function buildMeshes(land) {
-  const { x0, z0, size, solid, top, kind, rgb, under } = land;
-  const ground = new Faces(), water = new Faces();
+  const { x0, z0, size, solid, top, kind, plant, rgb, look, under, underLook } = land;
+  const solidFaces = new Faces(), cutout = new Faces(), water = new Faces();
   const at = (i, j) => (i < 0 || j < 0 || i >= size || j >= size ? -1 : i * size + j);
   const colour = (arr, k) => [arr[k * 3], arr[k * 3 + 1], arr[k * 3 + 2]];
   const leafLow = (k) => Math.max(solid[k], top[k] - 1);
+  const overworld = land.dim === 'overworld';
 
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
       const k = i * size + j;
       if (!kind[k]) continue;
       const x = x0 + j, z = z0 + i, s = solid[k];
-      const plant = kind[k] === 1 && top[k] >= s;  // flowers and grass on the ground: mostly the ground colour
-      let c = kind[k] === 1 && !plant ? colour(rgb, k) : colour(under, k);
-      if (plant) c = c.map((v, n) => Math.round(v * 0.7 + rgb[k * 3 + n] * 0.3));
-      ground.top(x, z, s, c, 0.95 + 0.07 * hash(x, z));
+      const own = kind[k] === 1 && !plant[k];
+      const L = LOOK[own ? look[k] : underLook[k]] || LOOK.plain;
+      let c = own ? colour(rgb, k) : colour(under, k);
+      if (plant[k]) c = c.map((v, n) => Math.round(v * 0.75 + rgb[k * 3 + n] * 0.25));
+      solidFaces.top(x, z, s, c, 0.96 + 0.06 * hash(x, z), L.top);
+
+      // What each block down the side of the column is made of: natural ground has dirt and then stone under it.
+      const blockAt = (y) => {
+        const depth = s - 1 - y;
+        if (depth === 0) return L.band ? [TEX.dirt, DIRT] : [L.side, c];
+        if (!L.natural) return [L.side, c];
+        if (depth <= 3) return L.fill === 'dirt' ? [TEX.dirt, DIRT] : [L.side, c];
+        return overworld ? [TEX.stone, STONE] : [L.side, c];
+      };
       NEIGHBOUR.forEach(([dj, di], side) => {
         const n = at(i + di, j + dj);
         const ns = n >= 0 && kind[n] ? solid[n] : s - 6;
-        if (ns < s) ground.wall(side, x, z, ns, s, c, SIDE_LIGHT[side] * 0.9);
+        if (ns >= s) return;
+        const light = SIDE_LIGHT[side] * 0.92;
+        for (let y = ns; y < s; y++) {
+          const [tile, col] = blockAt(y);
+          solidFaces.side(side, x, z, y, y + 1, col, light * (0.95 + 0.06 * hash(x, z, y)), tile);
+        }
+        if (L.band) cutout.side(side, x, z, s - 1 + BAND, s, c, light, TEX.grassBand, BAND, 1, 0.003);
       });
 
       if (kind[k] === 2) {
         // Leaves (or whatever is above the ground) as a block two high at the top, and a trunk under the highest spot.
         const lc = colour(rgb, k), lo = leafLow(k), hi = top[k] + 1;
-        ground.top(x, z, hi, lc, 0.95 + 0.07 * hash(x, z, 1));
-        if (lo > s) ground.bottom(x, z, lo, lc, 0.5);
+        const leafy = look[k] === 'leaves' || look[k] === 'plain';
+        const F = leafy ? cutout : solidFaces;
+        const tile = leafy ? TEX.leaves : (LOOK[look[k]] || LOOK.plain).side;
+        F.top(x, z, hi, lc, 0.96 + 0.06 * hash(x, z, 1), tile);
+        if (lo > s) F.bottom(x, z, lo, lc, 0.55, tile);
         NEIGHBOUR.forEach(([dj, di], side) => {
           const n = at(i + di, j + dj);
           if (n >= 0 && kind[n] === 2 && top[n] === top[k]) return;
-          ground.wall(side, x, z, lo, hi, lc, SIDE_LIGHT[side]);
+          for (let y = lo; y < hi; y++) F.side(side, x, z, y, y + 1, lc, SIDE_LIGHT[side], tile);
         });
         if (top[k] - s >= 3 && isPeak(land, i, j)) {
-          NEIGHBOUR.forEach((_, side) => ground.wall(side, x, z, s, lo, TRUNK, SIDE_LIGHT[side]));
+          NEIGHBOUR.forEach((_, side) => {
+            for (let y = s; y < lo; y++) solidFaces.side(side, x, z, y, y + 1, TRUNK, SIDE_LIGHT[side], TEX.logSide);
+          });
         }
       } else if (kind[k] === 3) {
-        water.top(x, z, top[k] + 0.88, colour(rgb, k), 1.05);
+        water.top(x, z, top[k] + 0.88, colour(rgb, k), 1.05, TEX.water);
       }
     }
   }
-  return { ground: ground.geometry(), water: water.idx.length ? water.geometry() : null };
+  return { solid: solidFaces.geometry(), cutout: cutout.geometry(), water: water.geometry() };
 }
 
 // The highest leaf in its 3×3 neighbourhood (ties broken by position) gets a trunk.
@@ -266,7 +308,7 @@ function label(text, color) {
 }
 
 // ---------- the view ----------
-export function openStreet({ dim, x, z, places = [], tileUrl, onClose }) {
+export function openStreet({ dim, x, z, places = [], tileUrl, names = [], onClose }) {
   const root = document.createElement('div');
   root.id = 'street';
   root.innerHTML = `
@@ -295,9 +337,16 @@ export function openStreet({ dim, x, z, places = [], tileUrl, onClose }) {
   scene.fog = new THREE.Fog(sky, RADIUS * 0.45, RADIUS * 0.95);
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, RADIUS * 2);
   camera.rotation.order = 'YXZ';
-  const groundMat = new THREE.MeshBasicMaterial({ vertexColors: true });
-  const waterMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false });
-  let groundMesh = null, waterMesh = null;
+  const tex = new THREE.CanvasTexture(atlas.canvas);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestMipmapLinearFilter;
+  tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  const mats = {
+    solid: new THREE.MeshBasicMaterial({ vertexColors: true, map: tex }),
+    cutout: new THREE.MeshBasicMaterial({ vertexColors: true, map: tex, alphaTest: 0.5, side: THREE.DoubleSide }),
+    water: new THREE.MeshBasicMaterial({ vertexColors: true, map: tex, transparent: true, opacity: 0.72, depthWrite: false }),
+  };
+  let meshes = [];
 
   const me = { x: x + 0.5, z: z + 0.5, y: null, vy: 0, yaw: 0, pitch: -0.08, onGround: false };
   let land = null, building = false, closed = false;
@@ -322,14 +371,16 @@ export function openStreet({ dim, x, z, places = [], tileUrl, onClose }) {
     if (building) return;
     building = true;
     const cx = Math.floor(me.x), cz = Math.floor(me.z);
-    const next = await readLand(cx, cz, tileUrl);
+    const next = await readLand(cx, cz, tileUrl, names, dim);
     if (closed) return;
-    const meshes = buildMeshes(next);
-    if (groundMesh) { scene.remove(groundMesh); groundMesh.geometry.dispose(); }
-    if (waterMesh) { scene.remove(waterMesh); waterMesh.geometry.dispose(); waterMesh = null; }
-    groundMesh = new THREE.Mesh(meshes.ground, groundMat);
-    scene.add(groundMesh);
-    if (meshes.water) { waterMesh = new THREE.Mesh(meshes.water, waterMat); waterMesh.renderOrder = 1; scene.add(waterMesh); }
+    const geo = buildMeshes(next);
+    for (const m of meshes) { scene.remove(m); m.geometry.dispose(); }
+    meshes = Object.entries(geo).filter(([, g]) => g).map(([kind, g]) => {
+      const m = new THREE.Mesh(g, mats[kind]);
+      if (kind === 'water') m.renderOrder = 1;
+      scene.add(m);
+      return m;
+    });
     land = next;
     land.cx = cx; land.cz = cz;
     for (const g of signs) {
@@ -496,8 +547,9 @@ export function openStreet({ dim, x, z, places = [], tileUrl, onClose }) {
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('keyup', onKey);
     window.removeEventListener('blur', onBlur);
-    if (groundMesh) groundMesh.geometry.dispose();
-    if (waterMesh) waterMesh.geometry.dispose();
+    for (const m of meshes) m.geometry.dispose();
+    for (const m of Object.values(mats)) m.dispose();
+    tex.dispose();
     for (const g of signs) { g.s.material.map.dispose(); g.s.material.dispose(); g.pole.geometry.dispose(); g.pole.material.dispose(); }
     renderer.dispose();
     root.remove();

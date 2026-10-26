@@ -1837,6 +1837,7 @@ async function openStreet(x, z) {
   mod.openStreet({
     dim, x, z,
     places: routePlaces(dim),
+    names: blockNames,
     tileUrl: (kind, tx, tz) => (kind === 'map' ? mapTileUrl(tx, tz) : infoUrl(tx, tz, kind)),
     onClose: (p) => { if (state.dim === dim) map.setView(ll(p.x + 0.5, p.z + 0.5), Math.max(map.getZoom(), 1)); },
   });
