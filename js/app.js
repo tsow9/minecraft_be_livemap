@@ -1772,17 +1772,22 @@ function setRouteTarget(id, point) {
 
 // A spot picked on empty ground (not a pin or other mark) gets its own small mark while the route is open.
 const routePoints = L.layerGroup();
-const POINT_SVG = '<svg class="gm-svg" viewBox="0 0 9 11" width="18" height="22" shape-rendering="crispEdges">'
-  + '<ellipse class="gm-shadow" cx="4.5" cy="10.2" rx="3.2" ry=".7" shape-rendering="geometricPrecision"/>'
-  + '<g class="gm-body"><rect x="0" y="0" width="1" height="1" fill="#1b1d22"/><rect x="1" y="0" width="1" height="1" fill="#1b1d22"/><rect x="7" y="0" width="1" height="1" fill="#1b1d22"/><rect x="8" y="0" width="1" height="1" fill="#1b1d22"/><rect x="0" y="1" width="1" height="1" fill="#1b1d22"/><rect x="1" y="1" width="1" height="1" fill="#e5484d"/><rect x="2" y="1" width="1" height="1" fill="#1b1d22"/><rect x="6" y="1" width="1" height="1" fill="#1b1d22"/><rect x="7" y="1" width="1" height="1" fill="#e5484d"/><rect x="8" y="1" width="1" height="1" fill="#1b1d22"/><rect x="1" y="2" width="1" height="1" fill="#1b1d22"/><rect x="2" y="2" width="1" height="1" fill="#e5484d"/><rect x="3" y="2" width="1" height="1" fill="#1b1d22"/><rect x="5" y="2" width="1" height="1" fill="#1b1d22"/><rect x="6" y="2" width="1" height="1" fill="#e5484d"/><rect x="7" y="2" width="1" height="1" fill="#1b1d22"/><rect x="2" y="3" width="1" height="1" fill="#1b1d22"/><rect x="3" y="3" width="1" height="1" fill="#e5484d"/><rect x="4" y="3" width="1" height="1" fill="#1b1d22"/><rect x="5" y="3" width="1" height="1" fill="#e5484d"/><rect x="6" y="3" width="1" height="1" fill="#1b1d22"/><rect x="3" y="4" width="1" height="1" fill="#1b1d22"/><rect x="4" y="4" width="1" height="1" fill="#e5484d"/><rect x="5" y="4" width="1" height="1" fill="#1b1d22"/><rect x="2" y="5" width="1" height="1" fill="#1b1d22"/><rect x="3" y="5" width="1" height="1" fill="#e5484d"/><rect x="4" y="5" width="1" height="1" fill="#1b1d22"/><rect x="5" y="5" width="1" height="1" fill="#e5484d"/><rect x="6" y="5" width="1" height="1" fill="#1b1d22"/><rect x="1" y="6" width="1" height="1" fill="#1b1d22"/><rect x="2" y="6" width="1" height="1" fill="#e5484d"/><rect x="3" y="6" width="1" height="1" fill="#1b1d22"/><rect x="5" y="6" width="1" height="1" fill="#1b1d22"/><rect x="6" y="6" width="1" height="1" fill="#e5484d"/><rect x="7" y="6" width="1" height="1" fill="#1b1d22"/><rect x="0" y="7" width="1" height="1" fill="#1b1d22"/><rect x="1" y="7" width="1" height="1" fill="#e5484d"/><rect x="2" y="7" width="1" height="1" fill="#1b1d22"/><rect x="6" y="7" width="1" height="1" fill="#1b1d22"/><rect x="7" y="7" width="1" height="1" fill="#e5484d"/><rect x="8" y="7" width="1" height="1" fill="#1b1d22"/><rect x="0" y="8" width="1" height="1" fill="#1b1d22"/><rect x="1" y="8" width="1" height="1" fill="#1b1d22"/><rect x="7" y="8" width="1" height="1" fill="#1b1d22"/><rect x="8" y="8" width="1" height="1" fill="#1b1d22"/></g></svg>';
+// Start: a ring on the ground. Destination: a red cross. Both only for spots picked on empty ground.
+const START_SVG = '<svg class="gm-svg" viewBox="0 0 26 20" width="24" height="18"><ellipse class="gm-shadow" cx="13" cy="17" rx="8" ry="1.6"/>'
+  + '<g class="gm-body"><ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#1b1d22" stroke-width="5"/>'
+  + '<ellipse cx="13" cy="10" rx="10" ry="6.5" fill="none" stroke="#f4f1ea" stroke-width="2.4"/>'
+  + '<ellipse cx="13" cy="10" rx="3" ry="2" fill="#ffd36e" stroke="#1b1d22" stroke-width="1.6"/></g></svg>';
+const GOAL_SVG = '<svg class="gm-svg" viewBox="0 0 22 24" width="20" height="22"><ellipse class="gm-shadow" cx="11" cy="21.5" rx="6" ry="1.6"/>'
+  + '<g class="gm-body"><path d="M5 5l12 12M17 5L5 17" stroke="#1b1d22" stroke-width="7" stroke-linecap="round"/>'
+  + '<path d="M5 5l12 12M17 5L5 17" stroke="#e5484d" stroke-width="3.6" stroke-linecap="round"/></g></svg>';
 
 function showRoutePoints() {
   routePoints.clearLayers();
-  for (const p of [route.from, route.to]) {
+  for (const [p, svg, dy] of [[route.from, START_SVG, 9], [route.to, GOAL_SVG, 10]]) {
     if (!p || !String(p.id).startsWith('point:')) continue;
     routePoints.addLayer(L.marker(ll(p.x + 0.5, p.z + 0.5), {
       pmIgnore: true, interactive: false, zIndexOffset: 1500,
-      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="gm" style="transform:translate(-50%,-9px)">${POINT_SVG}</div>` }),
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="gm" style="transform:translate(-50%,-${dy}px)">${svg}</div>` }),
     }));
   }
   if (!map.hasLayer(routePoints)) routePoints.addTo(map);
