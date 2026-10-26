@@ -127,6 +127,10 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
   const info = realmInfo(realm)
   if (withBackups) {
     try { info.backups = await realmBackups(api, realm) } catch (e) { console.error('バックアップ情報を取得できませんでした:', e.message) }
+    try {
+      const sub = await api.getRealmSubscriptionInfo(realm.id)
+      info.subscription = { start: toMillis(sub.startDate), daysLeft: typeof sub.daysLeft === 'number' ? sub.daysLeft : null, type: String(sub.subscriptionType || '').slice(0, 30) }
+    } catch (e) { console.error('契約情報を取得できませんでした:', e.message) }
   }
   return { members: await memberList(auth, realm), realm: info }
 }

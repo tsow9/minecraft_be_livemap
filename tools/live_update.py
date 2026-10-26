@@ -84,8 +84,9 @@ def main():
     realm = fetched.get('realm')
     if isinstance(realm, dict):
         # Backups are looked up only now and then; keep the last answer in between.
-        if 'backups' not in realm and isinstance(state.get('realm'), dict) and 'backups' in state['realm']:
-            realm['backups'] = state['realm']['backups']
+        for key in ('backups', 'subscription'):
+            if key not in realm and isinstance(state.get('realm'), dict) and key in state['realm']:
+                realm[key] = state['realm'][key]
         state['realm'] = {**realm, 'at': now}
     state = players.update_live(state, members, records, now)
     # The frequent check also starts the map update: every check while someone plays, hourly otherwise.
