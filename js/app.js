@@ -1674,15 +1674,15 @@ async function travelEstimate(f, t) {
 function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, kind: 'ピン' });
+    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim });
   }
   for (const p of state.players) {
-    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim, kind: p.online === true ? '現在地' : '最後の位置' });
-    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}のベッド`, x: p.bed.x, z: p.bed.z, dim, kind: 'ベッド' });
-    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}の最終死亡地点`, x: p.death.x, z: p.death.z, dim, kind: '死亡地点' });
+    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim });
+    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim });
+    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim });
   }
   for (const g of state.portals?.[dim] || []) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, kind: 'ゲート' });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim });
   }
   return out;
 }
@@ -1731,7 +1731,7 @@ function startRoute(a) {
   const sel = $('#route-to');
   sel.innerHTML = '';
   sel.append(new Option('行き先を選んでください', ''));
-  for (const t of routeTargets()) sel.append(new Option(`${t.name}(${t.kind}・${Math.round(t.dist)}ブロック)`, t.id));
+  for (const t of routeTargets()) sel.append(new Option(t.name, t.id));
   $('#route-result').hidden = true;
   $('#route').hidden = false;
   showRoutePoints();
@@ -1746,7 +1746,7 @@ function setRouteTarget(id, point) {
   const sel = $('#route-to');
   if (point) {
     sel.querySelector('option[data-point]')?.remove();
-    const o = new Option(`${t.name}(地図で選んだ場所)`, t.id);
+    const o = new Option(t.name, t.id);
     o.dataset.point = '1';
     sel.append(o);
   }
@@ -1920,7 +1920,7 @@ function renderPlayers() {
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="bed-icon gm" style="transform:translate(-50%,-17px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
       });
-      const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}のベッド`, x: b.x, z: b.z, dim: b.dim };
+      const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}・ベッド`, x: b.x, z: b.z, dim: b.dim };
       m.bindPopup(popupWithRoute(`<h4>${esc(names)}のベッド</h4><div class="sub">リスポーン地点</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
@@ -1935,7 +1935,7 @@ function renderPlayers() {
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-18px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      const place = { id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim: p.dim };
+      const place = { id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim: p.dim };
       m.bindPopup(popupWithRoute(`<h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
@@ -1945,7 +1945,7 @@ function renderPlayers() {
         pmIgnore: true,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon gm" style="transform:translate(-50%,-25px)">${DEATH_SVG}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      const place = { id: `death:${p.key}`, name: `${p.name}の最終死亡地点`, x: d.x, z: d.z, dim: d.dim };
+      const place = { id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: d.x, z: d.z, dim: d.dim };
       m.bindPopup(popupWithRoute(`<h4 class="death-h">${DEATH_SVG} ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
