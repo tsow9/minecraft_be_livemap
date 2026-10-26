@@ -4,5 +4,6 @@
   "minNativeZoom": -6,
   "maxNativeZoom": 0,
   "snapshots": [],
+  "streetView": true,
   "shareUrl": "https://blockmap-share.blockmap.workers.dev"
 }
