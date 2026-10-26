@@ -1315,7 +1315,7 @@ function prefetchInfo() {
 
 function showCenterInfo(x, z, info, biome) {
   centerInfo = info;
-  $('#c-biome').innerHTML = biome ? `<i>バイオーム</i>${esc(biome)}` : '';
+  $('#c-biome').textContent = biome || '';
   const part = (k, v) => `<span><i>${k}</i>${v}</span>`;
   $('#c-center').innerHTML = part('X', x) + (info ? part('Y', info.y) : '') + part('Z', z);
   const blk = $('#c-block');
