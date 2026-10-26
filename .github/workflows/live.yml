@@ -14,7 +14,8 @@ permissions:
 
 concurrency:
   group: live-players
-  cancel-in-progress: true
+  # Let a running check finish (a newer request waits) so that frequent triggers never cancel every run.
+  cancel-in-progress: false
 
 jobs:
   live:

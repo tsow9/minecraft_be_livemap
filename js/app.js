@@ -1629,13 +1629,6 @@ function renderClock() {
 
 // ---------- route: from a pin to a chosen destination (like a map app) ----------
 const route = { from: null, to: null, line: null };
-const SPRINT = 5.6, WALK = 4.3;
-
-function durationText(sec) {
-  if (sec < 60) return `${Math.max(1, Math.round(sec))}秒`;
-  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
-  return s ? `${m}分${s}秒` : `${m}分`;
-}
 
 // Everything on the map that a route can start from or go to, in one dimension.
 function routePlaces(dim) {
@@ -1722,8 +1715,7 @@ function setRouteTarget(id, point) {
   route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
     { color: '#fff', weight: 3, opacity: 0.95, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
   $('#route-dist').textContent = `${Math.round(t.dist)}ブロック`;
-  let more = `走って約${durationText(t.dist / SPRINT)}・歩いて約${durationText(t.dist / WALK)}`;
-  if (f.dim === 'overworld' && t.dist >= 200) more += `・ネザー経由なら約${Math.round(t.dist / 8)}ブロック`;
+  const more = f.dim === 'overworld' && t.dist >= 200 ? `ネザー経由なら約${Math.round(t.dist / 8)}ブロック` : '';
   $('#route-more').textContent = more;
   $('#route-result').hidden = false;
   // Keep both ends clear of the route card (top on a computer, bottom on a phone).
