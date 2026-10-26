@@ -1299,21 +1299,9 @@ function setupCoords() {
   };
   $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
   open.addEventListener('click', () => show(true));
-  // On a phone the game clock sits right under the readout (or under the small button when it is closed).
-  const placeClock = () => {
-    const clock = $('#clock');
-    if (!window.matchMedia('(max-width: 700px)').matches) { clock.style.top = ''; return; }
-    const ref = box.hidden ? open : box;
-    clock.style.top = `${Math.round(ref.getBoundingClientRect().bottom + 8)}px`;
-  };
-  if (window.ResizeObserver) new ResizeObserver(placeClock).observe(box);
-  window.addEventListener('resize', placeClock);
-  open.addEventListener('click', () => setTimeout(placeClock));
-  $('#coords-close').addEventListener('click', () => setTimeout(placeClock));
   let saved = null;
   try { saved = localStorage.getItem('mcmap.coords'); } catch { /* private mode */ }
   if (saved === 'closed') show(false);
-  placeClock();
 }
 
 // ---------- dimensions ----------
