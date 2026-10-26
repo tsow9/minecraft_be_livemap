@@ -530,6 +530,56 @@ const ChunkGrid = L.GridLayer.extend({
   },
 });
 
+// ---------- slime chunks ----------
+// Bedrock picks slime chunks from the chunk position alone (the world seed plays no part): the game's
+// random number generator (MT19937) is seeded with x * 0x1f1f1f1f XOR z, and a first number that is a
+// multiple of 10 makes a slime chunk. Only that first number is needed, so only 398 of the 624 seeding steps run.
+const slimeCache = new Map();
+function isSlimeChunk(cx, cz) {
+  const key = `${cx},${cz}`;
+  const hit = slimeCache.get(key);
+  if (hit !== undefined) return hit;
+  const seed = (Math.imul(cx, 0x1f1f1f1f) ^ cz) >>> 0;
+  let prev = seed, second = 0;
+  for (let i = 1; i <= 397; i++) {
+    prev = (Math.imul(0x6c078965, prev ^ (prev >>> 30)) + i) >>> 0;
+    if (i === 1) second = prev;
+  }
+  const y = (seed & 0x80000000) | (second & 0x7fffffff);
+  let v = (prev ^ (y >>> 1) ^ (y & 1 ? 0x9908b0df : 0)) >>> 0;
+  v ^= v >>> 11;
+  v ^= (v << 7) & 0x9d2c5680;
+  v ^= (v << 15) & 0xefc60000;
+  v ^= v >>> 18;
+  const slime = (v >>> 0) % 10 === 0;
+  if (slimeCache.size > 200000) slimeCache.clear();
+  slimeCache.set(key, slime);
+  return slime;
+}
+
+const SLIME_MIN_ZOOM = -2;
+const SlimeLayer = L.GridLayer.extend({
+  createTile(coords) {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 256;
+    if (state.dim !== 'overworld' || coords.z < SLIME_MIN_ZOOM) return tile;
+    const ctx = tile.getContext('2d');
+    const scale = Math.pow(2, coords.z), size = 16 * scale;
+    const cx0 = coords.x * 256 / size, cz0 = coords.y * 256 / size, n = 256 / size;
+    ctx.fillStyle = 'rgba(110, 230, 90, 0.32)';
+    ctx.strokeStyle = 'rgba(150, 255, 120, 0.8)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (!isSlimeChunk(cx0 + i, cz0 + j)) continue;
+        ctx.fillRect(i * size, j * size, size, size);
+        if (size >= 8) ctx.strokeRect(i * size + 0.5, j * size + 0.5, size - 1, size - 1);
+      }
+    }
+    return tile;
+  },
+});
+
 // ---------- base map ----------
 function snapshots() { return state.demo ? DEMO_SNAPSHOTS : state.config.snapshots; }
 
@@ -1089,7 +1139,7 @@ function loadInfoTile(url) {
     img.src = url;
   });
   infoCache.set(url, p);
-  if (infoCache.size > 80) {
+  if (infoCache.size > 160) {
     const old = infoCache.keys().next().value;
     infoCache.delete(old);
     infoData.delete(old);
@@ -1119,6 +1169,18 @@ function blockAtNow(x, z) {
   if (!id) return { info: null };
   const y = (v & 511) - 64;
   return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y }, raw: { id, y } };
+}
+
+// Biome tiles store, per block, the biome at the surface (value = biome ID + 1, 0 = unknown).
+// Answers like blockAtNow: the name, nothing known, or a promise while the tile loads.
+function biomeAtNow(x, z) {
+  const tx = Math.floor(x / 256), tz = Math.floor(z / 256);
+  const url = infoUrl(tx, tz, 'biome');
+  if (!url) return { name: '' };
+  if (!infoData.has(url)) return { pending: loadInfoTile(url) };
+  const data = infoData.get(url);
+  const v = data ? data.data[((z - tz * 256) * data.width + (x - tx * 256)) * 4] : 0;
+  return { name: v ? BIOME_JA[v - 1] || '' : '' };
 }
 
 // ---------- contour lines (drawn from the ground heights stored in the ground tiles) ----------
@@ -1236,8 +1298,9 @@ function prefetchInfo() {
   const urls = [];
   for (let tx = x0; tx <= x1; tx++) {
     for (let tz = z0; tz <= z1; tz++) {
-      const url = infoUrl(tx, tz);
-      if (url && !infoCache.has(url)) urls.push([Math.abs(tx - cx) + Math.abs(tz - cz), url]);
+      for (const url of [infoUrl(tx, tz), infoUrl(tx, tz, 'biome')]) {
+        if (url && !infoCache.has(url)) urls.push([Math.abs(tx - cx) + Math.abs(tz - cz), url]);
+      }
     }
   }
   prefetchQueue = urls.sort((p, q) => p[0] - q[0]).map((u) => u[1]);
@@ -1250,8 +1313,9 @@ function prefetchInfo() {
   idle(work);
 }
 
-function showCenterInfo(x, z, info) {
+function showCenterInfo(x, z, info, biome) {
   centerInfo = info;
+  $('#c-biome').innerHTML = biome ? `<i>バイオーム</i>${esc(biome)}` : '';
   const part = (k, v) => `<span><i>${k}</i>${v}</span>`;
   $('#c-center').innerHTML = part('X', x) + (info ? part('Y', info.y) : '') + part('Z', z);
   const blk = $('#c-block');
@@ -1263,12 +1327,12 @@ function showCenterInfo(x, z, info) {
 
 function updateCenterInfo() {
   const { x, z } = block(map.getCenter());
-  const r = blockAtNow(x, z);
-  if (!r.pending) { showCenterInfo(x, z, r.info); return; }
-  showCenterInfo(x, z, null);
-  r.pending.then(() => {
+  const r = blockAtNow(x, z), b = biomeAtNow(x, z);
+  if (!r.pending && !b.pending) { showCenterInfo(x, z, r.info, b.name); return; }
+  showCenterInfo(x, z, r.info || null, b.name || '');
+  Promise.all([r.pending, b.pending]).then(() => {
     const now = block(map.getCenter());
-    if (now.x === x && now.z === z) showCenterInfo(x, z, blockAtNow(x, z).info);
+    if (now.x === x && now.z === z) showCenterInfo(x, z, blockAtNow(x, z).info, biomeAtNow(x, z).name);
   });
 }
 
@@ -1330,6 +1394,7 @@ function setDim(dim) {
   renderPortals();
   stopRoute();
   refreshExplore();
+  state.slimeLayer?.redraw();
   showOtherDim(block(map.getCenter()).x, block(map.getCenter()).z);
 }
 
@@ -1401,6 +1466,16 @@ function setupPanels() {
     refreshContours();
     if (!on) toast('等高線を非表示');
     else toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示');
+  });
+
+  $('#btn-slime').addEventListener('click', () => {
+    if (state.slimeLayer) { map.removeLayer(state.slimeLayer); state.slimeLayer = null; }
+    else state.slimeLayer = new SlimeLayer({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
+    $('#btn-slime').classList.toggle('on', !!state.slimeLayer);
+    if (!state.slimeLayer) toast('スライムチャンクを非表示');
+    else if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
+    else if (map.getZoom() < SLIME_MIN_ZOOM) toast('スライムチャンクはもう少し拡大すると表示されます');
+    else toast('スライムチャンクを表示・Y40より下で湧きます');
   });
 
   $('#btn-grid').addEventListener('click', () => {

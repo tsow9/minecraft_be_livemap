@@ -101,7 +101,7 @@ def decode_subchunk(data):
 
 # ---------- per-chunk surface ----------
 class Surface:
-    __slots__ = ('top_y', 'top_c', 'top_id', 'water_y', 'ground_y')
+    __slots__ = ('top_y', 'top_c', 'top_id', 'water_y', 'ground_y', 'biome')
 
     def __init__(self):
         self.top_y = np.full((16, 16), UNSET, np.int16)
@@ -109,6 +109,7 @@ class Surface:
         self.top_id = np.zeros((16, 16), np.uint16)
         self.ground_y = np.full((16, 16), UNSET, np.int16)
         self.water_y = np.full((16, 16), UNSET, np.int16)
+        self.biome = None  # biome ID + 1 at the surface, [x][z]; 0 = unknown
 
 
 def _highest(mask):
@@ -172,6 +173,71 @@ def parse_key(key):
     return None
 
 
+# ---------- biomes ----------
+BIOME_3D, BIOME_2D = 43, 45  # key tags: biomes per 4×4×4… (newer worlds) or one per column (older worlds)
+BIOME_FLOOR = {0: -64, 1: 0, 2: 0}  # lowest sub-chunk the 3D biome data starts at
+
+
+def parse_biome_key(key):
+    if len(key) == 9 and key[8] in (BIOME_3D, BIOME_2D):
+        return (0, *struct.unpack_from('<ii', key), key[8])
+    if len(key) == 13 and key[12] in (BIOME_3D, BIOME_2D):
+        cx, cz, dim = struct.unpack_from('<iii', key)
+        return dim, cx, cz, key[12]
+    return None
+
+
+def _biome_layers(data):
+    """3D biome data after the height map: one entry per sub-chunk from the bottom, a number or an [x][z][y] array."""
+    layers, pos = [], 512
+    while pos < len(data):
+        header = struct.unpack_from('b', data, pos)[0]
+        pos += 1
+        bits = header >> 1
+        if bits == -1:  # same as the sub-chunk below
+            layers.append(layers[-1] if layers else 0)
+        elif bits == 0:
+            layers.append(struct.unpack_from('<i', data, pos)[0])
+            pos += 4
+        else:
+            per_word = 32 // bits
+            n_words = -(-4096 // per_word)
+            words = np.frombuffer(data, '<u4', n_words, pos)
+            pos += 4 * n_words
+            shifts = np.arange(per_word, dtype=np.uint32) * bits
+            idx = ((words[:, None] >> shifts) & ((1 << bits) - 1)).reshape(-1)[:4096]
+            count = struct.unpack_from('<i', data, pos)[0]
+            palette = np.frombuffer(data, '<i4', count, pos + 4)
+            pos += 4 + 4 * count
+            layers.append(palette[np.minimum(idx, count - 1)].reshape(16, 16, 16))
+    return layers
+
+
+def surface_biome(data, tag, floor, top_y):
+    """Biome ID + 1 at the top block of each column ([x][z], 0 = unknown)."""
+    if tag == BIOME_2D:
+        if len(data) < 768:
+            return None
+        return np.frombuffer(data, np.uint8, 256, 512).reshape(16, 16).T.astype(np.int16) + 1
+    layers = _biome_layers(data)
+    if not layers:
+        return None
+    out = np.zeros((16, 16), np.int16)
+    known = top_y > UNSET
+    ys = np.where(known, top_y, floor)
+    sub = np.clip((ys - floor) // 16, 0, len(layers) - 1)
+    for i in np.unique(sub):
+        sel = sub == i
+        layer = layers[i]
+        if isinstance(layer, np.ndarray):
+            xs, zs = np.nonzero(sel)
+            out[sel] = layer[xs, zs, ys[sel] % 16] + 1
+        else:
+            out[sel] = layer + 1
+    out[~known] = 0
+    return np.clip(out, 0, 255)
+
+
 # Nether portal blocks found while reading, per dimension id: [(x, y, z), ...]
 portal_blocks = {}
 
@@ -184,11 +250,19 @@ def read_surfaces(db_dir, dims):
     seen = 0
     started = time.time()
 
+    biome_raw = {}
+
     def want(key):
-        p = parse_key(key)
+        p = parse_key(key) or parse_biome_key(key)
         return p is not None and p[0] in want_ids
 
     for key, value in bedrock_db.scan(db_dir, want):
+        b = parse_biome_key(key)
+        if b:
+            # Keep the newer 3D form when a chunk has both.
+            if b[3] == BIOME_3D or (b[:3] not in biome_raw):
+                biome_raw[b[:3]] = (b[3], value)
+            continue
         dim, cx, cz, sy = parse_key(key)
         try:
             decoded = decode_subchunk(value)
@@ -214,6 +288,13 @@ def read_surfaces(db_dir, dims):
             print(f'  {seen} 区画を読み込み中... ({time.time() - started:.0f}秒)', flush=True)
     for pos, subs in nether_raw.items():
         surfaces[1][pos] = nether_surface(subs)
+    for (dim, cx, cz), (tag, value) in biome_raw.items():
+        surf = surfaces[dim].get((cx, cz))
+        if surf is not None:
+            try:
+                surf.biome = surface_biome(value, tag, BIOME_FLOOR.get(dim, 0), surf.top_y.astype(np.int32))
+            except (ValueError, struct.error, IndexError):
+                pass
     return surfaces
 
 
@@ -356,7 +437,17 @@ def build_info_tile(chunks, tx, tz):
     return Image.fromarray(rgb, 'RGB')
 
 
-def write_tiles(surfaces, out_dir, info_dir, ground_dir):
+def build_biome_tile(chunks, tx, tz):
+    """Per block: the biome at the surface (value = biome ID + 1, 0 = unknown)."""
+    v = np.zeros((256, 256), np.uint8)
+    for (cx, cz), surf in chunks:
+        if surf.biome is not None:
+            ox, oz = (cx - tx * 16) * 16, (cz - tz * 16) * 16
+            v[oz:oz + 16, ox:ox + 16] = surf.biome.T
+    return Image.fromarray(v, 'L') if v.any() else None
+
+
+def write_tiles(surfaces, out_dir, info_dir, ground_dir, biome_dir):
     by_tile = {}
     for (cx, cz), surf in surfaces.items():
         by_tile.setdefault((cx // 16, cz // 16), []).append(((cx, cz), surf))
@@ -373,6 +464,11 @@ def write_tiles(surfaces, out_dir, info_dir, ground_dir):
         ground = os.path.join(ground_dir, str(tx), f'{tz}.png')
         os.makedirs(os.path.dirname(ground), exist_ok=True)
         build_ground_tile(chunks, tx, tz).save(ground, compress_level=9)
+        biome = build_biome_tile(chunks, tx, tz)
+        if biome is not None:
+            path = os.path.join(biome_dir, str(tx), f'{tz}.png')
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            biome.save(path, compress_level=9)
     for z in range(-1, MIN_ZOOM - 1, -1):
         parents = {}
         for (tx, tz), img in level.items():
@@ -505,7 +601,7 @@ def main():
                 print(f'  {name}: データなし')
                 continue
             n = write_tiles(chunks, os.path.join(staging, name), os.path.join(staging, 'info', name),
-                            os.path.join(staging, 'ground', name))
+                            os.path.join(staging, 'ground', name), os.path.join(staging, 'biome', name))
             total += n
             print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
         if total == 0:
