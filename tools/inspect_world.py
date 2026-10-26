@@ -47,6 +47,30 @@ def main():
         if 'Pos' in root:
             print(f'  Pos の形: {type(root["Pos"]).__name__} {len(root["Pos"])}要素, DimensionId: {"DimensionId" in root}')
 
+    # Field names of every player record (values left out), plus the bed / respawn fields if present.
+    names = collections.Counter()
+    for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'player_server_')):
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except Exception:  # noqa: BLE001 - diagnostics only
+            continue
+        names.update(root.keys())
+        spawn = {k: v for k, v in root.items() if 'spawn' in k.lower() and isinstance(v, (int, float))}
+        if spawn:
+            print('  リスポーン関連:', spawn)
+    print('プレイヤー記録の項目(出てきた数):', sorted(names.items()))
+    level = os.path.join(os.path.dirname(db), 'level.dat')
+    if os.path.exists(level):
+        with open(level, 'rb') as f:
+            data = f.read()
+        try:
+            root, _ = nbt.root_compound(data, 8)
+            keep = {k: v for k, v in root.items() if re.search(r'time|tick|rain|lightning|weather|daylight', k, re.I)
+                    and isinstance(v, (int, float))}
+            print('level.dat の時刻・天気:', keep)
+        except Exception as e:  # noqa: BLE001 - diagnostics only
+            print('level.dat を読めない', e)
+
 
 if __name__ == '__main__':
     main()
