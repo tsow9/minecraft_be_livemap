@@ -1694,20 +1694,20 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
 
-// A chest seen from the front, after the game's chest: lighter lid, silver latch.
+// A chest seen from the front, after the game's chest: lid, body and the silver latch.
 const CHEST_SVG = pixSvg([
   'KKKKKKKKKKKKKK',
-  'KllllllllllllK',
-  'KllllllllllllK',
-  'KllLLLKKLLLllK',
-  'KlLLLKggKLLLlK',
+  'KLLLLLLLLLLLLK',
+  'KLLLLLLLLLLLLK',
+  'KLLLLLKKLLLLLK',
+  'KLLLLKggKLLLLK',
   'KKKKKKggKKKKKK',
   'KMMMMKKKKMMMMK',
   'KMMMMMMMMMMMMK',
   'KMMMMMMMMMMMMK',
   'KMMMMMMMMMMMMK',
   'KMMMMMMMMMMMMK',
-  'KKKKKKKKKKKKKK'], { K: '#21160b', l: '#c48a42', L: '#a8722f', M: '#9c6a30', g: '#d9d9d9' }, 1.6);
+  'KKKKKKKKKKKKKK'], { K: '#21160b', L: '#a8722f', M: '#93622b', g: '#d9d9d9' }, 1.3);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1799,40 +1799,67 @@ function containerMark(dim, c, key) {
     popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : '<div class="sub">空っぽ</div>'}` };
 }
 function villagerMark(dim, v, key) {
-  const name = jobName(v[3]) + (v[4] ? `「${v[4]}」` : '');
+  const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
   return { dim, x: v[0], y: v[1], z: v[2], icon: VILLAGER_SVG, name,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
+// Marks in the same block share one mark; its bubble first lists them so each one can be picked.
 function markLayer(marks, group, zIndexOffset) {
+  const at = new Map();
   for (const m of marks) {
-    const marker = L.marker(ll(m.x + 0.5, m.z + 0.5), {
+    const k = `${m.x},${m.z}`;
+    if (!at.has(k)) at.set(k, []);
+    at.get(k).push(m);
+  }
+  for (const list of at.values()) {
+    const first = list[0];
+    const count = list.length > 1 ? `<span class="mark-count">${list.length}</span>` : '';
+    const marker = L.marker(ll(first.x + 0.5, first.z + 0.5), {
       pmIgnore: true, zIndexOffset,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${m.icon}</div>` }),
+        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${first.icon}${count}</div>` }),
     });
-    const place = { id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim };
-    marker.bindPopup(() => {
-      const el = document.createElement('div'); el.className = 'pop';
+    const el = document.createElement('div'); el.className = 'pop';
+    // The bubble's contents are swapped on a click; keep that click from reaching the map (which would close it).
+    el.addEventListener('click', (e) => e.stopPropagation());
+    const refresh = () => marker.getPopup()?.update();
+    const show = (m) => {
       el.innerHTML = m.popup;
       const acts = document.createElement('div'); acts.className = 'acts';
-      acts.append(routeButton(place));
+      if (list.length > 1) acts.append(button('一覧に戻る', () => { showList(); refresh(); }));
+      acts.append(routeButton({ id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim }));
       el.append(acts);
-      return el;
-    });
+    };
+    const showList = () => {
+      el.innerHTML = `<h4>この場所に${list.length}つ</h4><div class="xyz">X ${first.x} / Z ${first.z}</div>`;
+      const ul = document.createElement('ul'); ul.className = 'mark-list';
+      for (const m of list) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="s-icon">${m.icon}</span><span class="grow"></span><span class="sub">Y ${m.y}</span>`;
+        li.querySelector('.grow').textContent = m.name;
+        li.addEventListener('click', () => { show(m); refresh(); });
+        ul.append(li);
+      }
+      el.append(ul);
+    };
+    marker.bindPopup(el);
+    marker.on('popupopen', () => { if (list.length > 1) showList(); else show(first); refresh(); });
     marker.addTo(group);
   }
 }
 
-// The chips at the bottom (PC): show every villager / every chest, barrel and shulker box in this dimension.
+// The chips under the search box (PC): show every villager / every chest, barrel and shulker box in this dimension.
 const thingGroup = L.layerGroup();
 const STORAGE_KINDS = new Set(['chest', 'large_chest', 'barrel', 'shulker_box']);
 const thingsOn = { villagers: false, chests: false };
 function renderThings() {
   thingGroup.clearLayers();
   const d = state.items?.dims?.[state.dim] || {};
-  if (thingsOn.chests) markLayer((d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)), thingGroup, 300);
-  if (thingsOn.villagers) markLayer((d.villagers || []).map((v) => villagerMark(state.dim, v, null)), thingGroup, 310);
+  const marks = [];
+  if (thingsOn.chests) marks.push(...(d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)));
+  if (thingsOn.villagers) marks.push(...(d.villagers || []).map((v) => villagerMark(state.dim, v, null)));
+  markLayer(marks, thingGroup, 300);
 }
 function setupThingChips() {
   thingGroup.addTo(map);

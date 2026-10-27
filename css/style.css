@@ -418,12 +418,23 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 /* PC: right under the search box, with the clock on the row below. */
 #chips { position: absolute; z-index: 1000; left: 12px; top: 66px; display: flex; gap: 8px; }
 @media (min-width: 701px) { #clock { top: 106px; } }
-#chips button { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--line);
+#chips button { display: flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px 0 6px; font-size: 13px; border-radius: 999px; border: 1px solid var(--line);
   background: var(--glass); color: var(--fg); font-weight: 600; box-shadow: var(--shadow); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 #chips button:hover { background: var(--glass-strong); }
 #chips button.on { background: var(--accent); border-color: var(--accent); color: #06130d; }
-#chips .chip-ic { display: grid; place-items: center; width: 22px; height: 22px; }
-#chips .chip-ic svg { width: 20px; height: 20px; }
+#chips .chip-ic { display: grid; place-items: center; width: 18px; height: 18px; }
+#chips .chip-ic svg { width: 17px; height: 17px; }
 #chips .chip-ic .gm-shadow { display: none; }
 @media (max-width: 700px) { #chips { display: none; } }
 
+
+/* Several marks in one block: a count on the mark and a list to pick from */
+.find-icon { position: relative; }
+.mark-count { position: absolute; right: -8px; top: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--accent);
+  color: #06130d; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px #1b1d22; }
+.pop ul.mark-list { list-style: none; margin: 6px 0 0; padding: 0; min-width: 200px; max-height: 240px; overflow: auto; touch-action: pan-y; }
+.pop ul.mark-list li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
+.pop ul.mark-list li:hover { background: var(--hover); }
+.pop ul.mark-list .s-icon { display: grid; place-items: center; width: 22px; }
+.pop ul.mark-list .s-icon .gm-shadow { display: none; }
+.pop ul.mark-list .grow { flex: 1; font-weight: 600; }
