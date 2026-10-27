@@ -1397,6 +1397,13 @@ function renderTimeline() {
 
 // ---------- panels ----------
 function setupPanels() {
+  // Everything under a panel's title goes in a body that scrolls, so the title stays put on the same background.
+  document.querySelectorAll('.panel').forEach((panel) => {
+    const body = document.createElement('div');
+    body.className = 'panel-body';
+    for (const el of [...panel.children]) if (el.tagName !== 'H2') body.append(el);
+    panel.append(body);
+  });
   $('#past-back').addEventListener('click', () => setSnapshotIndex(snapshots().length - 1));
   const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-realm': 'panel-realm' };
   const close = () => Object.entries(panels).forEach(([b, p]) => { $('#' + p).hidden = true; $('#' + b).classList.remove('on'); });
