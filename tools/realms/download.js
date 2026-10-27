@@ -13,7 +13,7 @@ async function main () {
     // Keep the backup and subscription details the member check may have just looked up.
     try {
       const before = JSON.parse(fs.readFileSync(membersFile, 'utf8')).realm || {}
-      for (const k of ['backups', 'subscription', 'extrasAt']) if (before[k] !== undefined) info[k] = before[k]
+      for (const k of ['backups', 'subscription', 'billing', 'extrasAt']) if (before[k] !== undefined) info[k] = before[k]
     } catch { /* no earlier file */ }
     fs.writeFileSync(membersFile, JSON.stringify({ fetchedAt: Date.now(), members, realm: info }))
     const download = await api.getRealmWorldDownload(realm.id, realm.activeSlot, 'latest')

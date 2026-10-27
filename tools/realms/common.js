@@ -132,6 +132,17 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
       const sub = await api.getRealmSubscriptionInfo(realm.id)
       info.subscription = { start: toMillis(sub.startDate), daysLeft: typeof sub.daysLeft === 'number' ? sub.daysLeft : null, type: String(sub.subscriptionType || '').slice(0, 30) }
     } catch (e) { console.error('契約情報を取得できませんでした:', e.message) }
+    // The detailed form (store, end date, renewal period) answers only for some accounts; keep it when it does.
+    try {
+      const d = await api.rest.get(`/subscriptions/${realm.id}/details`)
+      const text = (v) => (v == null ? null : String(v).slice(0, 40))
+      info.billing = {
+        store: text(d.store), type: text(d.type), renewal: text(d.renewalPeriod),
+        start: toMillis(d.startDate), end: toMillis(d.endDate),
+        daysLeft: typeof d.daysLeft === 'number' ? d.daysLeft : null,
+        fields: Object.keys(d || {}).slice(0, 30)
+      }
+    } catch (e) { console.error('契約の詳細を取得できませんでした:', e.message) }
   }
   return { members: await memberList(auth, realm), realm: info }
 }

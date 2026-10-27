@@ -84,7 +84,7 @@ def main():
     realm = fetched.get('realm')
     if isinstance(realm, dict):
         # Backups are looked up only now and then; keep the last answer in between.
-        for key in ('backups', 'subscription', 'extrasAt'):
+        for key in ('backups', 'subscription', 'billing', 'extrasAt'):
             if key not in realm and isinstance(state.get('realm'), dict) and key in state['realm']:
                 realm[key] = state['realm'][key]
         state['realm'] = {**realm, 'at': now}
