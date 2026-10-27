@@ -19,6 +19,7 @@ CONTAINERS = {
     'Dropper': 'dropper', 'Furnace': 'furnace', 'BlastFurnace': 'blast_furnace', 'Smoker': 'smoker',
     'BrewingStand': 'brewing_stand', 'Crafter': 'crafter', 'ChiseledBookshelf': 'chiseled_bookshelf', 'DecoratedPot': 'decorated_pot',
 }
+STORAGE = {'chest', 'barrel', 'shulker_box'}  # shown on the map even when empty
 VILLAGERS = {'minecraft:villager_v2', 'minecraft:villager', 'minecraft:wandering_trader'}
 JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographer', 'cleric', 'armorer', 'weaponsmith',
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
@@ -131,8 +132,8 @@ def scan(db_dir):
             if not kind or not all(isinstance(be.get(k), int) for k in 'xyz'):
                 continue
             items = _items(be.get('Items'))
-            if not items:
-                continue
+            if not items and kind not in STORAGE:
+                continue  # an empty furnace or hopper is not worth a mark; empty chests still show on the map
             if kind == 'chest' and be.get('Findable') == 1:
                 continue  # loot chest nobody has opened yet
             pair = (be.get('pairx'), be.get('pairz')) if isinstance(be.get('pairx'), int) else None

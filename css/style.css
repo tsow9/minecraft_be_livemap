@@ -413,3 +413,18 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   #finds { top: auto; left: 10px; right: 10px; transform: none; max-width: none; justify-content: space-between; border-radius: 20px;
     padding: 6px 6px 6px 16px; }
 }
+
+/* Chips at the bottom of the map (PC): show villagers / chests */
+#chips { position: absolute; z-index: 1000; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 8px; }
+#chips button { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--glass); color: var(--fg); font-weight: 600; box-shadow: var(--shadow); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+#chips button:hover { background: var(--glass-strong); }
+#chips button.on { background: var(--accent); border-color: var(--accent); color: #06130d; }
+#chips .chip-ic { display: grid; place-items: center; width: 22px; height: 22px; }
+#chips .chip-ic svg { width: 20px; height: 20px; }
+#chips .chip-ic .gm-shadow { display: none; }
+@media (max-width: 700px) { #chips { display: none; } }
+@media (min-width: 701px) {
+  #update-bar { bottom: 66px; }
+  body.tools-open #chips { display: none; }
+}

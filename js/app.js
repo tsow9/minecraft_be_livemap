@@ -1393,6 +1393,7 @@ function setDim(dim) {
   refreshExplore();
   state.slimeLayer?.redraw();
   renderFinds();
+  renderThings();
   showOtherDim(block(map.getCenter()).x, block(map.getCenter()).z);
 }
 
@@ -1697,6 +1698,7 @@ async function loadItems() {
   state.items = await fetchJson(`items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   buildFindIndex();
   if (finds) showFinds(finds.type, finds.key, false);
+  renderThings();
 }
 
 // One search entry per kind of item stored, per kind of item sold, and per villager job.
@@ -1760,24 +1762,77 @@ function tradesHtml(trades, matchKey) {
     + `<span>${esc(itemLabel(sell))}${sell[1] > 1 ? `×${sell[1]}` : ''}</span><b>${price(buy)}</b></li>`).join('')}</ul>`;
 }
 
+// A container or villager as a map mark: where it is, its icon, and what its bubble says.
+function containerMark(dim, c, key) {
+  const kind = itemName(c[3]);
+  return { dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, name: kind,
+    popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : '<div class="sub">空っぽ</div>'}` };
+}
+function villagerMark(dim, v, key) {
+  const name = jobName(v[3]) + (v[4] ? `「${v[4]}」` : '');
+  return { dim, x: v[0], y: v[1], z: v[2], icon: VILLAGER_SVG, name,
+    popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
+}
+
+function markLayer(marks, group, zIndexOffset) {
+  for (const m of marks) {
+    const marker = L.marker(ll(m.x + 0.5, m.z + 0.5), {
+      pmIgnore: true, zIndexOffset,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${m.icon}</div>` }),
+    });
+    const place = { id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim };
+    marker.bindPopup(() => {
+      const el = document.createElement('div'); el.className = 'pop';
+      el.innerHTML = m.popup;
+      const acts = document.createElement('div'); acts.className = 'acts';
+      acts.append(routeButton(place));
+      el.append(acts);
+      return el;
+    });
+    marker.addTo(group);
+  }
+}
+
+// The chips at the bottom (PC): show every villager / every chest, barrel and shulker box in this dimension.
+const thingGroup = L.layerGroup();
+const STORAGE_KINDS = new Set(['chest', 'large_chest', 'barrel', 'shulker_box']);
+const thingsOn = { villagers: false, chests: false };
+function renderThings() {
+  thingGroup.clearLayers();
+  const d = state.items?.dims?.[state.dim] || {};
+  if (thingsOn.chests) markLayer((d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)), thingGroup, 300);
+  if (thingsOn.villagers) markLayer((d.villagers || []).map((v) => villagerMark(state.dim, v, null)), thingGroup, 310);
+}
+function setupThingChips() {
+  thingGroup.addTo(map);
+  $('#chip-villager').innerHTML = VILLAGER_SVG;
+  $('#chip-chest').innerHTML = CHEST_SVG;
+  try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
+  document.querySelectorAll('#chips button').forEach((b) => {
+    const k = b.dataset.layer;
+    b.classList.toggle('on', !!thingsOn[k]);
+    b.addEventListener('click', () => {
+      thingsOn[k] = !thingsOn[k];
+      b.classList.toggle('on', thingsOn[k]);
+      try { localStorage.setItem('mcmap.things', JSON.stringify(thingsOn)); } catch { /* private mode */ }
+      renderThings();
+    });
+  });
+}
+
 // Mark every place where the chosen thing was found, in the dimension that has it (this one if it can).
 function showFinds(type, key, move = true) {
   const matches = [];
   for (const [dim, d] of Object.entries(state.items?.dims || {})) {
     if (type === 'item') {
       for (const c of d.containers || []) {
-        if (!c[4].some((it) => itemKey(it) === key)) continue;
-        const kind = itemName(c[3]);
-        matches.push({ dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, name: kind,
-          popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${invHtml(c[4], key)}` });
+        if (c[4].some((it) => itemKey(it) === key)) matches.push(containerMark(dim, c, key));
       }
     } else {
       for (const v of d.villagers || []) {
         const ok = type === 'job' ? jobName(v[3]) === key : v[5].some(([, sell]) => itemKey(sell) === key);
-        if (!ok) continue;
-        const name = jobName(v[3]) + (v[4] ? `「${v[4]}」` : '');
-        matches.push({ dim, x: v[0], y: v[1], z: v[2], icon: VILLAGER_SVG, name,
-          popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], type === 'job' ? null : key)}` });
+        if (ok) matches.push(villagerMark(dim, v, type === 'job' ? null : key));
       }
     }
   }
@@ -1801,23 +1856,7 @@ function renderFinds() {
   const card = $('#finds');
   if (!finds) { card.hidden = true; return; }
   const here = finds.matches.filter((m) => m.dim === state.dim);
-  for (const m of here) {
-    const marker = L.marker(ll(m.x + 0.5, m.z + 0.5), {
-      pmIgnore: true, zIndexOffset: 600,
-      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${m.icon}</div>` }),
-    });
-    const place = { id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim };
-    marker.bindPopup(() => {
-      const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = m.popup;
-      const acts = document.createElement('div'); acts.className = 'acts';
-      acts.append(routeButton(place));
-      el.append(acts);
-      return el;
-    });
-    marker.addTo(findGroup);
-  }
+  markLayer(here, findGroup, 600);
   const elsewhere = finds.matches.length - here.length;
   $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}か所` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}か所)` : ''}`;
   card.hidden = false;
@@ -2470,6 +2509,7 @@ async function setupPlayers() {
   playerGroup.addTo(map);
   portalGroup.addTo(map);
   findGroup.addTo(map);
+  setupThingChips();
   $('#finds-close').addEventListener('click', clearFinds);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
