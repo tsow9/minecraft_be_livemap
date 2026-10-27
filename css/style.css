@@ -456,3 +456,18 @@ body.finding .pl-icon.off { opacity: .4; }
 #search-clear:hover { background: rgba(255, 255, 255, .28); }
 #search-clear .ic { width: 16px; height: 16px; stroke-width: 2.4; }
 #search-clear[hidden] { display: none; }
+
+/* Phone: bubbles a size smaller so more of the map stays in view. */
+@media (max-width: 700px) {
+  .leaflet-popup-content { margin: 9px 11px; font-size: 12px; line-height: 1.5; }
+  .leaflet-popup-content-wrapper { border-radius: 12px; }
+  .pop { min-width: 150px; }
+  .pop h4 { font-size: 13px; margin-bottom: 2px; }
+  .pop .sub { font-size: 11px; }
+  .pop .acts { gap: 5px; margin-top: 6px; }
+  .pop .mini { padding: 4px 10px; font-size: 12px; }
+  .pop .mini .ic { width: 13px; height: 13px; margin-right: 4px; }
+  .pop ul.inv, .pop ul.mark-list { min-width: 170px; max-height: 180px; }
+  .pop ul.inv li { font-size: 11px; padding: 2px; }
+  .pop ul.mark-list li { padding: 4px; }
+}
