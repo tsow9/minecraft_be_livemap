@@ -1671,9 +1671,6 @@ function setupSearch() {
 const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
 let findIndex = { items: [], trades: [], jobs: [] };
-const CHEST_SVG = `<svg class="gm-svg" viewBox="0 0 24 22" width="20" height="18"><ellipse class="gm-shadow" cx="12" cy="19.5" rx="8" ry="1.8"/>`
-  + '<g class="gm-body"><rect x="3" y="4" width="18" height="13" rx="1.5" fill="#b07a3f" stroke="#1b1d22" stroke-width="2.4"/>'
-  + '<path d="M3 9.5h18" stroke="#1b1d22" stroke-width="2"/><rect x="10.3" y="7.6" width="3.4" height="4" fill="#d9d9d9" stroke="#1b1d22" stroke-width="1.4"/></g></svg>';
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 function pixSvg(rows, pal, scale) {
   const w = rows[0].length, h = rows.length;
@@ -1696,6 +1693,21 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
+
+// A chest seen from the front, after the game's chest: lighter lid, silver latch.
+const CHEST_SVG = pixSvg([
+  'KKKKKKKKKKKKKK',
+  'KllllllllllllK',
+  'KllllllllllllK',
+  'KllLLLKKLLLllK',
+  'KlLLLKggKLLLlK',
+  'KKKKKKggKKKKKK',
+  'KMMMMKKKKMMMMK',
+  'KMMMMMMMMMMMMK',
+  'KMMMMMMMMMMMMK',
+  'KMMMMMMMMMMMMK',
+  'KMMMMMMMMMMMMK',
+  'KKKKKKKKKKKKKK'], { K: '#21160b', l: '#c48a42', L: '#a8722f', M: '#9c6a30', g: '#d9d9d9' }, 1.6);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1824,13 +1836,6 @@ function renderThings() {
 }
 function setupThingChips() {
   thingGroup.addTo(map);
-  // Keep the chips just right of the clock, which changes width with the time and weather.
-  const placeChips = () => {
-    const clock = $('#clock').getBoundingClientRect();
-    $('#chips').style.left = clock.width ? `${clock.right + 8}px` : '';
-  };
-  new ResizeObserver(placeChips).observe($('#clock'));
-  window.addEventListener('resize', placeChips);
   $('#chip-villager').innerHTML = VILLAGER_SVG;
   $('#chip-chest').innerHTML = CHEST_SVG;
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
