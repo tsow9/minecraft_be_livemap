@@ -1696,7 +1696,7 @@ function pixSvg(rows, pal, size, edge = 0) {
     + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
-const VILLAGER_SVG = pixSvg([
+const VILLAGER_ART = [[
   '..KKKKKKKK..',
   '..KssssssK..',
   '..KssssssK..',
@@ -1708,10 +1708,12 @@ const VILLAGER_SVG = pixSvg([
   'KrrrrKKrrrrK',
   'KrRRRRRRRRrK',
   'KrRRRRRRRRrK',
-  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.6);
+  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
+const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
+const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 2.2);  // search hits
 // The wandering trader: the villager's shape, dressed after the game's trader — dark blue hood with a red-brown rim,
 // a red-brown band round the lower face, and a blue robe with gold trim down the front.
-const TRADER_SVG = pixSvg([
+const TRADER_ART = [[
   '..KKKKKKKK..',
   '..KhhhhhhK..',
   '..KccccccK..',
@@ -1724,10 +1726,12 @@ const TRADER_SVG = pixSvg([
   'KTSSSIISSSTK',
   'KTSSSIISSSTK',
   'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2b4170', c: '#7a1a0c', b: '#3a2a18', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72',
-  T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }, 1.6);
+  T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }];
+const TRADER_SVG = pixSvg(...TRADER_ART, 1.6);
+const TRADER_BIG = pixSvg(...TRADER_ART, 2.2);  // search hits
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
 // closes and the silver latch over it.
-const CHEST_SVG = pixSvg([
+const CHEST_ART = [[
   'AAAAAAAAAAAAAAAA',
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
@@ -1740,7 +1744,9 @@ const CHEST_SVG = pixSvg([
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.8);
+  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }];
+const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
+const CHEST_BIG = pixSvg(...CHEST_ART, 1.6, 1);  // search hits
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1827,12 +1833,13 @@ function tradesHtml(trades, matchKey) {
 // A container or villager as a map mark: where it is, its icon, and what its bubble says.
 function containerMark(dim, c, key) {
   const kind = itemName(c[3]);
-  return { dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, name: kind,
+  return { dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, iconBig: CHEST_BIG, name: kind,
     popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : '<div class="sub">空っぽ</div>'}` };
 }
 function villagerMark(dim, v, key) {
   const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
-  return { dim, x: v[0], y: v[1], z: v[2], icon: v[3] === 'wandering_trader' ? TRADER_SVG : VILLAGER_SVG, name,
+  const trader = v[3] === 'wandering_trader';
+  return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : VILLAGER_SVG, iconBig: trader ? TRADER_BIG : VILLAGER_BIG, name,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
@@ -1849,7 +1856,7 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
     const marker = L.marker(ll(first.x + 0.5, first.z + 0.5), {
       pmIgnore: true, zIndexOffset,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm${hit ? ' hit' : ''}">${hit ? '<span class="hit-ring"></span>' : ''}${first.icon}</div>` }),
+        html: `<div class="find-icon gm${hit ? ' hit' : ''}">${hit ? '<span class="hit-ring"></span>' : ''}${hit ? first.iconBig || first.icon : first.icon}</div>` }),
     });
     const el = document.createElement('div'); el.className = 'pop';
     // The bubble's contents are swapped on a click; keep that click from reaching the map (which would close it).
@@ -1946,7 +1953,7 @@ function renderFinds() {
   const card = $('#finds');
   if (!finds) { card.hidden = true; return; }
   const here = finds.matches.filter((m) => m.dim === state.dim);
-  markLayer(here, findGroup, 600, true);
+  markLayer(here, findGroup, 2000, true);  // in front of every other mark
   const elsewhere = finds.matches.length - here.length;
   $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}件` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}件)` : ''}`;
   card.hidden = false;
