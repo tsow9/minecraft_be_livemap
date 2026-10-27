@@ -113,7 +113,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   background: rgba(14, 16, 20, .85); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
 .pl-icon.off, .pl-icon.unk { opacity: .65; }
 .pl-icon.off .nm::after { content: " ・ログアウト"; font-weight: 500; color: var(--sub); }
-.pl-icon .ring { display: none; position: absolute; left: 50%; top: 7.7px; width: 24px; height: 24px; margin: -12px 0 0 -12px;
+.pl-icon .ring { display: none; position: absolute; left: 50%; top: 9px; width: 28px; height: 28px; margin: -14px 0 0 -14px;
   border-radius: 50%; border: 2px solid var(--accent); pointer-events: none; }
 .pl-icon.on .ring { display: block; animation: pulse 2s ease-out infinite; will-change: transform, opacity; }
 @keyframes pulse { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }

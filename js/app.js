@@ -1673,7 +1673,7 @@ let finds = null;          // what is marked now: { label, matches: [{ dim, x, y
 let findIndex = { items: [], trades: [], jobs: [] };
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
-// wherever it sits; uneven sizes made some rows a screen pixel thicker than others.
+// wherever it sits.
 // `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
 const SCREEN = window.devicePixelRatio || 1;
 function pixSvg(rows, pal, size, edge = 0) {
@@ -1682,7 +1682,16 @@ function pixSvg(rows, pal, size, edge = 0) {
   const unit = dots / SCREEN;                            // page pixels per drawing pixel
   const e = edge ? Math.max(1, Math.round(edge * SCREEN)) / dots : 0;  // outline, in drawing pixels
   let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
-  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; }));
+  // One exact-size rectangle per run of the same colour in a row: edges then land on the screen's pixels the same way
+  // everywhere (slightly oversized squares used to grow by a screen pixel at some positions).
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length;) {
+      let end = x + 1;
+      while (end < row.length && row[end] === row[x]) end += 1;
+      if (pal[row[x]]) r += `<rect x="${x}" y="${y}" width="${end - x}" height="1" fill="${pal[row[x]]}"/>`;
+      x = end;
+    }
+  });
   return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * unit}" height="${(h + 2 + 2 * e) * unit}" shape-rendering="crispEdges">`
     + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
 }
@@ -2249,7 +2258,7 @@ const DEATH_SVG = `<svg class="gm-svg" viewBox="0 0 24 34" width="20" height="28
   + '<path d="M12 4.5v21M5 11.5h14" stroke="#f4f1ea" stroke-width="3.5" stroke-linecap="round"/></g></svg>';
 let exploreLayer = null;
 
-const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="17" height="20.4"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
+const playerSvg = (c) => `<svg class="gm-svg" viewBox="0 0 20 24" width="20" height="24"><ellipse class="gm-shadow" cx="10" cy="21" rx="4.5" ry="1.4"/>`
   + `<g class="gm-body"><circle cx="10" cy="9" r="6.5" fill="${c}" stroke="#1b1d22" stroke-width="2.6"/><circle cx="10" cy="9" r="2.2" fill="#f4f1ea"/></g></svg>`;
 
 // Each person keeps the same color: the order comes from their ID, not from where they are in the list
@@ -2367,7 +2376,7 @@ function renderPlayers() {
       const m = L.marker(ll(p.x + 0.5, p.z + 0.5), {
         pmIgnore: true, zIndexOffset: off ? 900 : 1000,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-18px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
+          html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-21px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
       const place = { id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim: p.dim };
       m.bindPopup(popupWithRoute(`<h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div>`, place));
