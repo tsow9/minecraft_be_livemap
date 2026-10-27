@@ -1695,23 +1695,21 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
 
-// A chest seen from the front, after the game's chest kept plain: lid, the dark band where it closes,
-// body, a frame darker on the right and bottom, and the silver latch over the band.
+// A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
+// closes and the silver latch over it.
 const CHEST_SVG = pixSvg([
-  'AAAAAAAAAAAAAH',
-  'ADDDDDDDDDDDDH',
-  'ADDDDDDDDDDDDH',
-  'ADDDDDNNDDDDDH',
-  'BBBBBBOOBBBBBH',
-  'AFFFFFPPFFFFFH',
-  'AFFFFFFFFFFFFH',
-  'AFFFFFFFFFFFFH',
-  'AFFFFFFFFFFFFH',
-  'AFFFFFFFFFFFFH',
-  'AFFFFFFFFFFFFH',
-  'HHHHHHHHHHHHHH'], {
-  K: '#16130f', A: '#4a4134', H: '#2a251e', B: '#3d372c', D: '#a8762b', F: '#986a24', N: '#d2d2d2', O: '#a8a8a8', P: '#868686',
-}, 1.15, 0.6);
+  'AAAAAAAAAAAAAA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDNNDDDDDA',
+  'BBBBBBNNBBBBBB',
+  'ADDDDDNNDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDA',
+  'AAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.6);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1786,8 +1784,7 @@ function invHtml(items, matchKey) {
     sum.get(k).n += it[1];
   }
   const rows = [...sum.entries()].sort((a, b) => (b[0] === matchKey) - (a[0] === matchKey) || b[1].n - a[1].n);
-  const shown = rows.slice(0, 30).map(([k, { it, n }]) => `<li${k === matchKey ? ' class="hit"' : ''}><span>${esc(itemLabel(it))}</span><b>${n}</b></li>`).join('');
-  return `<ul class="inv">${shown}</ul>${rows.length > 30 ? `<div class="sub">ほか${rows.length - 30}種類</div>` : ''}`;
+  return `<ul class="inv">${rows.map(([k, { it, n }]) => `<li${k === matchKey ? ' class="hit"' : ''}><span>${esc(itemLabel(it))}</span><b>${n}</b></li>`).join('')}</ul>`;
 }
 function tradesHtml(trades, matchKey) {
   if (!trades.length) return '<div class="sub">取引の情報がありません</div>';
