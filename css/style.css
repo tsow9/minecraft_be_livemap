@@ -424,7 +424,15 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #chips .chip-ic { display: grid; place-items: center; width: 18px; height: 18px; }
 #chips .chip-ic svg { width: 17px; height: 17px; }
 #chips .chip-ic .gm-shadow { display: none; }
-@media (max-width: 700px) { #chips { display: none; } }
+/* Phone: a row of its own right under the search box; the readout and the dimension switch move down below it. */
+@media (max-width: 700px) {
+  #chips { left: 10px; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 50px); overflow-x: auto; scrollbar-width: none; }
+  #chips::-webkit-scrollbar { display: none; }
+  #chips button { flex: none; height: 30px; }
+  .search { margin-bottom: 36px; }
+  #coords, #coords-open { top: calc(max(10px, env(safe-area-inset-top)) + 86px) !important; }
+  body.searching #chips { visibility: hidden; }
+}
 
 
 /* Several marks in one block: a list to pick from */

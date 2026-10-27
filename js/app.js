@@ -1371,8 +1371,16 @@ function setupCoords() {
     const clock = $('#clock');
     const above = clock.hidden || getComputedStyle(clock).position !== 'static' ? dims : clock;
     root.setProperty('--side-top', `${Math.ceil(above.getBoundingClientRect().bottom + 8)}px`);
+    // Bubbles that open move the map so they are not hidden under the boxes at the top (and the side buttons).
+    const top = Math.max(...[dims, clock, box, $('#chips')].map((e) => {
+      const r = e.getBoundingClientRect();
+      return e.hidden || r.top > innerHeight / 3 ? 0 : r.bottom;  // only what sits at the top (the PC readout is at the bottom)
+    }));
+    const side = $('#sidebuttons').getBoundingClientRect();
+    L.Popup.prototype.options.autoPanPaddingTopLeft = L.point(10, Math.ceil(top + 8));
+    L.Popup.prototype.options.autoPanPaddingBottomRight = L.point(side.top < top + 120 ? Math.ceil(innerWidth - side.left + 8) : 10, 80);
   };
-  if (window.ResizeObserver) { const ro = new ResizeObserver(keepWidth); ro.observe(dims); ro.observe($('#clock')); }
+  if (window.ResizeObserver) { const ro = new ResizeObserver(keepWidth); [dims, $('#clock'), box, $('#chips')].forEach((e) => ro.observe(e)); }
   window.addEventListener('resize', keepWidth);
   keepWidth();
   let saved = null;
@@ -1979,6 +1987,8 @@ function showFinds(type, key, move = true) {
     else map.fitBounds(L.latLngBounds(here.map((m) => ll(m.x + 0.5, m.z + 0.5))).pad(0.2), { maxZoom: 1 });
   }
   renderFinds();
+  // Open the bubble of the hit nearest the middle of the screen, so the result can be read straight away.
+  if (move) nearestMarker((l) => findGroup.hasLayer(l), map.getCenter())?.openPopup();
 }
 
 function renderFinds() {
@@ -2002,9 +2012,22 @@ const FOCUS_SCALE = 1.35;  // keep in step with .leaflet-marker-icon.keep .gm-sv
 function focusPlace(it) {
   finds = { type: 'place', label: it.title, place: { dim: it.dim, x: it.x, z: it.z }, matches: [] };
   renderFinds();
-  // The bubble may already be open (the jump opens it), measured before the mark grew.
+  // The bubble may already be open (the jump opens it), measured before the mark grew; otherwise open the mark's own.
   const open = map._popup, src = open?.isOpen() && (open._source || markerAt(open.getLatLng()));
   if (src instanceof L.Marker) fitPopup(open, src);
+  else nearestMarker((l) => l.getElement()?.classList.contains('keep'), ll(it.x + 0.5, it.z + 0.5))?.openPopup();
+}
+
+// The marker passing `test` that is closest to `at` (on screen), or null.
+function nearestMarker(test, at) {
+  const to = map.latLngToContainerPoint(at);
+  let best = null, gap = Infinity;
+  map.eachLayer((l) => {
+    if (!(l instanceof L.Marker) || !l.getPopup() || !test(l)) return;
+    const d = map.latLngToContainerPoint(l.getLatLng()).distanceTo(to);
+    if (d < gap) { best = l; gap = d; }
+  });
+  return best;
 }
 
 function focusMark(layer) {
