@@ -144,23 +144,27 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
       }
     } catch (e) { console.error('契約の詳細を取得できませんでした:', e.message) }
   }
-  return { members: await memberList(auth, realm), realm: info }
+  const { members, names } = await memberList(auth, realm)
+  // The owner's gamertag (the account the map uses), looked up together with the members' names.
+  const owner = names[realm.ownerUUID] || realm.owner
+  info.owner = owner ? String(owner).slice(0, 40) : null
+  return { members, realm: info }
 }
 
 async function memberList (auth, realm) {
   const players = (realm.players || []).filter(p => p.uuid)
   let names = {}
   try {
-    names = await gamertags(auth, players.map(p => p.uuid))
+    names = await gamertags(auth, [...new Set([...players.map(p => p.uuid), realm.ownerUUID].filter(Boolean))])
   } catch (e) {
     console.error(e.message)
   }
-  return players.map(p => ({
+  return { names, members: players.map(p => ({
     id: hashId(p.uuid),
     name: names[p.uuid] || p.name || null,
     online: p.online === true,
     lastLogin: toMillis(p.lastLogin)
-  }))
+  })) }
 }
 
 module.exports = { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, withSavedLogin, pickOwnedRealm, realmMembers, realmStatus }

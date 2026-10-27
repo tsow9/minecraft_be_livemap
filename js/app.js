@@ -2222,9 +2222,9 @@ function renderRealm(r, online, memberCount) {
   if (!r || typeof r !== 'object') return;
   const row = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
   const onOff = (v) => (v === true ? 'オン' : v === false ? 'オフ' : esc(v));
-  let html = `<div class="realm-name">${esc(r.name || 'Realm')}</div>`;
-  if (r.motd) html += `<p class="help">${esc(r.motd)}</p>`;
+  let html = r.motd ? `<p class="help">${esc(r.motd)}</p>` : '';
   html += '<h3>状態</h3>';
+  if (r.owner) html += row('所有者', esc(r.owner));
   html += row('サーバー', r.open ? '<i class="dot on"></i>開いている' : '<i class="dot"></i>閉じている');
   html += row('参加中', `${online}人・メンバー ${memberCount}人${Number.isFinite(r.maxPlayers) ? `・最大 ${r.maxPlayers}人` : ''}`);
   if (r.expired) html += row('期限', '<span class="warn">切れています</span>');

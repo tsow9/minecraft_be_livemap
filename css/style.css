@@ -387,8 +387,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 }
 
 /* Realm information panel */
-#realm-info .realm-name { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
 #realm-info h3 { margin-top: 12px; }
+#realm-info h3:first-child { margin-top: 0; }
 #realm-info .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 2px; font-size: 13px; border-bottom: 1px solid var(--line); }
 #realm-info .kv span { color: var(--sub); }
 #realm-info .kv b { font-weight: 600; text-align: right; }
