@@ -1541,7 +1541,7 @@ function setupPanels() {
 // ---------- search ----------
 function setupSearch() {
   const input = $('#search'), list = $('#search-results');
-  let items = [], active = 0;
+  let items = [], active = 0, picked = '';
   const hide = () => { list.hidden = true; };
   // Searching ends only by picking, jumping, Escape, or touching somewhere else, not when the keyboard is put away.
   const close = () => {
@@ -1553,6 +1553,7 @@ function setupSearch() {
     const it = items[i];
     if (!it) return;
     close();
+    input.value = picked = it.title;  // the picked name stays in the box (the × clears it with the highlight)
     it.go();
     if (it.kind !== 'find') focusPlace(it);
   };
@@ -1630,7 +1631,11 @@ function setupSearch() {
     clearFinds();
     showClear();
   });
-  document.addEventListener('finds-changed', showClear);
+  // When the highlight goes (a tap elsewhere on the map), the name that was picked goes with it.
+  document.addEventListener('finds-changed', () => {
+    if (!finds && input.value === picked && document.activeElement !== input) input.value = '';
+    showClear();
+  });
   input.addEventListener('focus', suggest);
   // Phones: while the search is in use, the X/Z search opens right under it.
   const bar = $('#topbar');
@@ -1695,16 +1700,14 @@ let findIndex = { items: [], trades: [], jobs: [] };
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
 // wherever it sits.
 // `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
-// For search hits, `grow` makes each drawing pixel that many screen pixels larger, and `arrow` puts a red arrow
-// above, drawn on the same pixel grid so it stays exactly centred.
+// For search hits, `grow` makes each drawing pixel that many screen pixels larger.
 const SCREEN = window.devicePixelRatio || 1;
-const HIT_ARROW = ['KKKKKKKKKK', 'KRRRRRRRRK', '.KRRRRRRK.', '..KRRRRK..', '...KRRK...', '....KK....'];
-function pixSvg(rows, pal, size, edge = 0, { grow = 0, arrow = false } = {}) {
+function pixSvg(rows, pal, size, edge = 0, { grow = 0 } = {}) {
   const w = rows[0].length, h = rows.length;
   const dots = Math.max(1, Math.round(size * SCREEN)) + grow;  // screen pixels per drawing pixel
   const unit = dots / SCREEN;                                  // page pixels per drawing pixel
   const e = edge ? Math.max(1, Math.round(edge * SCREEN)) / dots : 0;  // outline, in drawing pixels
-  const top = arrow ? HIT_ARROW.length + 1 + e : e;            // room above the picture
+  const top = e;                                               // room above the picture
   let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
   // One exact-size rectangle per run of the same colour in a row: edges then land on the screen's pixels the same way
   // everywhere (slightly oversized squares used to grow by a screen pixel at some positions).
@@ -1721,9 +1724,8 @@ function pixSvg(rows, pal, size, edge = 0, { grow = 0, arrow = false } = {}) {
     return out;
   };
   r += draw(rows, pal, 0, 0);
-  const pointer = arrow ? draw(HIT_ARROW, { K: '#1b1d22', R: '#ff5a4f' }, (w - HIT_ARROW[0].length) / 2, -top) : '';
   return `<svg class="gm-svg" viewBox="${-e} ${-top} ${w + 2 * e} ${h + 2 + e + top}" width="${(w + 2 * e) * unit}" height="${(h + 2 + e + top) * unit}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/>${pointer}<g class="gm-body">${r}</g></svg>`;
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
 const VILLAGER_ART = [[
@@ -1740,7 +1742,7 @@ const VILLAGER_ART = [[
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
-const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1, arrow: true });  // search hits
+const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1 });  // search hits
 // The wandering trader: the villager's shape, dressed after the game's trader — dark blue hood with a red-brown rim,
 // a red-brown band round the lower face, and a blue robe with gold trim down the front.
 const TRADER_ART = [[
@@ -1758,7 +1760,7 @@ const TRADER_ART = [[
   'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2b4170', c: '#7a1a0c', b: '#3a2a18', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72',
   T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }];
 const TRADER_SVG = pixSvg(...TRADER_ART, 1.6);
-const TRADER_BIG = pixSvg(...TRADER_ART, 1.6, 0, { grow: 1, arrow: true });  // search hits
+const TRADER_BIG = pixSvg(...TRADER_ART, 1.6, 0, { grow: 1 });  // search hits
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
 // closes and the silver latch over it.
 const CHEST_ART = [[
@@ -1776,7 +1778,7 @@ const CHEST_ART = [[
   'ADDDDDDDDDDDDDDA',
   'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
-const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1, arrow: true });  // search hits
+const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1 });  // search hits
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1873,7 +1875,7 @@ function villagerMark(dim, v, key) {
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
-// Search hits (hit = true) are drawn larger with an arrow and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
+// Search hits (hit = true) are drawn larger and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset, hit = false) {
   const at = new Map();
   for (const m of marks) {
@@ -1993,20 +1995,16 @@ function renderFinds() {
   card.hidden = false;
 }
 
-// A place picked in the search, or any mark that is clicked, keeps its full colour, grows and gets the red arrow,
+// A place picked in the search, or any mark that is clicked, keeps its full colour and grows,
 // while the rest of the map's marks fade as for other search results.
 const FOCUS_SCALE = 1.35;  // keep in step with .leaflet-marker-icon.keep .gm-svg in style.css
-const PLACE_ARROW = (() => {
-  const dots = Math.max(1, Math.round(1.6 * SCREEN));
-  const w = HIT_ARROW[0].length, h = HIT_ARROW.length, colours = { K: '#1b1d22', R: '#ff5a4f' };
-  let r = '';
-  HIT_ARROW.forEach((row, y) => [...row].forEach((ch, x) => { if (colours[ch]) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${colours[ch]}"/>`; }));
-  return `<svg class="place-arrow" viewBox="0 0 ${w} ${h}" width="${w * dots / SCREEN}" height="${h * dots / SCREEN}" shape-rendering="crispEdges">${r}</svg>`;
-})();
 
 function focusPlace(it) {
   finds = { type: 'place', label: it.title, place: { dim: it.dim, x: it.x, z: it.z }, matches: [] };
   renderFinds();
+  // The bubble may already be open (the jump opens it), measured before the mark grew.
+  const open = map._popup, src = open?.isOpen() && (open._source || markerAt(open.getLatLng()));
+  if (src instanceof L.Marker) fitPopup(open, src);
 }
 
 function focusMark(layer) {
@@ -2016,34 +2014,42 @@ function focusMark(layer) {
   const at = layer.getLatLng();
   const on = !!p && p.dim === state.dim && Math.abs(at.lng - (p.x + 0.5)) <= 1 && Math.abs(-at.lat - (p.z + 0.5)) <= 1;
   el.classList.toggle('keep', on);
-  // Chests and villagers: the larger drawing that already carries the arrow (same as a search hit).
+  // Chests and villagers: the larger drawing (same as a search hit); other marks grow through CSS.
   const fi = el.querySelector('.find-icon');
   if (fi && layer.mark) {
     if (fi.classList.contains('hit') !== on) {
       fi.classList.toggle('hit', on);
       fi.innerHTML = on ? `<span class="hit-ring"></span>${layer.mark.big}` : layer.mark.small;
     }
-    return;
   }
-  // Pins, players, beds, gates: the picture grows (CSS) and the arrow sits just above it.
-  const holder = el.querySelector('.gm') || el.firstElementChild;
-  const arrow = el.querySelector('.place-arrow');
-  if (on && !arrow && holder) {
-    holder.insertAdjacentHTML('beforeend', PLACE_ARROW);
-    const svg = holder.querySelector('svg.gm-svg');
-    const grown = svg ? svg.height.baseVal.value * (FOCUS_SCALE - 1) : 0;
-    holder.querySelector('.place-arrow').style.top = `${-14 - grown}px`;
-  }
-  if (!on && arrow) arrow.remove();
 }
 
 // Focus the mark that was clicked (its bubble opened), unless it is already one of the marked search results.
 function focusClicked(e) {
-  const src = e.popup._source;
-  if (!(src instanceof L.Marker) || findGroup.hasLayer(src)) return;
-  const at = src.getLatLng();
-  finds = { type: 'place', label: '', place: { dim: state.dim, x: Math.floor(at.lng), z: Math.floor(-at.lat) }, matches: [] };
-  renderFinds();
+  const src = e.popup._source || markerAt(e.popup.getLatLng());  // pins open a bubble of their own at the pin
+  if (!(src instanceof L.Marker)) return;
+  if (!findGroup.hasLayer(src)) {
+    const at = src.getLatLng();
+    finds = { type: 'place', label: '', place: { dim: state.dim, x: Math.floor(at.lng), z: Math.floor(-at.lat) }, matches: [] };
+    renderFinds();
+  }
+  fitPopup(e.popup, src);
+}
+
+function markerAt(at) {
+  let found = null;
+  map.eachLayer((l) => { if (!found && l instanceof L.Marker && l.getElement() && l.getLatLng().equals(at)) found = l; });
+  return found;
+}
+
+// Point the bubble's tip at the top of the (now larger) picture instead of covering it.
+function fitPopup(popup, marker) {
+  const svg = marker.getElement()?.querySelector('svg');
+  if (!svg) return;
+  const top = svg.getBoundingClientRect().top - map.getContainer().getBoundingClientRect().top;
+  const gap = Math.round(top - map.latLngToContainerPoint(marker.getLatLng()).y);
+  popup.options.offset = L.point(0, Math.min(0, gap) + 7);
+  popup.update();
 }
 
 function clearFinds() {
