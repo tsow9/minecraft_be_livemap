@@ -1700,36 +1700,38 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.6);
-// The wandering trader: the same face in a blue hood and robe.
+// The wandering trader: the villager's shape, dressed after the game's trader — dark blue hood with a red-brown rim,
+// a red-brown band round the lower face, and a blue robe with gold trim down the front.
 const TRADER_SVG = pixSvg([
   '..KKKKKKKK..',
-  '.KhhhhhhhhK.',
-  '.KhbbbbbbhK.',
-  '.KhwgnngwhK.',
-  '.KhssnnsshK.',
-  '.KhssnnsshK.',
-  'KKhhhnnhhhKK',
-  'KHHHHKKHHHHK',
-  'KHRRRRRRRRHK',
-  'KHRRyRRyRRHK',
-  'KHRRRRRRRRHK',
-  'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2c4588', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72', H: '#2c4588', R: '#3a5fb5', y: '#e2c04a' }, 1.6);
-
+  '..KhhhhhhK..',
+  '..KccccccK..',
+  '..KbbbbbbK..',
+  '..KwgnngwK..',
+  '..KssnnssK..',
+  '..KccnnccK..',
+  'KKKKKnnKKKKK',
+  'KTTTTKKTTTTK',
+  'KTSSSIISSSTK',
+  'KTSSSIISSSTK',
+  'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2b4170', c: '#7a1a0c', b: '#3a2a18', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72',
+  T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }, 1.6);
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
 // closes and the silver latch over it.
 const CHEST_SVG = pixSvg([
-  'AAAAAAAAAAAAAA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDNNDDDDDA',
-  'BBBBBBNNBBBBBB',
-  'ADDDDDNNDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.8);
+  'AAAAAAAAAAAAAAAA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDNNDDDDDDA',
+  'BBBBBBBNNBBBBBBB',
+  'ADDDDDDNNDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'ADDDDDDDDDDDDDDA',
+  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.8);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
