@@ -1581,7 +1581,7 @@ function setupSearch() {
     }
     for (const p of state.players) {
       const color = playerColor(p.key);
-      out.push({ kind: 'player', dim: p.dim, x: p.x, z: p.z, title: p.online === true ? p.name : `${p.name}・ログアウト`, hay: p.name,
+      out.push({ kind: 'player', dim: p.dim, x: p.x, z: p.z, title: p.name, hay: p.name,
         icon: playerSvg(color), meta: `プレイヤー ・ ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
       if (p.bed) out.push({ kind: 'bed', dim: p.bed.dim, x: p.bed.x, z: p.bed.z, title: `${p.name}・ベッド`, hay: `${p.name} ベッド`,
         icon: BED_SVG(color), meta: `ベッド ・ ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
@@ -2111,7 +2111,7 @@ function routePlaces(dim) {
   }
   for (const p of state.players) {
     const c = playerColor(p.key);
-    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim, icon: playerSvg(c) });
+    if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim, icon: playerSvg(c) });
     if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c) });
     if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
@@ -2385,7 +2385,7 @@ function renderPlayers() {
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="pl-icon gm ${cls}" style="transform:translate(-50%,-21px)"><span class="ring"></span>${playerSvg(color)}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      const place = { id: `player:${p.key}`, name: p.online === true ? p.name : `${p.name}・ログアウト`, x: p.x, z: p.z, dim: p.dim };
+      const place = { id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim: p.dim };
       m.bindPopup(popupWithRoute(`<h4>${esc(p.name)}</h4><div class="sub">${esc(placeText(p))}</div><div class="xyz">X ${p.x} / Y ${p.y} / Z ${p.z}</div><div class="sub">${esc(otherDimLine(p.x, p.z, p.dim))}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
