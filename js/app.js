@@ -1674,10 +1674,28 @@ let findIndex = { items: [], trades: [], jobs: [] };
 const CHEST_SVG = `<svg class="gm-svg" viewBox="0 0 24 22" width="20" height="18"><ellipse class="gm-shadow" cx="12" cy="19.5" rx="8" ry="1.8"/>`
   + '<g class="gm-body"><rect x="3" y="4" width="18" height="13" rx="1.5" fill="#b07a3f" stroke="#1b1d22" stroke-width="2.4"/>'
   + '<path d="M3 9.5h18" stroke="#1b1d22" stroke-width="2"/><rect x="10.3" y="7.6" width="3.4" height="4" fill="#d9d9d9" stroke="#1b1d22" stroke-width="1.4"/></g></svg>';
-const VILLAGER_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="18" height="21"><ellipse class="gm-shadow" cx="11" cy="23.5" rx="7" ry="1.8"/>`
-  + '<g class="gm-body"><rect x="3.5" y="2.5" width="15" height="16" rx="1.5" fill="#c8946a" stroke="#1b1d22" stroke-width="2.4"/>'
-  + '<rect x="4.7" y="3.7" width="12.6" height="3" fill="#5b3a29"/><rect x="6.3" y="8.5" width="2.6" height="2" fill="#2e7d32"/>'
-  + '<rect x="13.1" y="8.5" width="2.6" height="2" fill="#2e7d32"/><rect x="9.6" y="9.5" width="2.8" height="6.5" rx=".8" fill="#a8734f" stroke="#1b1d22" stroke-width="1.1"/></g></svg>';
+// Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
+function pixSvg(rows, pal, scale) {
+  const w = rows[0].length, h = rows.length;
+  let r = '';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; }));
+  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + 2}" width="${w * scale}" height="${(h + 2) * scale}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
+}
+// A villager's face over a brown robe, after the game's villager.
+const VILLAGER_SVG = pixSvg([
+  '..KKKKKKKK..',
+  '..KssssssK..',
+  '..KssssssK..',
+  '..KbbbbbbK..',
+  '..KwgnngwK..',
+  '..KssnnssK..',
+  '..KssnnssK..',
+  'KKKKKnnKKKKK',
+  'KrrrrKKrrrrK',
+  'KrRRRRRRRRrK',
+  'KrRRRRRRRRrK',
+  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1806,6 +1824,13 @@ function renderThings() {
 }
 function setupThingChips() {
   thingGroup.addTo(map);
+  // Keep the chips just right of the clock, which changes width with the time and weather.
+  const placeChips = () => {
+    const clock = $('#clock').getBoundingClientRect();
+    $('#chips').style.left = clock.width ? `${clock.right + 8}px` : '';
+  };
+  new ResizeObserver(placeChips).observe($('#clock'));
+  window.addEventListener('resize', placeChips);
   $('#chip-villager').innerHTML = VILLAGER_SVG;
   $('#chip-chest').innerHTML = CHEST_SVG;
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
