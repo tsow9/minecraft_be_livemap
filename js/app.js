@@ -1672,12 +1672,13 @@ const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
 let findIndex = { items: [], trades: [], jobs: [] };
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
-function pixSvg(rows, pal, scale) {
-  const w = rows[0].length, h = rows.length;
-  let r = '';
+// `edge` adds that much extra dark outline around the whole picture (in pixels of the drawing).
+function pixSvg(rows, pal, scale, edge = 0) {
+  const w = rows[0].length, h = rows.length, e = edge;
+  let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
   rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; }));
-  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + 2}" width="${w * scale}" height="${(h + 2) * scale}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
+  return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * scale}" height="${(h + 2 + 2 * e) * scale}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
 const VILLAGER_SVG = pixSvg([
@@ -1707,7 +1708,7 @@ const CHEST_SVG = pixSvg([
   'KMMMMMMMMMMMMK',
   'KMMMMMMMMMMMMK',
   'KMMMMMMMMMMMMK',
-  'KKKKKKKKKKKKKK'], { K: '#21160b', L: '#a8722f', M: '#93622b', g: '#d9d9d9' }, 1.3);
+  'KKKKKKKKKKKKKK'], { K: '#21160b', L: '#a8722f', M: '#93622b', g: '#d9d9d9' }, 1.15, 0.6);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
