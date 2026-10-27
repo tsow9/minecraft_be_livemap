@@ -2202,6 +2202,14 @@ const RULE_NAMES = [
   ['showDeathMessages', '死亡メッセージ'], ['doDayLightCycle', '昼と夜が進む'], ['doWeatherCycle', '天気が変わる'],
 ];
 
+// The next payment day on or after today; months shorter than the day pay on their last day.
+function nextBillingDate(day) {
+  const now = new Date();
+  const on = (y, m) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+  const thisMonth = on(now.getFullYear(), now.getMonth());
+  return thisMonth >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) ? thisMonth : on(now.getFullYear(), now.getMonth() + 1);
+}
+
 function renderRealm(r, online, memberCount) {
   const box = $('#realm-info');
   if (!r || typeof r !== 'object') return;
@@ -2213,9 +2221,12 @@ function renderRealm(r, online, memberCount) {
   html += row('サーバー', r.open ? '<i class="dot on"></i>開いている' : '<i class="dot"></i>閉じている');
   html += row('参加中', `${online}人・メンバー ${memberCount}人${Number.isFinite(r.maxPlayers) ? `・最大 ${r.maxPlayers}人` : ''}`);
   if (r.expired) html += row('期限', '<span class="warn">切れています</span>');
-  else if (Number.isFinite(r.daysLeft)) {
-    const end = new Date(Date.now() + r.daysLeft * 86400000);
-    html += row('残り', `${r.daysLeft}日・${end.getMonth() + 1}月${end.getDate()}日ごろまで`);
+  const day = state.config.realmBillingDay;
+  if (day) {
+    const d = nextBillingDate(day);
+    html += row('次の支払い', `${d.getMonth() + 1}月${d.getDate()}日${state.config.realmPrice ? `・${state.config.realmPrice.toLocaleString('ja-JP')}円` : ''}`);
+  } else if (state.config.realmPrice) {
+    html += row('料金', `月${state.config.realmPrice.toLocaleString('ja-JP')}円`);
   }
   if (r.backups && Number.isFinite(r.backups.count)) {
     html += row('バックアップ', `${r.backups.count}個${r.backups.latest ? `・最新 ${esc(timeText(r.backups.latest))}` : ''}`);
@@ -2339,6 +2350,9 @@ async function main() {
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
+    // Monthly Realm fee and day of the month it is paid (written by hand: Realms does not report either).
+    realmPrice: Number.isFinite(cfg.realmPrice) ? cfg.realmPrice : null,
+    realmBillingDay: Number.isInteger(cfg.realmBillingDay) && cfg.realmBillingDay >= 1 && cfg.realmBillingDay <= 31 ? cfg.realmBillingDay : null,
     liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
     shareUrl: typeof cfg.shareUrl === 'string' && /^https:\/\/[\w.-]+(:\d+)?$/.test(cfg.shareUrl.replace(/\/$/, '')) ? cfg.shareUrl.replace(/\/$/, '') : null,
     liveApiUrl: typeof cfg.liveApiUrl === 'string' && /^https:\/\/api\.github\.com\//.test(cfg.liveApiUrl) ? cfg.liveApiUrl : null,
