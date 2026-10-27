@@ -1695,20 +1695,26 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
 
-// A chest seen from the front, after the game's chest: lid, body and the silver latch.
+// A chest seen from the front, drawn after the game's chest: plank lid and body, the dark band where the lid
+// closes with a shadow under it, a frame darker on the right and bottom, and the silver latch over the band.
 const CHEST_SVG = pixSvg([
-  'KKKKKKKKKKKKKK',
-  'KLLLLLLLLLLLLK',
-  'KLLLLLLLLLLLLK',
-  'KLLLLLKKLLLLLK',
-  'KLLLLKggKLLLLK',
-  'KKKKKKggKKKKKK',
-  'KMMMMKKKKMMMMK',
-  'KMMMMMMMMMMMMK',
-  'KMMMMMMMMMMMMK',
-  'KMMMMMMMMMMMMK',
-  'KMMMMMMMMMMMMK',
-  'KKKKKKKKKKKKKK'], { K: '#21160b', L: '#a8722f', M: '#93622b', g: '#d9d9d9' }, 1.15, 0.6);
+  'AAAAAAAAAAAAAH',
+  'ADDDDFFDDDDFDH',
+  'AFFFFGFFFGFFFH',
+  'AFFFFGNNGFFFEH',
+  'BBBBBBOOBBBBBH',
+  'BBBBBBPPBBBBBH',
+  'ALLLLLQQLLLLLH',
+  'ADDDDFFFDDDDFH',
+  'AFFEEEFFFEEEFH',
+  'ADDDDDDFFFDDDH',
+  'AEEFFFEEEEFFEH',
+  'ADDFFDDDDFFDDH',
+  'AGGGGGGGGGGGGH',
+  'HHHHHHHHHHHHHH'], {
+  K: '#16130f', A: '#4a4134', H: '#2a251e', B: '#3d372c', D: '#ad7b2f', F: '#a07027', E: '#8d671f', G: '#7e571c',
+  L: '#76592f', N: '#d2d2d2', O: '#a8a8a8', P: '#8a8a8a', Q: '#727272',
+}, 1.15, 0.6);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
