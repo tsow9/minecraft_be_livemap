@@ -439,7 +439,10 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 
 /* Search hits stand out: drawn larger with a red arrow (see pixSvg) and a green circle on the ground under them.
    While they are shown, every other mark fades a little, and logged-out players even more. */
-body.finding .leaflet-marker-icon:not(:has(.find-icon.hit)) { opacity: .5; }
+body.finding .leaflet-marker-icon:not(:has(.find-icon.hit)):not(.keep) { opacity: .5; }
+.leaflet-marker-icon.keep { z-index: 100000 !important; }
+.leaflet-marker-icon.keep .gm { position: relative; }
+.place-arrow { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); pointer-events: none; }
 body.finding .pl-icon.off { opacity: .4; }
 .find-icon.hit .hit-ring { position: absolute; left: 50%; bottom: -6px; width: 46px; height: 18px; margin-left: -23px; border-radius: 50%;
   background: radial-gradient(closest-side, rgba(62, 207, 142, .95), rgba(62, 207, 142, .35) 70%, transparent); pointer-events: none; z-index: -1; }

@@ -962,6 +962,8 @@ function setupTools() {
   let popupWasOpen = false;
   map.on('preclick', () => { popupWasOpen = !!map._popup && map.hasLayer(map._popup); });
   map.on('click', (e) => {
+    // A search result is marked: a tap on another spot of the map just takes the marking away.
+    if (finds && state.mode === 'none' && !route.from) { clearFinds(); return; }
     const { x, z } = block(e.latlng);
     if (state.mode === 'none' && route.from && !popupWasOpen) {
       // Choosing a destination: a tap on an empty spot of the map picks that spot.
@@ -1547,7 +1549,13 @@ function setupSearch() {
     document.body.classList.remove('searching');
     if (document.activeElement?.closest?.('.search, #find')) document.activeElement.blur();
   };
-  const pick = (i) => { const it = items[i]; if (!it) return; close(); it.go(); };
+  const pick = (i) => {
+    const it = items[i];
+    if (!it) return;
+    close();
+    it.go();
+    if (it.kind !== 'find') focusPlace(it);
+  };
   const render = () => {
     list.innerHTML = '';
     items.forEach((it, i) => {
@@ -1961,13 +1969,42 @@ function showFinds(type, key, move = true) {
 function renderFinds() {
   findGroup.clearLayers();
   document.body.classList.toggle('finding', !!finds);
+  map.eachLayer(focusMark);
   const card = $('#finds');
-  if (!finds) { card.hidden = true; return; }
+  if (!finds || finds.type === 'place') { card.hidden = true; return; }
   const here = finds.matches.filter((m) => m.dim === state.dim);
   markLayer(here, findGroup, 2000, true);  // in front of every other mark
   const elsewhere = finds.matches.length - here.length;
   $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}件` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}件)` : ''}`;
   card.hidden = false;
+}
+
+// A place picked in the search (pin, player, bed, death point, gate) already has its own mark: that mark keeps its full
+// colour and gets the red arrow, while the rest of the map's marks fade as for other search results.
+const PLACE_ARROW = (() => {
+  const dots = Math.max(1, Math.round(1.6 * SCREEN));
+  const w = HIT_ARROW[0].length, h = HIT_ARROW.length, colours = { K: '#1b1d22', R: '#ff5a4f' };
+  let r = '';
+  HIT_ARROW.forEach((row, y) => [...row].forEach((ch, x) => { if (colours[ch]) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${colours[ch]}"/>`; }));
+  return `<svg class="place-arrow" viewBox="0 0 ${w} ${h}" width="${w * dots / SCREEN}" height="${h * dots / SCREEN}" shape-rendering="crispEdges">${r}</svg>`;
+})();
+
+function focusPlace(it) {
+  finds = { type: 'place', label: it.title, place: { dim: it.dim, x: it.x, z: it.z }, matches: [] };
+  renderFinds();
+}
+
+function focusMark(layer) {
+  const el = layer instanceof L.Marker ? layer.getElement() : null;
+  if (!el) return;
+  const p = finds?.type === 'place' ? finds.place : null;
+  const at = layer.getLatLng();
+  const on = !!p && p.dim === state.dim && Math.abs(at.lng - (p.x + 0.5)) <= 1 && Math.abs(-at.lat - (p.z + 0.5)) <= 1;
+  el.classList.toggle('keep', on);
+  const holder = el.querySelector('.gm') || el.firstElementChild;
+  const arrow = el.querySelector('.place-arrow');
+  if (on && !arrow && holder) holder.insertAdjacentHTML('beforeend', PLACE_ARROW);
+  if (!on && arrow) arrow.remove();
 }
 
 function clearFinds() {
@@ -2617,6 +2654,7 @@ async function setupPlayers() {
   playerGroup.addTo(map);
   portalGroup.addTo(map);
   findGroup.addTo(map);
+  map.on('layeradd', (e) => { if (finds?.type === 'place') focusMark(e.layer); });
   setupThingChips();
   $('#finds-close').addEventListener('click', clearFinds);
   renderPlayers();
