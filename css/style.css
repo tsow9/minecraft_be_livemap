@@ -191,6 +191,9 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
   -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); animation: pop .16s ease-out; }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 .panel h2 { margin: 0 0 8px; font-size: 16px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+/* The panel title stays at the top while the rest scrolls. */
+.panel h2 { position: sticky; top: -14px; z-index: 2; margin: -14px -16px 8px; padding: 14px 16px 8px; background: rgb(22, 24, 30);
+  border-radius: 18px 18px 0 0; }
 .panel h3 { margin: 4px 0 6px; font-size: 11px; font-weight: 700; color: var(--sub); letter-spacing: .06em; }
 .panel .help { color: var(--sub); font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
 .close { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--field);
