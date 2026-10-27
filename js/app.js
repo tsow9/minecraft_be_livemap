@@ -1843,7 +1843,7 @@ function villagerMark(dim, v, key) {
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
-// Search hits (hit = true) get a glowing ring. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
+// Search hits (hit = true) get an arrow and a circle under them (see .find-icon.hit). Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset, hit = false) {
   const at = new Map();
   for (const m of marks) {

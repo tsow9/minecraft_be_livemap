@@ -438,9 +438,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 .pop ul.mark-list .s-icon .gm-shadow { display: none; }
 .pop ul.mark-list .grow { flex: 1; font-weight: 600; }
 
-/* Search hits stand out: a glowing ring under the mark that softly pulses */
-.find-icon.hit .gm-svg { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 5px var(--accent)); }
-.find-icon.hit .hit-ring { position: absolute; left: 50%; bottom: -3px; width: 40px; height: 16px; margin-left: -20px; border-radius: 50%;
-  border: 3px solid var(--accent); box-shadow: 0 0 10px var(--accent); animation: hitpulse 1.4s ease-out infinite; pointer-events: none; }
-@keyframes hitpulse { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
-.leaflet-zoom-anim .find-icon.hit .hit-ring { animation: none; opacity: 0; }
+/* Search hits stand out: a red arrow above and a green circle on the ground under them */
+.find-icon.hit::before { content: ""; position: absolute; left: 50%; top: -16px; margin-left: -8px; border: 8px solid transparent;
+  border-top: 11px solid #ff5a4f; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); pointer-events: none; }
+.find-icon.hit .hit-ring { position: absolute; left: 50%; bottom: -6px; width: 46px; height: 18px; margin-left: -23px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(62, 207, 142, .95), rgba(62, 207, 142, .35) 70%, transparent); pointer-events: none; z-index: -1; }
