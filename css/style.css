@@ -429,7 +429,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 
 
 /* Several marks in one block: a list to pick from */
-.find-icon { position: relative; }
+/* A mark stands on its spot: bottom centre (a whole number of screen pixels, see pixSvg). */
+.find-icon { position: relative; transform: translate(-50%, -100%); }
 .pop ul.mark-list { list-style: none; margin: 6px 0 0; padding: 0; min-width: 200px; max-height: 240px; overflow: auto; touch-action: pan-y; }
 .pop ul.mark-list li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
 .pop ul.mark-list li:hover { background: var(--hover); }

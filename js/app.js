@@ -1672,12 +1672,18 @@ const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
 let findIndex = { items: [], trades: [], jobs: [] };
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
-// `edge` adds that much extra dark outline around the whole picture (in pixels of the drawing).
-function pixSvg(rows, pal, scale, edge = 0) {
-  const w = rows[0].length, h = rows.length, e = edge;
+// One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
+// wherever it sits; uneven sizes made some rows a screen pixel thicker than others.
+// `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
+const SCREEN = window.devicePixelRatio || 1;
+function pixSvg(rows, pal, size, edge = 0) {
+  const w = rows[0].length, h = rows.length;
+  const dots = Math.max(1, Math.round(size * SCREEN));   // screen pixels per drawing pixel
+  const unit = dots / SCREEN;                            // page pixels per drawing pixel
+  const e = edge ? Math.max(1, Math.round(edge * SCREEN)) / dots : 0;  // outline, in drawing pixels
   let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
   rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; }));
-  return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * scale}" height="${(h + 2 + 2 * e) * scale}" shape-rendering="crispEdges">`
+  return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * unit}" height="${(h + 2 + 2 * e) * unit}" shape-rendering="crispEdges">`
     + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
@@ -1693,7 +1699,21 @@ const VILLAGER_SVG = pixSvg([
   'KrrrrKKrrrrK',
   'KrRRRRRRRRrK',
   'KrRRRRRRRRrK',
-  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
+  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.6);
+// The wandering trader: the same face in a blue hood and robe.
+const TRADER_SVG = pixSvg([
+  '..KKKKKKKK..',
+  '.KhhhhhhhhK.',
+  '.KhbbbbbbhK.',
+  '.KhwgnngwhK.',
+  '.KhssnnsshK.',
+  '.KhssnnsshK.',
+  'KKhhhnnhhhKK',
+  'KHHHHKKHHHHK',
+  'KHRRRRRRRRHK',
+  'KHRRyRRyRRHK',
+  'KHRRRRRRRRHK',
+  'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2c4588', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72', H: '#2c4588', R: '#3a5fb5', y: '#e2c04a' }, 1.6);
 
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
 // closes and the silver latch over it.
@@ -1709,7 +1729,7 @@ const CHEST_SVG = pixSvg([
   'ADDDDDDDDDDDDA',
   'ADDDDDDDDDDDDA',
   'ADDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.6);
+  'AAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }, 1.15, 0.8);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1748,7 +1768,7 @@ function buildFindIndex() {
     }
     for (const v of d.villagers || []) {
       const job = jobName(v[3]);
-      if (!jobs.has(job)) jobs.set(job, { key: job, label: `${job}の村人`, hay: `${job} 村人`, count: 0 });
+      if (!jobs.has(job)) jobs.set(job, { key: job, label: v[3] === 'wandering_trader' ? job : `${job}の村人`, hay: `${job} 村人`, count: 0 });
       jobs.get(job).count += 1;
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
@@ -1771,7 +1791,7 @@ function findSuggestions(q) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `入れ物の中 ・ ${e.places.size}か所・計${e.total}個`, go: () => showFinds('item', e.key) });
   }
   for (const e of findIndex.jobs.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.label === jobName('wandering_trader') ? TRADER_SVG : VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
   }
   return out.slice(0, 60);
 }
@@ -1801,7 +1821,7 @@ function containerMark(dim, c, key) {
 }
 function villagerMark(dim, v, key) {
   const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
-  return { dim, x: v[0], y: v[1], z: v[2], icon: VILLAGER_SVG, name,
+  return { dim, x: v[0], y: v[1], z: v[2], icon: v[3] === 'wandering_trader' ? TRADER_SVG : VILLAGER_SVG, name,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
@@ -1818,7 +1838,7 @@ function markLayer(marks, group, zIndexOffset) {
     const marker = L.marker(ll(first.x + 0.5, first.z + 0.5), {
       pmIgnore: true, zIndexOffset,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${first.icon}</div>` }),
+        html: `<div class="find-icon gm">${first.icon}</div>` }),
     });
     const el = document.createElement('div'); el.className = 'pop';
     // The bubble's contents are swapped on a click; keep that click from reaching the map (which would close it).
@@ -1849,22 +1869,24 @@ function markLayer(marks, group, zIndexOffset) {
   }
 }
 
-// The chips under the search box (PC): show every villager / every chest, barrel and shulker box in this dimension.
+// The chips under the search box (PC): show every villager / wandering trader / chest, barrel and shulker box here.
 const thingGroup = L.layerGroup();
 const STORAGE_KINDS = new Set(['chest', 'large_chest', 'barrel', 'shulker_box']);
-const thingsOn = { villagers: false, chests: false };
+const thingsOn = { villagers: false, traders: false, chests: false };
 function renderThings() {
   thingGroup.clearLayers();
   const d = state.items?.dims?.[state.dim] || {};
   const marks = [];
   if (thingsOn.chests) marks.push(...(d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)));
-  if (thingsOn.villagers) marks.push(...(d.villagers || []).map((v) => villagerMark(state.dim, v, null)));
+  if (thingsOn.villagers) marks.push(...(d.villagers || []).filter((v) => v[3] !== 'wandering_trader').map((v) => villagerMark(state.dim, v, null)));
+  if (thingsOn.traders) marks.push(...(d.villagers || []).filter((v) => v[3] === 'wandering_trader').map((v) => villagerMark(state.dim, v, null)));
   markLayer(marks, thingGroup, 300);
 }
 function setupThingChips() {
   thingGroup.addTo(map);
   $('#chip-villager').innerHTML = VILLAGER_SVG;
   $('#chip-chest').innerHTML = CHEST_SVG;
+  $('#chip-trader').innerHTML = TRADER_SVG;
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
   document.querySelectorAll('#chips button').forEach((b) => {
     const k = b.dataset.layer;
