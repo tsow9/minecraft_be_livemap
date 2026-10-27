@@ -544,9 +544,11 @@ function makeBaseLayer() {
   const url = state.config.tileUrl.replace('{snapshot}', encodeURIComponent(snap.id)).replace('{dim}', state.dim);
   // Sharp screens (most phones) get the next more detailed picture shown at half size, so zoomed-out views stay crisp.
   const hi = (window.devicePixelRatio || 1) >= 1.5 ? 1 : 0;
+  // Closer than the most detailed picture, tiles are enlarged on a canvas here (see createTile) rather than by the browser,
+  // which on some phones smooths enlarged pictures into a blur.
   return new HistoryTileLayer(url, {
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
-    minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: state.config.maxNativeZoom - hi,
+    minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
     attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
   });
 }
@@ -554,13 +556,57 @@ function makeBaseLayer() {
 // Each day's manifest says which day's folder holds each tile (unchanged tiles are stored only once).
 const EMPTY_TILE = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 const manifests = new Map();
+const enlargeCache = new Map();
 const HistoryTileLayer = L.TileLayer.extend({
   getTileUrl(coords) {
+    return this.urlAt(coords.x, coords.y, this._getZoomForUrl()) || EMPTY_TILE;
+  },
+
+  urlAt(x, y, z) {
     const m = this.options.manifest;
-    if (!m) return L.TileLayer.prototype.getTileUrl.call(this, coords);
-    const key = `${this.options.dim}/${this._getZoomForUrl()}/${coords.x}/${coords.y}`;
+    if (!m) return null;
+    const key = `${this.options.dim}/${z}/${x}/${y}`;
     const hit = m[key];
-    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : EMPTY_TILE;
+    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
+  },
+
+  _initTile(tile) {
+    L.TileLayer.prototype._initTile.call(this, tile);
+    if (tile.dataset?.overlap) tile.style.width = tile.style.height = `${this.getTileSize().x + 1}px`;
+  },
+
+  createTile(coords, done) {
+    const detail = this.options.detailZoom;
+    if (detail == null || coords.z <= detail) return L.TileLayer.prototype.createTile.call(this, coords, done);
+    // Enlarge part of the most detailed picture, block by block (no smoothing), at the screen's full sharpness.
+    const f = 2 ** (coords.z - detail);
+    const size = this.getTileSize().x;
+    // One extra pixel overlaps the next tile, so no thin seam shows between tiles on screens with uneven pixel ratios.
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = Math.round((size + 1) * (window.devicePixelRatio || 1));
+    canvas.dataset.overlap = '1';
+    const url = this.urlAt(Math.floor(coords.x / f), Math.floor(coords.y / f), detail + this.options.zoomOffset);
+    if (!url) { setTimeout(() => done(null, canvas)); return canvas; }
+    if (!enlargeCache.has(url)) {
+      enlargeCache.set(url, new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      }));
+      if (enlargeCache.size > 60) enlargeCache.delete(enlargeCache.keys().next().value);
+    }
+    enlargeCache.get(url).then((img) => {
+      if (img) {
+        const part = img.naturalWidth / f;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, (coords.x - Math.floor(coords.x / f) * f) * part, (coords.y - Math.floor(coords.y / f) * f) * part, part, part,
+          0, 0, canvas.width, canvas.height);
+      }
+      done(null, canvas);
+    });
+    return canvas;
   },
 });
 
