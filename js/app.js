@@ -1675,25 +1675,35 @@ let findIndex = { items: [], trades: [], jobs: [] };
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
 // wherever it sits.
 // `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
+// For search hits, `grow` makes each drawing pixel that many screen pixels larger, and `arrow` puts a red arrow
+// above, drawn on the same pixel grid so it stays exactly centred.
 const SCREEN = window.devicePixelRatio || 1;
-function pixSvg(rows, pal, size, edge = 0) {
+const HIT_ARROW = ['KKKKKKKKKK', 'KRRRRRRRRK', '.KRRRRRRK.', '..KRRRRK..', '...KRRK...', '....KK....'];
+function pixSvg(rows, pal, size, edge = 0, { grow = 0, arrow = false } = {}) {
   const w = rows[0].length, h = rows.length;
-  const dots = Math.max(1, Math.round(size * SCREEN));   // screen pixels per drawing pixel
-  const unit = dots / SCREEN;                            // page pixels per drawing pixel
+  const dots = Math.max(1, Math.round(size * SCREEN)) + grow;  // screen pixels per drawing pixel
+  const unit = dots / SCREEN;                                  // page pixels per drawing pixel
   const e = edge ? Math.max(1, Math.round(edge * SCREEN)) / dots : 0;  // outline, in drawing pixels
+  const top = arrow ? HIT_ARROW.length + 1 + e : e;            // room above the picture
   let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
   // One exact-size rectangle per run of the same colour in a row: edges then land on the screen's pixels the same way
   // everywhere (slightly oversized squares used to grow by a screen pixel at some positions).
-  rows.forEach((row, y) => {
-    for (let x = 0; x < row.length;) {
-      let end = x + 1;
-      while (end < row.length && row[end] === row[x]) end += 1;
-      if (pal[row[x]]) r += `<rect x="${x}" y="${y}" width="${end - x}" height="1" fill="${pal[row[x]]}"/>`;
-      x = end;
-    }
-  });
-  return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * unit}" height="${(h + 2 + 2 * e) * unit}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
+  const draw = (lines, colours, dx, dy) => {
+    let out = '';
+    lines.forEach((row, y) => {
+      for (let x = 0; x < row.length;) {
+        let end = x + 1;
+        while (end < row.length && row[end] === row[x]) end += 1;
+        if (colours[row[x]]) out += `<rect x="${dx + x}" y="${dy + y}" width="${end - x}" height="1" fill="${colours[row[x]]}"/>`;
+        x = end;
+      }
+    });
+    return out;
+  };
+  r += draw(rows, pal, 0, 0);
+  const pointer = arrow ? draw(HIT_ARROW, { K: '#1b1d22', R: '#ff5a4f' }, (w - HIT_ARROW[0].length) / 2, -top) : '';
+  return `<svg class="gm-svg" viewBox="${-e} ${-top} ${w + 2 * e} ${h + 2 + e + top}" width="${(w + 2 * e) * unit}" height="${(h + 2 + e + top) * unit}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/>${pointer}<g class="gm-body">${r}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
 const VILLAGER_ART = [[
@@ -1710,7 +1720,7 @@ const VILLAGER_ART = [[
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
-const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 2.2);  // search hits
+const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1, arrow: true });  // search hits
 // The wandering trader: the villager's shape, dressed after the game's trader — dark blue hood with a red-brown rim,
 // a red-brown band round the lower face, and a blue robe with gold trim down the front.
 const TRADER_ART = [[
@@ -1728,7 +1738,7 @@ const TRADER_ART = [[
   'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2b4170', c: '#7a1a0c', b: '#3a2a18', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72',
   T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }];
 const TRADER_SVG = pixSvg(...TRADER_ART, 1.6);
-const TRADER_BIG = pixSvg(...TRADER_ART, 2.2);  // search hits
+const TRADER_BIG = pixSvg(...TRADER_ART, 1.6, 0, { grow: 1, arrow: true });  // search hits
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
 // closes and the silver latch over it.
 const CHEST_ART = [[
@@ -1746,7 +1756,7 @@ const CHEST_ART = [[
   'ADDDDDDDDDDDDDDA',
   'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
-const CHEST_BIG = pixSvg(...CHEST_ART, 1.6, 1);  // search hits
+const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1, arrow: true });  // search hits
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1843,7 +1853,7 @@ function villagerMark(dim, v, key) {
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
-// Search hits (hit = true) get an arrow and a circle under them (see .find-icon.hit). Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
+// Search hits (hit = true) are drawn larger with an arrow and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset, hit = false) {
   const at = new Map();
   for (const m of marks) {
@@ -1950,6 +1960,7 @@ function showFinds(type, key, move = true) {
 
 function renderFinds() {
   findGroup.clearLayers();
+  document.body.classList.toggle('finding', !!finds);
   const card = $('#finds');
   if (!finds) { card.hidden = true; return; }
   const here = finds.matches.filter((m) => m.dim === state.dim);
