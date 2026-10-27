@@ -121,6 +121,34 @@ async function realmBackups (api, realm) {
   return { count: backups.length, latest: times.length ? Math.max(...times) : null }
 }
 
+// Trial: the Realms subscription as an add-on of Minecraft for Windows in the public store catalog (Japan).
+async function storeSearch () {
+  const get = async (ids) => {
+    const res = await fetch(`https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=${ids.join(',')}&market=JP&languages=ja-jp&MS-CV=DGU1mcuYo0WMMp+F.1`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return (await res.json()).Products || []
+  }
+  const out = { related: 0, found: [] }
+  try {
+    const [game] = await get(['9NBLGGH2JHXJ'])
+    const related = (game?.MarketProperties || []).flatMap(m => m.RelatedProducts || []).map(r => r.RelatedProductId).filter(Boolean)
+    out.related = related.length
+    out.title = String(game?.LocalizedProperties?.[0]?.ProductTitle || '').slice(0, 40)
+    for (let i = 0; i < related.length && i < 400; i += 20) {
+      for (const p of await get(related.slice(i, i + 20))) {
+        const title = String(p.LocalizedProperties?.[0]?.ProductTitle || '')
+        if (!/realm/i.test(title)) continue
+        const prices = (p.DisplaySkuAvailabilities || []).map(x => {
+          const pr = (x.Availabilities || []).map(a => a.OrderManagementData?.Price).find(Boolean)
+          return pr ? `${String(x.Sku?.LocalizedProperties?.[0]?.SkuTitle || '').slice(0, 40)}: ${pr.ListPrice} ${pr.CurrencyCode}` : null
+        }).filter(Boolean).slice(0, 4)
+        out.found.push({ id: p.ProductId, title: title.slice(0, 60), prices })
+      }
+    }
+  } catch (e) { out.error = e.message.slice(0, 80) }
+  return out
+}
+
 // Members and Realm settings from a single lookup.
 async function realmStatus (api, auth, realmId, withBackups = false) {
   const realm = await api.getRealm(realmId)
@@ -142,6 +170,7 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
         daysLeft: typeof d.daysLeft === 'number' ? d.daysLeft : null,
         product: text(d.productId), variant: text(d.productVariantId)
       }
+      info.billing.storeSearch = await storeSearch()
     } catch (e) { console.error('契約の詳細を取得できませんでした:', e.message) }
   }
   return { members: await memberList(auth, realm), realm: info }
