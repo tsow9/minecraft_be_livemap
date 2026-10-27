@@ -134,8 +134,8 @@ def scan(db_dir):
             items = _items(be.get('Items'))
             if not items and kind not in STORAGE:
                 continue  # an empty furnace or hopper is not worth a mark; empty chests still show on the map
-            if kind == 'chest' and be.get('Findable') == 1:
-                continue  # loot chest nobody has opened yet
+            if be.get('LootTable') or be.get('Findable') == 1:
+                continue  # a structure's chest or barrel nobody has opened yet: its loot is only made when opened
             pair = (be.get('pairx'), be.get('pairz')) if isinstance(be.get('pairx'), int) else None
             containers.append({'dim': dim, 'x': be['x'], 'y': be['y'], 'z': be['z'], 'kind': kind, 'items': items,
                                'pair': pair, 'lead': be.get('pairlead') == 1})
