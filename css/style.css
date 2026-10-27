@@ -437,3 +437,10 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 .pop ul.mark-list .s-icon { display: grid; place-items: center; width: 22px; }
 .pop ul.mark-list .s-icon .gm-shadow { display: none; }
 .pop ul.mark-list .grow { flex: 1; font-weight: 600; }
+
+/* Search hits stand out: a glowing ring under the mark that softly pulses */
+.find-icon.hit .gm-svg { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 5px var(--accent)); }
+.find-icon.hit .hit-ring { position: absolute; left: 50%; bottom: -3px; width: 40px; height: 16px; margin-left: -20px; border-radius: 50%;
+  border: 3px solid var(--accent); box-shadow: 0 0 10px var(--accent); animation: hitpulse 1.4s ease-out infinite; pointer-events: none; }
+@keyframes hitpulse { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+.leaflet-zoom-anim .find-icon.hit .hit-ring { animation: none; opacity: 0; }

@@ -1799,7 +1799,7 @@ function findSuggestions(q) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `村人が売っている ・ ${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
   }
   for (const e of findIndex.items.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `入れ物の中 ・ ${e.places.size}か所・計${e.total}個`, go: () => showFinds('item', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `入れ物の中 ・ ${e.places.size}件・計${e.total}個`, go: () => showFinds('item', e.key) });
   }
   for (const e of findIndex.jobs.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.label === jobName('wandering_trader') ? TRADER_SVG : VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
@@ -1836,8 +1836,8 @@ function villagerMark(dim, v, key) {
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
-// Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
-function markLayer(marks, group, zIndexOffset) {
+// Search hits (hit = true) get a glowing ring. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
+function markLayer(marks, group, zIndexOffset, hit = false) {
   const at = new Map();
   for (const m of marks) {
     const k = `${m.x},${m.z}`;
@@ -1849,7 +1849,7 @@ function markLayer(marks, group, zIndexOffset) {
     const marker = L.marker(ll(first.x + 0.5, first.z + 0.5), {
       pmIgnore: true, zIndexOffset,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm">${first.icon}</div>` }),
+        html: `<div class="find-icon gm${hit ? ' hit' : ''}">${hit ? '<span class="hit-ring"></span>' : ''}${first.icon}</div>` }),
     });
     const el = document.createElement('div'); el.className = 'pop';
     // The bubble's contents are swapped on a click; keep that click from reaching the map (which would close it).
@@ -1946,9 +1946,9 @@ function renderFinds() {
   const card = $('#finds');
   if (!finds) { card.hidden = true; return; }
   const here = finds.matches.filter((m) => m.dim === state.dim);
-  markLayer(here, findGroup, 600);
+  markLayer(here, findGroup, 600, true);
   const elsewhere = finds.matches.length - here.length;
-  $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}か所` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}か所)` : ''}`;
+  $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}件` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}件)` : ''}`;
   card.hidden = false;
 }
 
