@@ -121,6 +121,31 @@ async function realmBackups (api, realm) {
   return { count: backups.length, latest: times.length ? Math.max(...times) : null }
 }
 
+// Current prices of a Microsoft Store product (the public store catalog, Japanese market).
+async function storePrices (productId) {
+  try {
+    const url = `https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=${encodeURIComponent(productId)}&market=JP&languages=ja-jp&MS-CV=DGU1mcuYo0WMMp+F.1`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const product = (await res.json()).Products?.[0]
+    const out = []
+    for (const sku of product?.DisplaySkuAvailabilities || []) {
+      const title = sku.Sku?.LocalizedProperties?.[0]?.SkuTitle || ''
+      for (const a of sku.Availabilities || []) {
+        const p = a.OrderManagementData?.Price
+        if (p && typeof p.ListPrice === 'number') {
+          out.push({ sku: String(sku.Sku?.SkuId || '').slice(0, 20), title: String(title).slice(0, 60), price: p.ListPrice, msrp: p.MSRP ?? null, currency: String(p.CurrencyCode || '').slice(0, 5) })
+          break
+        }
+      }
+    }
+    return out.slice(0, 8)
+  } catch (e) {
+    console.error('ストアの価格を取得できませんでした:', e.message)
+    return null
+  }
+}
+
 // Members and Realm settings from a single lookup.
 async function realmStatus (api, auth, realmId, withBackups = false) {
   const realm = await api.getRealm(realmId)
@@ -140,8 +165,9 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
         store: text(d.store), type: text(d.type), renewal: text(d.renewalPeriod),
         start: toMillis(d.startDate), end: toMillis(d.endDate),
         daysLeft: typeof d.daysLeft === 'number' ? d.daysLeft : null,
-        fields: Object.keys(d || {}).slice(0, 30)
+        product: text(d.productId), variant: text(d.productVariantId)
       }
+      if (d.productId) info.billing.prices = await storePrices(d.productId)
     } catch (e) { console.error('契約の詳細を取得できませんでした:', e.message) }
   }
   return { members: await memberList(auth, realm), realm: info }
