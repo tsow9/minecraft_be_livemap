@@ -1619,6 +1619,18 @@ function setupSearch() {
     render();
   };
   input.addEventListener('input', suggest);
+  // The × in the box: empties it, closes the suggestions and takes away any marking on the map.
+  const clear = $('#search-clear');
+  const showClear = () => { clear.hidden = !input.value && !finds; };
+  input.addEventListener('input', showClear);
+  clear.addEventListener('mousedown', (e) => e.preventDefault());
+  clear.addEventListener('click', () => {
+    input.value = '';
+    hide();
+    clearFinds();
+    showClear();
+  });
+  document.addEventListener('finds-changed', showClear);
   input.addEventListener('focus', suggest);
   // Phones: while the search is in use, the X/Z search opens right under it.
   const bar = $('#topbar');
@@ -1901,6 +1913,7 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
     };
     marker.bindPopup(el);
     marker.on('popupopen', () => { if (list.length > 1) showList(); else show(first); refresh(); });
+    marker.mark = { small: first.icon, big: first.iconBig || first.icon };  // swapped when the mark is picked
     marker.addTo(group);
   }
 }
@@ -1968,6 +1981,7 @@ function showFinds(type, key, move = true) {
 
 function renderFinds() {
   findGroup.clearLayers();
+  document.dispatchEvent(new Event('finds-changed'));
   document.body.classList.toggle('finding', !!finds);
   map.eachLayer(focusMark);
   const card = $('#finds');
@@ -1979,8 +1993,9 @@ function renderFinds() {
   card.hidden = false;
 }
 
-// A place picked in the search (pin, player, bed, death point, gate) already has its own mark: that mark keeps its full
-// colour and gets the red arrow, while the rest of the map's marks fade as for other search results.
+// A place picked in the search, or any mark that is clicked, keeps its full colour, grows and gets the red arrow,
+// while the rest of the map's marks fade as for other search results.
+const FOCUS_SCALE = 1.35;  // keep in step with .leaflet-marker-icon.keep .gm-svg in style.css
 const PLACE_ARROW = (() => {
   const dots = Math.max(1, Math.round(1.6 * SCREEN));
   const w = HIT_ARROW[0].length, h = HIT_ARROW.length, colours = { K: '#1b1d22', R: '#ff5a4f' };
@@ -2001,10 +2016,34 @@ function focusMark(layer) {
   const at = layer.getLatLng();
   const on = !!p && p.dim === state.dim && Math.abs(at.lng - (p.x + 0.5)) <= 1 && Math.abs(-at.lat - (p.z + 0.5)) <= 1;
   el.classList.toggle('keep', on);
+  // Chests and villagers: the larger drawing that already carries the arrow (same as a search hit).
+  const fi = el.querySelector('.find-icon');
+  if (fi && layer.mark) {
+    if (fi.classList.contains('hit') !== on) {
+      fi.classList.toggle('hit', on);
+      fi.innerHTML = on ? `<span class="hit-ring"></span>${layer.mark.big}` : layer.mark.small;
+    }
+    return;
+  }
+  // Pins, players, beds, gates: the picture grows (CSS) and the arrow sits just above it.
   const holder = el.querySelector('.gm') || el.firstElementChild;
   const arrow = el.querySelector('.place-arrow');
-  if (on && !arrow && holder) holder.insertAdjacentHTML('beforeend', PLACE_ARROW);
+  if (on && !arrow && holder) {
+    holder.insertAdjacentHTML('beforeend', PLACE_ARROW);
+    const svg = holder.querySelector('svg.gm-svg');
+    const grown = svg ? svg.height.baseVal.value * (FOCUS_SCALE - 1) : 0;
+    holder.querySelector('.place-arrow').style.top = `${-14 - grown}px`;
+  }
   if (!on && arrow) arrow.remove();
+}
+
+// Focus the mark that was clicked (its bubble opened), unless it is already one of the marked search results.
+function focusClicked(e) {
+  const src = e.popup._source;
+  if (!(src instanceof L.Marker) || findGroup.hasLayer(src)) return;
+  const at = src.getLatLng();
+  finds = { type: 'place', label: '', place: { dim: state.dim, x: Math.floor(at.lng), z: Math.floor(-at.lat) }, matches: [] };
+  renderFinds();
 }
 
 function clearFinds() {
@@ -2655,6 +2694,7 @@ async function setupPlayers() {
   portalGroup.addTo(map);
   findGroup.addTo(map);
   map.on('layeradd', (e) => { if (finds?.type === 'place') focusMark(e.layer); });
+  map.on('popupopen', focusClicked);
   setupThingChips();
   $('#finds-close').addEventListener('click', clearFinds);
   renderPlayers();
