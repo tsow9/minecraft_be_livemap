@@ -2270,10 +2270,18 @@ async function setupPlayers() {
   await loadPortals();
   setInterval(renderClock, 15000);
   await refreshLive();
-  // Every 15 seconds through the group's server (cheap), otherwise every minute from GitHub.
-  setInterval(() => { if (document.visibilityState === 'visible') refreshLive(); }, share.url ? 15000 : 60000);
+  // While someone plays: positions every 5 seconds and the map every 20 seconds.
+  // Otherwise every 15 seconds through the group's server (cheap; every minute from GitHub without it) and the map every minute.
+  const every = (fn, playing, idle) => {
+    const next = () => setTimeout(async () => {
+      if (document.visibilityState === 'visible') { try { await fn(); } catch { /* try again next time */ } }
+      next();
+    }, state.anyoneOnline ? playing : idle);
+    next();
+  };
+  every(refreshLive, share.url ? 5000 : 30000, share.url ? 15000 : 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
-  setInterval(refreshConfig, 60000);
+  every(refreshConfig, 20000, 60000);
   // Phones pause background tabs, so also check right away when the page comes back into view.
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshConfig(); });
 }

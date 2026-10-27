@@ -1,6 +1,6 @@
 name: 参加中の人と現在地
 
-# Light job every few minutes: who is online, and (only while someone plays) where players are.
+# Who is online and where players are. While someone plays, one run keeps checking every 20 seconds.
 # GitHub's own timer is unreliable, so an outside timer may also start this through workflow_dispatch.
 # The site reads live.json straight from the live-data branch, so no site rebuild is needed.
 on:
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   live:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -32,66 +32,17 @@ jobs:
         with:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
-      - name: 参加中の人を調べる
-        run: |
-          mkdir -p live
-          if git fetch --depth 1 origin live-data; then git archive FETCH_HEAD | tar -x -C live; fi
-          node tools/realms/live.js members.json live/live.json
+      - name: 参加中の人と現在地を調べる(プレイ中は20秒おきに続ける)
+        run: bash tools/live_loop.sh
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
-      - name: 前回の状態を取得
-        id: prev
-        run: |
-          echo "need_world=$(python3 tools/live_update.py need-world live/live.json members.json)" >> "$GITHUB_OUTPUT"
-      - name: プレイ中ならワールドをダウンロード
-        if: steps.prev.outputs.need_world == 'true'
-        run: node tools/realms/download.js world.mcworld members.json
-        env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
-          REALM_NAME: ${{ vars.REALM_NAME }}
-          MC_VERSION: ${{ vars.MC_VERSION }}
+          SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
+          GH_TOKEN: ${{ github.token }}
       - name: 新しくなったログイン情報を保存
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
-      - name: 現在地を更新
-        id: update
-        env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
-        run: |
-          if [ -f world.mcworld ]; then
-            python3 tools/live_update.py update live/live.json members.json world.mcworld
-          else
-            python3 tools/live_update.py update live/live.json members.json
-          fi
-      - name: 公開する
-        # Single force-pushed commit so the branch never grows.
-        run: |
-          cd live
-          rm -rf .git
-          git init -q -b live-data
-          git add live.json
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -q -m "参加中の人と現在地 $(date -u '+%F %H:%M')"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: 共有サーバーにも送る(サイトが数秒おきに読めるように)
-        env:
-          SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
-        run: |
-          url=$(python3 -c "import json; print(json.load(open('config.json')).get('shareUrl') or '')")
-          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          if [ -n "$url" ] && [ -n "$SHARE_PASSPHRASE" ]; then
-            curl -sS --max-time 20 -o /dev/null -w '共有サーバー: %{http_code}\n' -X POST "$url/live" \
-              -H "Origin: https://$owner.github.io" -H "X-Passphrase: $SHARE_PASSPHRASE" \
-              -H 'Content-Type: application/json' --data-binary @live/live.json || true
-          fi
-      - name: 地図の更新を始める(プレイ中は毎回、それ以外は1時間おき)
-        if: steps.update.outputs.run_map == 'true'
-        run: gh workflow run map.yml --ref main -f action=地図を更新
-        env:
-          GH_TOKEN: ${{ github.token }}
