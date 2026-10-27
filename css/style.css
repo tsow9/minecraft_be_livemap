@@ -45,7 +45,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 1050; display: flex; gap: 8px; padding: 12px;
   padding-top: max(12px, env(safe-area-inset-top)); pointer-events: none; flex-wrap: wrap; }
 #topbar > * { pointer-events: auto; }
-.glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #finds, #toast,
+.glass, #search, .seg, #sidebuttons, #tools, #coords, .panel, #search-results, #past-banner, #toast,
 .leaflet-control-zoom { background: var(--glass);
   border: 1px solid var(--line); box-shadow: var(--shadow); }
 .search { position: relative; z-index: 10; flex: 0 1 240px; min-width: 0; }
@@ -331,7 +331,7 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   /* On a phone the route card is at the bottom, so its list opens upward. */
   #route-list { top: auto; bottom: calc(100% + 6px); }
   /* Phone: everything that appears at the bottom is the same full-width sheet in the same place. */
-  #route, #update-bar, #past-banner, #finds, #tools, .panel { left: 10px; right: 10px; top: auto; bottom: calc(16px + env(safe-area-inset-bottom));
+  #route, #update-bar, #past-banner, #tools, .panel { left: 10px; right: 10px; top: auto; bottom: calc(16px + env(safe-area-inset-bottom));
     width: auto; max-width: none; transform: none; border-radius: 20px; }
   #update-bar, #past-banner { justify-content: space-between; padding: 8px 8px 8px 16px; white-space: normal; }
   #route { padding: 12px 44px 12px 14px; }
@@ -398,20 +398,12 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #panel-realm .share-row { margin: 12px 0 0; }
 
 /* Search marks for stored items and villagers */
-#finds { position: absolute; z-index: 1050; left: 50%; transform: translateX(-50%); top: 66px; display: flex; gap: 6px; align-items: center;
-  padding: 4px 4px 4px 14px; border-radius: 999px; font-weight: 600; white-space: nowrap; max-width: calc(100vw - 24px); }
-#finds[hidden] { display: none; }
-#finds-text { overflow: hidden; text-overflow: ellipsis; }
 .pop ul.inv { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow: auto; min-width: 200px; touch-action: pan-y; }
 .pop ul.inv li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 2px; font-size: 12px; border-bottom: 1px solid var(--line); }
 .pop ul.inv li b { font-weight: 600; white-space: nowrap; }
 .pop ul.inv li.hit { color: var(--accent); font-weight: 700; }
 .pop ul.trades li { flex-direction: column; gap: 1px; }
 .pop ul.trades li b { color: var(--sub); font-weight: 500; white-space: normal; }
-@media (max-width: 700px) {
-  #finds { top: auto; left: 10px; right: 10px; transform: none; max-width: none; justify-content: space-between; border-radius: 20px;
-    padding: 6px 6px 6px 16px; }
-}
 
 /* Chips at the bottom of the map (PC): show villagers / chests */
 /* PC: right under the search box, with the clock on the row below. */

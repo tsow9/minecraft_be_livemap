@@ -1842,10 +1842,10 @@ function findSuggestions(q) {
   const out = [];
   const hit = (e) => e.hay.toLowerCase().includes(q);
   for (const e of findIndex.trades.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `村人が売っている ・ ${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
   }
   for (const e of findIndex.items.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `入れ物の中 ・ ${e.places.size}件・計${e.total}個`, go: () => showFinds('item', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `${e.places.size}件・全${e.total}個`, go: () => showFinds('item', e.key) });
   }
   for (const e of findIndex.jobs.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.label === jobName('wandering_trader') ? TRADER_SVG : VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
@@ -1996,13 +1996,8 @@ function renderFinds() {
   document.dispatchEvent(new Event('finds-changed'));
   document.body.classList.toggle('finding', !!finds);
   map.eachLayer(focusMark);
-  const card = $('#finds');
-  if (!finds || finds.type === 'place') { card.hidden = true; return; }
-  const here = finds.matches.filter((m) => m.dim === state.dim);
-  markLayer(here, findGroup, 2000, true);  // in front of every other mark
-  const elsewhere = finds.matches.length - here.length;
-  $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}件` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}件)` : ''}`;
-  card.hidden = false;
+  if (!finds || finds.type === 'place') return;
+  markLayer(finds.matches.filter((m) => m.dim === state.dim), findGroup, 2000, true);  // in front of every other mark
 }
 
 // A place picked in the search, or any mark that is clicked, keeps its full colour and grows,
@@ -2725,7 +2720,6 @@ async function setupPlayers() {
   map.on('layeradd', (e) => { if (finds?.type === 'place') focusMark(e.layer); });
   map.on('popupopen', focusClicked);
   setupThingChips();
-  $('#finds-close').addEventListener('click', clearFinds);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
   $('#btn-trails').addEventListener('click', () => {
