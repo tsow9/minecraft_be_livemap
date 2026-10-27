@@ -160,13 +160,40 @@ def _merge_pairs(containers):
     return out
 
 
+# Items the language file lists under older names (lava bucket = "item.bucketLava").
+ITEM_KEYS = {
+    'water_bucket': 'item.bucketWater', 'lava_bucket': 'item.bucketLava', 'milk_bucket': 'item.milk',
+    'cod_bucket': 'item.bucketFish', 'salmon_bucket': 'item.bucketSalmon', 'tropical_fish_bucket': 'item.bucketTropical',
+    'pufferfish_bucket': 'item.bucketPuffer', 'axolotl_bucket': 'item.bucketAxolotl', 'filled_map': 'item.map',
+    'empty_map': 'item.emptyMap', 'ink_sac': 'item.dye.black', 'lapis_lazuli': 'item.dye.blue', 'cocoa_beans': 'item.dye.brown',
+    'bone_meal': 'item.dye.white', 'black_dye': 'item.dye.black_new', 'blue_dye': 'item.dye.blue_new',
+    'brown_dye': 'item.dye.brown_new', 'white_dye': 'item.dye.white_new', 'light_gray_dye': 'item.dye.silver',
+    'light_blue_dye': 'item.dye.lightBlue', 'cod': 'item.fish', 'cooked_cod': 'item.cooked_fish', 'tropical_fish': 'item.clownfish',
+    'sugar_cane': 'item.reeds', 'oak_fence': 'tile.fence', 'quartz_pillar': 'tile.quartz_block.lines',
+    'melon_slice': 'item.melon', 'glistering_melon_slice': 'item.speckled_melon', 'banner': 'item.banner.white',
+    'tube_coral_block': 'tile.coral_block.blue', 'brain_coral_block': 'tile.coral_block.pink',
+    'bubble_coral_block': 'tile.coral_block.purple', 'fire_coral_block': 'tile.coral_block.red',
+    'horn_coral_block': 'tile.coral_block.yellow', 'dark_oak_boat': 'item.boat.big_oak',
+}
+ITEM_JA = {'potion': 'ポーション', 'bundle': 'バンドル', 'spruce_fence': 'トウヒのフェンス', 'birch_fence': 'シラカバのフェンス',
+           'jungle_fence': 'ジャングルのフェンス', 'acacia_fence': 'アカシアのフェンス', 'dark_oak_fence': 'ダークオークのフェンス'}
+for _c in ['cyan', 'gray', 'green', 'lime', 'magenta', 'orange', 'pink', 'purple', 'red', 'yellow']:
+    ITEM_KEYS[f'{_c}_dye'] = f'item.dye.{_c}'
+for _w in ['oak', 'spruce', 'birch', 'jungle', 'acacia']:
+    ITEM_KEYS[f'{_w}_boat'] = f'item.boat.{_w}'
+
+
 def _names(lang, ids):
     if not lang:
-        return {}
+        return dict(ITEM_JA)
     import official_names
     out = {}
     for i in ids:
-        ja = official_names.japanese(i, lang)
+        key = ITEM_KEYS.get(i)
+        ja = lang.get(f'{key}.name') if key else None
+        ja = ja or official_names.japanese(i, lang) or ITEM_JA.get(i)
+        if not ja and i.startswith('music_disc_'):
+            ja = '音楽ディスク'
         if ja:
             out[i] = ja
     return out
