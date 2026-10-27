@@ -1695,25 +1695,22 @@ const VILLAGER_SVG = pixSvg([
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }, 1.75);
 
-// A chest seen from the front, drawn after the game's chest: plank lid and body, the dark band where the lid
-// closes with a shadow under it, a frame darker on the right and bottom, and the silver latch over the band.
+// A chest seen from the front, after the game's chest kept plain: lid, the dark band where it closes,
+// body, a frame darker on the right and bottom, and the silver latch over the band.
 const CHEST_SVG = pixSvg([
   'AAAAAAAAAAAAAH',
-  'ADDDDFFDDDDFDH',
-  'AFFFFGFFFGFFFH',
-  'AFFFFGNNGFFFEH',
+  'ADDDDDDDDDDDDH',
+  'ADDDDDDDDDDDDH',
+  'ADDDDDNNDDDDDH',
   'BBBBBBOOBBBBBH',
-  'BBBBBBPPBBBBBH',
-  'ALLLLLQQLLLLLH',
-  'ADDDDFFFDDDDFH',
-  'AFFEEEFFFEEEFH',
-  'ADDDDDDFFFDDDH',
-  'AEEFFFEEEEFFEH',
-  'ADDFFDDDDFFDDH',
-  'AGGGGGGGGGGGGH',
+  'AFFFFFPPFFFFFH',
+  'AFFFFFFFFFFFFH',
+  'AFFFFFFFFFFFFH',
+  'AFFFFFFFFFFFFH',
+  'AFFFFFFFFFFFFH',
+  'AFFFFFFFFFFFFH',
   'HHHHHHHHHHHHHH'], {
-  K: '#16130f', A: '#4a4134', H: '#2a251e', B: '#3d372c', D: '#ad7b2f', F: '#a07027', E: '#8d671f', G: '#7e571c',
-  L: '#76592f', N: '#d2d2d2', O: '#a8a8a8', P: '#8a8a8a', Q: '#727272',
+  K: '#16130f', A: '#4a4134', H: '#2a251e', B: '#3d372c', D: '#a8762b', F: '#986a24', N: '#d2d2d2', O: '#a8a8a8', P: '#868686',
 }, 1.15, 0.6);
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -1811,7 +1808,7 @@ function villagerMark(dim, v, key) {
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 
-// Marks in the same block share one mark; its bubble first lists them so each one can be picked.
+// Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset) {
   const at = new Map();
   for (const m of marks) {
@@ -1821,11 +1818,10 @@ function markLayer(marks, group, zIndexOffset) {
   }
   for (const list of at.values()) {
     const first = list[0];
-    const count = list.length > 1 ? `<span class="mark-count">${list.length}</span>` : '';
     const marker = L.marker(ll(first.x + 0.5, first.z + 0.5), {
       pmIgnore: true, zIndexOffset,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${first.icon}${count}</div>` }),
+        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${first.icon}</div>` }),
     });
     const el = document.createElement('div'); el.className = 'pop';
     // The bubble's contents are swapped on a click; keep that click from reaching the map (which would close it).
@@ -1839,7 +1835,7 @@ function markLayer(marks, group, zIndexOffset) {
       el.append(acts);
     };
     const showList = () => {
-      el.innerHTML = `<h4>この場所に${list.length}つ</h4><div class="xyz">X ${first.x} / Z ${first.z}</div>`;
+      el.innerHTML = `<h4>複数の候補があります</h4><div class="xyz">X ${first.x} / Z ${first.z}</div>`;
       const ul = document.createElement('ul'); ul.className = 'mark-list';
       for (const m of list) {
         const li = document.createElement('li');

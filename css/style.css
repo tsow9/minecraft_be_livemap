@@ -428,10 +428,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 @media (max-width: 700px) { #chips { display: none; } }
 
 
-/* Several marks in one block: a count on the mark and a list to pick from */
+/* Several marks in one block: a list to pick from */
 .find-icon { position: relative; }
-.mark-count { position: absolute; right: -8px; top: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--accent);
-  color: #06130d; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px #1b1d22; }
 .pop ul.mark-list { list-style: none; margin: 6px 0 0; padding: 0; min-width: 200px; max-height: 240px; overflow: auto; touch-action: pan-y; }
 .pop ul.mark-list li { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
 .pop ul.mark-list li:hover { background: var(--hover); }
