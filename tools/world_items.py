@@ -19,7 +19,6 @@ CONTAINERS = {
     'Dropper': 'dropper', 'Furnace': 'furnace', 'BlastFurnace': 'blast_furnace', 'Smoker': 'smoker',
     'BrewingStand': 'brewing_stand', 'Crafter': 'crafter', 'ChiseledBookshelf': 'chiseled_bookshelf', 'DecoratedPot': 'decorated_pot',
 }
-STORAGE = {'chest', 'barrel', 'shulker_box'}  # shown on the map even when empty
 VILLAGERS = {'minecraft:villager_v2', 'minecraft:villager', 'minecraft:wandering_trader'}
 JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographer', 'cleric', 'armorer', 'weaponsmith',
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
@@ -132,8 +131,6 @@ def scan(db_dir):
             if not kind or not all(isinstance(be.get(k), int) for k in 'xyz'):
                 continue
             items = _items(be.get('Items'))
-            if not items and kind not in STORAGE:
-                continue  # an empty furnace or hopper is not worth a mark; empty chests still show on the map
             if be.get('LootTable') or be.get('Findable') == 1:
                 continue  # a structure's chest or barrel nobody has opened yet: its loot is only made when opened
             pair = (be.get('pairx'), be.get('pairz')) if isinstance(be.get('pairx'), int) else None
@@ -144,7 +141,8 @@ def scan(db_dir):
             v = _villager(actor, actor_dims.get(uid, 0))
             if v:
                 villagers.append(v)
-    return _merge_pairs(containers), villagers
+    # Empty containers are left out (after joining double chests, so a half-empty double chest still shows).
+    return [c for c in _merge_pairs(containers) if c['items']], villagers
 
 
 def _merge_pairs(containers):
