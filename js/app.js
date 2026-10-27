@@ -1392,6 +1392,7 @@ function setDim(dim) {
   stopRoute();
   refreshExplore();
   state.slimeLayer?.redraw();
+  renderFinds();
   showOtherDim(block(map.getCenter()).x, block(map.getCenter()).z);
 }
 
@@ -1604,6 +1605,7 @@ function setupSearch() {
     const near = (it) => (it.dim === state.dim ? 0 : 1e12) + Math.hypot(it.x - c.x, it.z - c.z);
     items = (q ? all().filter((it) => `${it.title} ${it.hay}`.toLowerCase().includes(q)) : all().filter(shownNow))
       .sort((p, r) => near(p) - near(r)).slice(0, 200);
+    if (q) items = items.concat(findSuggestions(q));
     active = 0;
     render();
   };
@@ -1661,6 +1663,169 @@ function setupSearch() {
   }
   go.addEventListener('click', jump);
   update();
+}
+
+// ---------- what is stored where (chests and other containers) and who sells what (villagers) ----------
+// items.json comes from the map maker; picking a search result marks every place it was found.
+const findGroup = L.layerGroup();
+let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
+let findIndex = { items: [], trades: [], jobs: [] };
+const CHEST_SVG = `<svg class="gm-svg" viewBox="0 0 24 22" width="20" height="18"><ellipse class="gm-shadow" cx="12" cy="19.5" rx="8" ry="1.8"/>`
+  + '<g class="gm-body"><rect x="3" y="4" width="18" height="13" rx="1.5" fill="#b07a3f" stroke="#1b1d22" stroke-width="2.4"/>'
+  + '<path d="M3 9.5h18" stroke="#1b1d22" stroke-width="2"/><rect x="10.3" y="7.6" width="3.4" height="4" fill="#d9d9d9" stroke="#1b1d22" stroke-width="1.4"/></g></svg>';
+const VILLAGER_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="18" height="21"><ellipse class="gm-shadow" cx="11" cy="23.5" rx="7" ry="1.8"/>`
+  + '<g class="gm-body"><rect x="3.5" y="2.5" width="15" height="16" rx="1.5" fill="#c8946a" stroke="#1b1d22" stroke-width="2.4"/>'
+  + '<rect x="4.7" y="3.7" width="12.6" height="3" fill="#5b3a29"/><rect x="6.3" y="8.5" width="2.6" height="2" fill="#2e7d32"/>'
+  + '<rect x="13.1" y="8.5" width="2.6" height="2" fill="#2e7d32"/><rect x="9.6" y="9.5" width="2.8" height="6.5" rx=".8" fill="#a8734f" stroke="#1b1d22" stroke-width="1.1"/></g></svg>';
+
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+function itemName(id) {
+  return state.items?.names?.[id] || BLOCK_JA(id) || id;
+}
+function enchText(ench) {
+  return (ench || []).map(([i, l]) => `${state.items?.ench?.[i] || `エンチャント${i}`}${ROMAN[l] || l}`).join('・');
+}
+function itemLabel(it) {
+  return it[2]?.length ? `${itemName(it[0])}(${enchText(it[2])})` : itemName(it[0]);
+}
+const itemKey = (it) => `${it[0]}|${(it[2] || []).map((e) => e.join(':')).sort().join(',')}`;
+function jobName(job) {
+  return (job && state.items?.jobs?.[job]) || '村人';
+}
+
+async function loadItems() {
+  state.items = await fetchJson(`items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  buildFindIndex();
+  if (finds) showFinds(finds.type, finds.key, false);
+}
+
+// One search entry per kind of item stored, per kind of item sold, and per villager job.
+function buildFindIndex() {
+  const items = new Map(), trades = new Map(), jobs = new Map();
+  for (const [dim, d] of Object.entries(state.items?.dims || {})) {
+    for (const c of d.containers || []) {
+      for (const it of c[4]) {
+        const k = itemKey(it);
+        if (!items.has(k)) items.set(k, { key: k, label: itemLabel(it), hay: `${itemLabel(it)} ${it[0]}`, places: new Set(), total: 0 });
+        const e = items.get(k);
+        e.places.add(`${dim}:${c[0]}:${c[1]}:${c[2]}`);
+        e.total += it[1];
+      }
+    }
+    for (const v of d.villagers || []) {
+      const job = jobName(v[3]);
+      if (!jobs.has(job)) jobs.set(job, { key: job, label: `${job}の村人`, hay: `${job} 村人`, count: 0 });
+      jobs.get(job).count += 1;
+      for (const [, sell] of v[5]) {
+        const k = itemKey(sell);
+        if (!trades.has(k)) trades.set(k, { key: k, label: itemLabel(sell), hay: `${itemLabel(sell)} ${sell[0]} 取引 村人`, villagers: new Set() });
+        trades.get(k).villagers.add(`${dim}:${v[0]}:${v[1]}:${v[2]}`);
+      }
+    }
+  }
+  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()] };
+}
+
+// Search suggestions for a typed word (stored items, things villagers sell, villager jobs).
+function findSuggestions(q) {
+  const out = [];
+  const hit = (e) => e.hay.toLowerCase().includes(q);
+  for (const e of findIndex.trades.filter(hit)) {
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `村人が売っている ・ ${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
+  }
+  for (const e of findIndex.items.filter(hit)) {
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `入れ物の中 ・ ${e.places.size}か所・計${e.total}個`, go: () => showFinds('item', e.key) });
+  }
+  for (const e of findIndex.jobs.filter(hit)) {
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
+  }
+  return out.slice(0, 60);
+}
+
+function invHtml(items, matchKey) {
+  const sum = new Map();
+  for (const it of items) {
+    const k = itemKey(it);
+    if (!sum.has(k)) sum.set(k, { it, n: 0 });
+    sum.get(k).n += it[1];
+  }
+  const rows = [...sum.entries()].sort((a, b) => (b[0] === matchKey) - (a[0] === matchKey) || b[1].n - a[1].n);
+  const shown = rows.slice(0, 30).map(([k, { it, n }]) => `<li${k === matchKey ? ' class="hit"' : ''}><span>${esc(itemLabel(it))}</span><b>${n}</b></li>`).join('');
+  return `<ul class="inv">${shown}</ul>${rows.length > 30 ? `<div class="sub">ほか${rows.length - 30}種類</div>` : ''}`;
+}
+function tradesHtml(trades, matchKey) {
+  if (!trades.length) return '<div class="sub">取引の情報がありません</div>';
+  const price = (buy) => buy.map((b) => `${esc(itemLabel(b))}×${b[1]}`).join(' + ');
+  return `<ul class="inv trades">${trades.map(([buy, sell]) => `<li${itemKey(sell) === matchKey ? ' class="hit"' : ''}>`
+    + `<span>${esc(itemLabel(sell))}${sell[1] > 1 ? `×${sell[1]}` : ''}</span><b>${price(buy)}</b></li>`).join('')}</ul>`;
+}
+
+// Mark every place where the chosen thing was found, in the dimension that has it (this one if it can).
+function showFinds(type, key, move = true) {
+  const matches = [];
+  for (const [dim, d] of Object.entries(state.items?.dims || {})) {
+    if (type === 'item') {
+      for (const c of d.containers || []) {
+        if (!c[4].some((it) => itemKey(it) === key)) continue;
+        const kind = itemName(c[3]);
+        matches.push({ dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, name: kind,
+          popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${invHtml(c[4], key)}` });
+      }
+    } else {
+      for (const v of d.villagers || []) {
+        const ok = type === 'job' ? jobName(v[3]) === key : v[5].some(([, sell]) => itemKey(sell) === key);
+        if (!ok) continue;
+        const name = jobName(v[3]) + (v[4] ? `「${v[4]}」` : '');
+        matches.push({ dim, x: v[0], y: v[1], z: v[2], icon: VILLAGER_SVG, name,
+          popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], type === 'job' ? null : key)}` });
+      }
+    }
+  }
+  const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
+    : findIndex.jobs.find((e) => e.key === key);
+  if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
+  finds = { type, key, label: entry?.label || '', matches };
+  if (move) {
+    const count = (dim) => matches.filter((m) => m.dim === dim).length;
+    const dim = count(state.dim) ? state.dim : Object.keys(DIMS).sort((a, b) => count(b) - count(a))[0];
+    if (dim !== state.dim) setDim(dim);
+    const here = matches.filter((m) => m.dim === state.dim);
+    if (here.length === 1) goTo(here[0].x, here[0].z, null, 1);
+    else map.fitBounds(L.latLngBounds(here.map((m) => ll(m.x + 0.5, m.z + 0.5))).pad(0.2), { maxZoom: 1 });
+  }
+  renderFinds();
+}
+
+function renderFinds() {
+  findGroup.clearLayers();
+  const card = $('#finds');
+  if (!finds) { card.hidden = true; return; }
+  const here = finds.matches.filter((m) => m.dim === state.dim);
+  for (const m of here) {
+    const marker = L.marker(ll(m.x + 0.5, m.z + 0.5), {
+      pmIgnore: true, zIndexOffset: 600,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+        html: `<div class="find-icon gm" style="transform:translate(-50%,-20px)">${m.icon}</div>` }),
+    });
+    const place = { id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim };
+    marker.bindPopup(() => {
+      const el = document.createElement('div'); el.className = 'pop';
+      el.innerHTML = m.popup;
+      const acts = document.createElement('div'); acts.className = 'acts';
+      acts.append(routeButton(place));
+      el.append(acts);
+      return el;
+    });
+    marker.addTo(findGroup);
+  }
+  const elsewhere = finds.matches.length - here.length;
+  $('#finds-text').textContent = `${finds.label} ・ ${here.length ? `${here.length}か所` : 'この次元にはなし'}${elsewhere ? `(ほかの次元に${elsewhere}か所)` : ''}`;
+  card.hidden = false;
+}
+
+function clearFinds() {
+  finds = null;
+  renderFinds();
 }
 
 // ---------- nether portals (found in the world by the map maker) ----------
@@ -2202,6 +2367,7 @@ async function refreshConfig() {
   state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   refreshExplore();
   loadPortals();
+  loadItems();
 }
 
 async function refreshLive() {
@@ -2303,6 +2469,8 @@ async function setupPlayers() {
   state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   playerGroup.addTo(map);
   portalGroup.addTo(map);
+  findGroup.addTo(map);
+  $('#finds-close').addEventListener('click', clearFinds);
   renderPlayers();
   $('#show-deaths').addEventListener('change', renderPlayers);
   $('#btn-trails').addEventListener('click', () => {
@@ -2314,6 +2482,7 @@ async function setupPlayers() {
   $('#show-beds').addEventListener('change', renderPlayers);
   $('#show-portals').addEventListener('change', renderPortals);
   await loadPortals();
+  loadItems();
   setInterval(renderClock, 15000);
   await refreshLive();
   // While someone plays: positions every 5 seconds and the map every 20 seconds.

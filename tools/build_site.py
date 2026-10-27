@@ -34,7 +34,7 @@ def main():
         for folder in ('tiles', 'manifests'):
             if os.path.isdir(os.path.join(data, folder)):
                 shutil.copytree(os.path.join(data, folder), os.path.join(out, folder))
-    for name in ('explore.json', 'blocks.json', 'portals.json'):
+    for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json'):
         if os.path.exists(os.path.join(data, name)):
             shutil.copy2(os.path.join(data, name), out)
     repo = os.environ.get('GITHUB_REPOSITORY')
