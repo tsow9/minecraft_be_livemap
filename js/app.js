@@ -1874,7 +1874,8 @@ function buildFindIndex() {
     // Signs with the same words (signposts along a road) are one entry.
     for (const g of d.signs || []) {
       const k = signTitle(g[3]);
-      if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} 看板`, count: 0 });
+      // Full-width letters (ＦＲＥＥ) are also found by typing them half-width (free).
+      if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} ${k.normalize('NFKC')} 看板`, count: 0 });
       signs.get(k).count += 1;
     }
   }
