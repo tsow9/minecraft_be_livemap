@@ -25,6 +25,7 @@ DARK = 100        # pixels darker than this (0-255) keep their own colour: eyes,
 MAX_ROWS = {'llama': 11, 'trader_llama': 11, 'camel': 9}
 # These have their eyes on the sides of the head, out of sight from the front: the head shows one column of each side.
 SIDE_EYES = {'horse', 'donkey', 'mule', 'skeleton_horse', 'zombie_horse', 'parrot'}
+NOD = 0.5         # how much of the game's nodding is kept: a horse's neck leans 30 degrees, drawn at 15
 DIM = 95          # a coat darker than this (0-255, its middle colour) is lightened up to it
 LETTERS = 'abdefghijklmnopqrsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # 'c' (collar) and 't' (tag) are the site's
 
@@ -191,7 +192,7 @@ def _head_cubes(geo, hidden=()):
         out = []
         while bone is not None:
             if (bone.get('rotation') or [0])[0]:
-                out.append(([bone['rotation'][0], 0, 0], bone.get('pivot', [0, 0, 0])))
+                out.append(([bone['rotation'][0] * NOD, 0, 0], bone.get('pivot', [0, 0, 0])))
             bone = bones.get(bone.get('parent'))
         return out
 
@@ -210,7 +211,7 @@ def _head_cubes(geo, hidden=()):
             continue
         turns = chain(b)
         for c in b.get('cubes') or []:
-            own = [([c['rotation'][0], 0, 0], c.get('pivot', c['origin']))] if (c.get('rotation') or [0])[0] else []
+            own = [([c['rotation'][0] * NOD, 0, 0], c.get('pivot', c['origin']))] if (c.get('rotation') or [0])[0] else []
             out.append({**c, 'mirror': c.get('mirror', b.get('mirror', False)), 'turns': own + turns})
     return out
 
