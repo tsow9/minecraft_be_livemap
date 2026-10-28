@@ -1831,32 +1831,33 @@ const signTitle = (text) => text.split('\n').join(' ');
 // Pets and named animals: the animal's face over a collar ('c'). The collar takes the owner's colour (brown leather
 // when nobody owns it), and a little name tag hangs from it when the animal has a name.
 const FACES = {
-  // Square blocky heads after the game's animals, made chibi: big face, eyes, a snout, ears or horns.
-  wolf: ['.KK......KK.', 'KwMK....KMwK', 'KwwMKKKKMwwK', 'KwwwwwwwwwwK', 'KMKKMwwMKKMK', 'KwMMwwwwMMwK', 'KwwwKKKKwwwK',
-    'KwwwmmmmwwwK', 'KMwwmmmmwwMK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  cat: ['KK........KK', 'KwK......KwK', 'KwwKKKKKKwwK', 'KwSwSwwSwSwK', 'KwwwwwwwwwwK', 'KwGgwwwwgGwK', 'KwwwmPPmwwwK',
-    'KwwwmmmmwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  fox: ['KK........KK', 'KdK......KdK', 'KwwKKKKKKwwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KmmwwwwwwmmK', 'KmmmmKKmmmmK',
+  // Front views of the game's head models, made chibi: square ears standing on the wolf's head, the pig's flat box snout,
+  // the cow's horns sticking out sideways, the chicken's tall head with its beak and wattle, the horse's long face.
+  wolf: ['KKKK....KKKK', 'KwMwKKKKwMwK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KwwwwwwwwwwK', 'KwwwmKKmwwwK',
+    'KwwwmmmmwwwK', 'KwwwmmmmwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  cat: ['.KK......KK.', '.KwKKKKKKwK.', 'KwSwSwwSwSwK', 'KwwwwwwwwwwK', 'KwGgwwwwgGwK', 'KwwwwmmwwwwK', 'KwwwmPPmwwwK',
+    'KwwwwmmwwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  fox: ['KK........KK', 'KdK......KdK', 'KwdKKKKKKdwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KmmmmKKmmmmK', 'KmmmmmmmmmmK',
     '.KmmmmmmmmK.', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  horse: ['..KK..KK..', '..KwKKwK..', '.KwMMMMwK.', '.KwwMMwwK.', 'KwKwwwwKwK', '.KwwwwwwK.', '.KwwwwwwK.', '.KmmmmmmK.',
-    '.KmKmmKmK.', 'KccccccccK', 'KKKKKKKKKK'],
-  donkey: ['.KK....KK.', '.KwK..KwK.', '.KwK..KwK.', '.KwKKKKwK.', '.KwwwwwwK.', 'KwKwwwwKwK', '.KwwwwwwK.', '.KmmmmmmK.',
-    '.KmKmmKmK.', 'KccccccccK', 'KKKKKKKKKK'],
-  sheep: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwmmmmmmwwK', 'KwmWKmmKWmwK', 'KwmmmmmmmmwK', 'KwmmmPPmmmwK', 'KwwmmmmmmwwK',
-    'KwwwwwwwwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  cow: ['KK........KK', 'KhKKKKKKKKhK', 'KwwwwWWwwwwK', 'KwwwWWWwwwwK', 'KwWKwwwwWKwK', 'KwwwwwwwwwwK', 'KwmmmmmmmmwK',
-    'KwmKmmmmKmwK', 'KwmmmmmmmmwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  pig: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwWKwwwwKWwK', 'KwwwwwwwwwwK', 'KwwmmmmmmwwK', 'KwwmKmmKmwwK',
+  horse: ['..KK..KK..', '..KwKKwK..', '.KwwMMwwK.', '.KwwMMwwK.', '.KKwwwwKK.', '.KwwwwwwK.', '.KwwwwwwK.', '.KmmmmmmK.',
+    '.KmKmmKmK.', '.KmmmmmmK.', 'KccccccccK', 'KKKKKKKKKK'],
+  donkey: ['.KK....KK.', '.KwK..KwK.', '.KwK..KwK.', '.KwKKKKwK.', '.KwwwwwwK.', '.KKwwwwKK.', '.KwwwwwwK.', '.KmmmmmmK.',
+    '.KmKmmKmK.', '.KmmmmmmK.', 'KccccccccK', 'KKKKKKKKKK'],
+  sheep: ['.KKKKKKKKKK.', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwmmmmmmmmwK', 'KwmWKmmKWmwK', 'KwmmmmmmmmwK', 'KwmmmPPmmmwK',
     'KwwmmmmmmwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  bird: ['..KKKKKK..', '.KwwwwwwK.', '.KwKwwKwK.', '.KwwwwwwK.', 'KKyyyyyyKK', '.KwwrrwwK.', '.KwwrrwwK.', 'KccccccccK',
-    'KKKKKKKKKK'],
+  cow: ['KK..........KK', 'KhK........KhK', 'KhhKKKKKKKKhhK', '.KwwwWWwwwwwK.', '.KwWKwwwwWKwK.', '.KwwwwwwwwwwK.',
+    '.KmmmmmmmmmmK.', '.KmKKmmmmKKmK.', '.KmmmmmmmmmmK.', '.KccccccccccK.', '.KKKKKKKKKKKK.'],
+  pig: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwWKwwwwKWwK', 'KwwwwwwwwwwK', 'KwKKKKKKKKwK', 'KwKmKmmKmKwK',
+    'KwKmmmmmmKwK', 'KwKKKKKKKKwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  bird: ['..KKKKKK..', '..KwwwwK..', '..KKwwKK..', '.KKyyyyKK.', '.KyyyyyyK.', '..KKrrKK..', '..KwrrwK..', '..KwwwwK..',
+    '.KccccccK.', '.KKKKKKKK.'],
   rabbit: ['.KK....KK.', '.KwK..KwK.', '.KPK..KPK.', '.KwKKKKwK.', 'KwwwwwwwwK', 'KwKwwwwKwK', 'KwwwPPwwwK', '.KwwwwwwK.',
     'KccccccccK', 'KKKKKKKKKK'],
 };
 // Which face and colours each kind of animal gets (anything else: the wolf's face in a soft brown).
 const ANIMALS = {
-  wolf: ['wolf', { w: '#f2efea', M: '#c4bdb3', m: '#ddd6cc' }],
-  cat: ['cat', { w: '#f2a650', S: '#c9742a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#f29bb0' }],
+  wolf: ['wolf', { w: '#f2efea', M: '#c4bdb3', m: '#d3ccc2' }],
+  cat: ['cat', { w: '#f2a650', S: '#c9742a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#e8798f' }],
   ocelot: ['cat', { w: '#f2cf6a', S: '#b98a2a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#f29bb0' }],
   fox: ['fox', { w: '#f08a3a', d: '#3a2a22', m: '#fbf3ea' }],
   horse: ['horse', { w: '#b07440', M: '#5a3a24', m: '#d7a678' }],
@@ -1873,31 +1874,6 @@ const ANIMALS = {
   rabbit: ['rabbit', { w: '#d8b088', P: '#f2a0a8' }],
 };
 const LEATHER = '#6b4a2a';
-// The game's textures are never flat: each pixel is a shade lighter or darker than its neighbours.
-// Body colours get that speckle here (fixed per animal kind, so a mark never flickers between redraws).
-const SPECKLE = 'wmMSb';
-function shadeHex(hex, f) {
-  const n = parseInt(hex.slice(1), 16);
-  const ch = (v) => Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f)).toString(16).padStart(2, '0');
-  return `#${ch(n >> 16)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
-}
-function speckle(rows, pal, seed) {
-  const spare = [...'0123456789!#$%&*+=?@^~'];
-  const out = { ...pal };
-  const alt = {};
-  for (const k of SPECKLE) {
-    if (!pal[k]) continue;
-    alt[k] = [spare.shift(), spare.shift()];
-    out[alt[k][0]] = shadeHex(pal[k], 0.14);
-    out[alt[k][1]] = shadeHex(pal[k], -0.12);
-  }
-  const grid = rows.map((row, y) => [...row].map((ch, x) => {
-    if (!alt[ch]) return ch;
-    const r = (Math.imul(x * 374761393 + y * 668265263 + seed, 1274126177) >>> 0) % 100;
-    return r < 22 ? alt[ch][0] : r < 42 ? alt[ch][1] : ch;
-  }).join(''));
-  return [grid, out];
-}
 function animalSvg(kind, collar, named, big = false, size = 1.6) {
   const [face, pal] = ANIMALS[kind] || ['wolf', { w: '#d9c2a2', M: '#b59c7c', m: '#c9b190' }];
   const rows = [...FACES[face]];
@@ -1909,8 +1885,7 @@ function animalSvg(kind, collar, named, big = false, size = 1.6) {
     const row = (mid) => `${'.'.repeat(at)}${mid}${'.'.repeat(w - at - mid.length)}`;
     rows.push(row('KttK'), row('KttK'), row('KKKK'));
   }
-  const [grid, colours] = speckle(rows, { K: '#231c17', ...pal, c: collar, t: '#f2e2b0' }, [...kind].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7));
-  return pixSvg(grid, colours, size, 0, { grow: big ? 1 : 0 });
+  return pixSvg(rows, { K: '#231c17', ...pal, c: collar, t: '#f2e2b0' }, size, 0, { grow: big ? 1 : 0 });
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
