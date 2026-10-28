@@ -1831,37 +1831,50 @@ const signTitle = (text) => text.split('\n').join(' ');
 // Pets and named animals: the animal's face over a collar ('c'). The collar takes the owner's colour (brown leather
 // when nobody owns it), and a little name tag hangs from it when the animal has a name.
 const FACES = {
-  dog: ['.KK......KK.', 'KwwK....KwwK', 'KwwwKKKKwwwK', 'KwwwwwwwwwwK', 'KwKwwwwwwKwK', 'KwwwwwwwwwwK', '.KwwwKKwwwK.',
-    '.KwwwwwwwwK.', '..KccccccK..', '...KKKKKK...'],
-  cat: ['K..........K', 'KK........KK', 'KwK......KwK', 'KwwKKKKKKwwK', 'KwwwwwwwwwwK', 'KwGwwwwwwGwK', 'KwwwwPPwwwwK',
-    '.KwwwwwwwwK.', '..KccccccK..', '...KKKKKK...'],
-  horse: ['.KK....KK.', '.KwK..KwK.', 'KwwwKKwwwK', 'KwKwwwwKwK', 'KwwwwwwwwK', '.KwwwwwwK.', '.KwwwwwwK.', '.KwmmmmwK.',
-    '.KmKmmKmK.', '..KccccK..', '..KKKKKK..'],
-  sheep: ['.KKKKKKKKKK.', 'KwwwwwwwwwwK', 'KwwKKKKKKwwK', 'KwKmmmmmmKwK', 'KwKmKmmKmKwK', 'KwKmmmmmmKwK', '.KKmmPPmmKK.',
-    '..KmmmmmmK..', '..KccccccK..', '...KKKKKK...'],
-  cow: ['KK........KK', 'KhK......KhK', '.KKKKKKKKKK.', 'KwwWWwwwwwwK', 'KwKWWwwwwKwK', 'KwwwwwwWWwwK', '.KmmmmmmmmK.',
-    '.KmKmmmmKmK.', '..KccccccK..', '...KKKKKK...'],
-  pig: ['.KK......KK.', 'KwwK....KwwK', 'KwwwwwwwwwwK', 'KwKwwwwwwKwK', 'KwwwwwwwwwwK', 'KwwwmmmmwwwK', 'KwwwKmmKwwwK',
-    '.KwwmmmmwwK.', '..KccccccK..', '...KKKKKK...'],
-  bird: ['...KKKK...', '..KwwwwK..', '.KwKwwKwK.', '.KwwyywwK.', '.KwwrrwwK.', '..KwwwwK..', '..KccccK..', '..KKKKKK..'],
+  // Square blocky heads after the game's animals, made chibi: big face, eyes, a snout, ears or horns.
+  wolf: ['.KKK....KKK.', '.KwwKKKKwwK.', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KwwwwwwwwwwK', 'KwwwmKKmwwwK',
+    'KwwwmmmmwwwK', 'KwwwmmmmwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  cat: ['KK........KK', 'KwK......KwK', 'KwwKKKKKKwwK', 'KwSwSwwSwSwK', 'KwwwwwwwwwwK', 'KwGgwwwwgGwK', 'KwwwmPPmwwwK',
+    'KwwwmmmmwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  fox: ['KK........KK', 'KdK......KdK', 'KwwKKKKKKwwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KmmwwwwwwmmK', 'KmmmmKKmmmmK',
+    '.KmmmmmmmmK.', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  horse: ['..KK..KK..', '..KwKKwK..', '.KwMMMMwK.', '.KwwMMwwK.', 'KwKwwwwKwK', '.KwwwwwwK.', '.KwwwwwwK.', '.KmmmmmmK.',
+    '.KmKmmKmK.', 'KccccccccK', 'KKKKKKKKKK'],
+  donkey: ['.KK....KK.', '.KwK..KwK.', '.KwK..KwK.', '.KwKKKKwK.', '.KwwwwwwK.', 'KwKwwwwKwK', '.KwwwwwwK.', '.KmmmmmmK.',
+    '.KmKmmKmK.', 'KccccccccK', 'KKKKKKKKKK'],
+  sheep: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwmmmmmmwwK', 'KwmWKmmKWmwK', 'KwmmmmmmmmwK', 'KwmmmPPmmmwK', 'KwwmmmmmmwwK',
+    'KwwwwwwwwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  cow: ['KK........KK', 'KhKKKKKKKKhK', 'KwwwwWWwwwwK', 'KwwwWWWwwwwK', 'KwWKwwwwWKwK', 'KwwwwwwwwwwK', 'KwmmmmmmmmwK',
+    'KwmKmmmmKmwK', 'KwmmmmmmmmwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  pig: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwWKwwwwKWwK', 'KwwwwwwwwwwK', 'KwwmmmmmmwwK', 'KwwmKmmKmwwK',
+    'KwwmmmmmmwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
+  bird: ['..KKKKKK..', '.KwwwwwwK.', '.KwKwwKwK.', '.KwwwwwwK.', 'KKyyyyyyKK', '.KwwrrwwK.', '.KwwrrwwK.', 'KccccccccK',
+    'KKKKKKKKKK'],
+  rabbit: ['.KK....KK.', '.KwK..KwK.', '.KPK..KPK.', '.KwKKKKwK.', 'KwwwwwwwwK', 'KwKwwwwKwK', 'KwwwPPwwwK', '.KwwwwwwK.',
+    'KccccccccK', 'KKKKKKKKKK'],
 };
-// Which face and colours each kind of animal gets (anything else: the dog's face in grey-brown).
+// Which face and colours each kind of animal gets (anything else: the wolf's face in a soft brown).
 const ANIMALS = {
-  wolf: ['dog', { w: '#e8e4dc' }], cat: ['cat', { w: '#e09a4a', G: '#3fa34d', P: '#e88a9a' }],
-  ocelot: ['cat', { w: '#e8c05a', G: '#3fa34d', P: '#e88a9a' }], fox: ['cat', { w: '#d9772b', G: '#2b2b2b', P: '#f2f0ea' }],
-  horse: ['horse', { w: '#8a5a2e', m: '#b07e52' }], donkey: ['horse', { w: '#8d8478', m: '#b5ada2' }],
-  mule: ['horse', { w: '#5a3a22', m: '#7d573a' }], skeleton_horse: ['horse', { w: '#d8d8cc', m: '#b3b3a6' }],
-  zombie_horse: ['horse', { w: '#4f7a4a', m: '#6f9a68' }], llama: ['horse', { w: '#e2d6b8', m: '#c9b994' }],
-  trader_llama: ['horse', { w: '#3d5a8c', m: '#e2d6b8' }], camel: ['horse', { w: '#c9a26a', m: '#e0c28e' }],
-  sheep: ['sheep', { w: '#f2f0ea', m: '#c9b49b', P: '#e88a9a' }],
-  cow: ['cow', { w: '#4a3326', W: '#eeeeee', m: '#c9a58a', h: '#d9d2c0' }],
-  mooshroom: ['cow', { w: '#a3261c', W: '#d8d8d8', m: '#c9a58a', h: '#d9d2c0' }],
-  pig: ['pig', { w: '#f0a5a2', m: '#e07f86' }],
-  chicken: ['bird', { w: '#f2f0ea', y: '#e8a33a', r: '#d93a2b' }], parrot: ['bird', { w: '#d93a2b', y: '#5a5a5a', r: '#e8c05a' }],
+  wolf: ['wolf', { w: '#f7f5f1', m: '#c9c3bb' }],
+  cat: ['cat', { w: '#f2a650', S: '#c9742a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#f29bb0' }],
+  ocelot: ['cat', { w: '#f2cf6a', S: '#b98a2a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#f29bb0' }],
+  fox: ['fox', { w: '#f08a3a', d: '#3a2a22', m: '#fbf3ea' }],
+  horse: ['horse', { w: '#b07440', M: '#5a3a24', m: '#d7a678' }],
+  camel: ['horse', { w: '#e2b878', M: '#b88a4e', m: '#f0d4a4' }],
+  skeleton_horse: ['horse', { w: '#ecece2', M: '#b9b9ad', m: '#d4d4c8' }],
+  zombie_horse: ['horse', { w: '#6fa868', M: '#3f6b3a', m: '#8fc488' }],
+  donkey: ['donkey', { w: '#a9a196', m: '#d6cfc5' }], mule: ['donkey', { w: '#7a5236', m: '#a87c5a' }],
+  llama: ['donkey', { w: '#f0e6cc', m: '#ddd0ae' }], trader_llama: ['donkey', { w: '#f0e6cc', m: '#5b7fc0' }],
+  sheep: ['sheep', { w: '#ffffff', m: '#f0cfae', W: '#ffffff', P: '#f2a0a8' }],
+  cow: ['cow', { w: '#6e4a34', W: '#f7f7f7', m: '#f0d6c2', h: '#ece8dc' }],
+  mooshroom: ['cow', { w: '#d8483a', W: '#ececec', m: '#f0d6c2', h: '#ece8dc' }],
+  pig: ['pig', { w: '#ffb8c0', W: '#ffffff', m: '#f590a0' }],
+  chicken: ['bird', { w: '#ffffff', y: '#f5b13a', r: '#e8402f' }], parrot: ['bird', { w: '#ef4a3a', y: '#5a5a5a', r: '#f5d04a' }],
+  rabbit: ['rabbit', { w: '#d8b088', P: '#f2a0a8' }],
 };
 const LEATHER = '#6b4a2a';
 function animalSvg(kind, collar, named, big = false, size = 1.6) {
-  const [face, pal] = ANIMALS[kind] || ['dog', { w: '#a08a70' }];
+  const [face, pal] = ANIMALS[kind] || ['wolf', { w: '#d9c2a2', m: '#bfa582' }];
   const rows = [...FACES[face]];
   const band = rows.findIndex((r) => r.includes('c'));
   rows.splice(band, 0, rows[band]);  // the collar two rows thick, so its colour shows on the map
