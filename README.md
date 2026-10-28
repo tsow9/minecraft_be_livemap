@@ -120,9 +120,6 @@ Realmsで遊んでいるワールドを、スマホやPCのブラウザで見ら
 
 ## 使っているもの
 
-マインクラフト公式のものではありません。Mojang・Microsoft とは関係ありません。
-NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
-
 - ペットの顔は、地図を更新するたびに公式の [bedrock-samples](https://github.com/Mojang/bedrock-samples) のモデルと絵から作ります(`tools/pet_faces.py`)。公式の絵そのものはこのリポジトリに入れていません
 
 - [Leaflet](https://leafletjs.com/) 1.9.4: 地図の表示(BSD-2-Clause)
