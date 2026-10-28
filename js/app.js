@@ -1370,6 +1370,7 @@ function setupCoords() {
     root.setProperty('--dims-left', `${Math.floor(dims.getBoundingClientRect().left)}px`);
     const clock = $('#clock');
     const above = clock.hidden || getComputedStyle(clock).position !== 'static' ? dims : clock;
+    root.setProperty('--clock-w', `${clock.hidden ? 0 : Math.ceil(clock.getBoundingClientRect().width)}px`);
     root.setProperty('--side-top', `${Math.ceil(above.getBoundingClientRect().bottom + 8)}px`);
     // Bubbles that open move the map so they are not hidden under the boxes at the top (and the side buttons).
     const top = Math.max(...[dims, clock, box, $('#chips')].map((e) => {
