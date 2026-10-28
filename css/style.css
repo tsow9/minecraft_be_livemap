@@ -154,24 +154,21 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #coords { position: absolute; left: 12px; bottom: 14px; z-index: 900; padding: 6px 6px 7px 12px; border-radius: var(--radius);
   font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none; }
 #coords[hidden] { display: none; }
-/* Layout: X/Y/Z with the fold and close buttons at the top right, the other dimension's X/Z right below,
-   then the block name with the copy button. Folded (.only), it is one line: X/Y/Z, copy, unfold, close. */
-#coords { display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 2px; }
+/* Layout: X/Y/Z with the copy, fold and close buttons at the top right, the other dimension's X/Z right below,
+   then the block name and biome. Folded (.only), only the top line is left. */
+#coords { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; column-gap: 2px; }
 #coords .line { display: contents; }
 #coords .xyz { grid-column: 1; grid-row: 1; }
-#coords-mode { grid-column: 2; grid-row: 1; }
+#copy-center { grid-column: 2; grid-row: 1; }
+#coords-mode { grid-column: 3; grid-row: 1; }
 #coords-mode .ic { transform: rotate(180deg); }
-#coords-close { grid-column: 3; grid-row: 1; }
-#copy-center { grid-column: 3; grid-row: 3 / 5; align-self: end; }
+#coords-close { grid-column: 4; grid-row: 1; }
 #coords.only { grid-template-columns: auto auto auto auto; }
 #coords.only .blk, #coords.only .sub { display: none; }
-#coords.only #copy-center { grid-column: 2; grid-row: 1; align-self: center; }
-#coords.only #coords-mode { grid-column: 3; }
 #coords.only #coords-mode .ic { transform: none; }
-#coords.only #coords-close { grid-column: 4; }
 #coords .xyz { display: flex; gap: 10px; font-size: 15px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
 #coords .xyz i, #coords .sub i { font-style: normal; font-size: 13px; font-weight: 700; color: var(--sub); margin-right: 4px; }
-#coords .blk { grid-column: 1 / 3; grid-row: 3; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#coords .blk { grid-column: 1 / -1; grid-row: 3; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #coords .blk:empty { display: none; }
 #coords .biome { grid-row: 4; }
 #coords .sub { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: baseline; gap: 10px; color: var(--sub); font-size: 13px; font-weight: 600; margin-top: -1px; }
@@ -380,7 +377,7 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   /* Narrow phones: the numbers shrink a little so the close button never covers them. */
   #coords .xyz { font-size: clamp(11px, 7.4cqw, 15px) !important; gap: clamp(4px, 2.6cqw, 8px) !important; margin-right: 0; }
   #sidebuttons { top: var(--side-top, 142px) !important; }
-  #coords { padding: 6px 4px 4px 10px !important; grid-template-columns: minmax(0, 1fr) auto auto; }
+  #coords { padding: 6px 4px 4px 10px !important; grid-template-columns: minmax(0, 1fr) auto auto auto; }
   #coords.only { width: auto; container-type: normal; padding-bottom: 6px !important; grid-template-columns: auto auto auto auto; }
   #coords.only .xyz { font-size: 14px !important; gap: 7px !important; margin-right: 2px; }
   #coords .icon-btn { width: 26px; height: 26px; }
