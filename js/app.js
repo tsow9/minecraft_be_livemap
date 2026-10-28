@@ -1828,33 +1828,51 @@ const SIGN_ART = [[
 const SIGN_SVG = pixSvg(...SIGN_ART, 1.3);
 const SIGN_BIG = pixSvg(...SIGN_ART, 1.3, 0, { grow: 1 });  // search hits
 const signTitle = (text) => text.split('\n').join(' ');
-// A paw print for a tamed animal, in its owner's colour.
-const PAW_ART = [[
-  '....KKK.KKK....',
-  '...KpppKpppK...',
-  '...KpppKpppK...',
-  'KKK.KpK.KpK.KKK',
-  'KppK.K...K.KppK',
-  'KppK.KKKKK.KppK',
-  '.KK.KpppppK.KK.',
-  '...KpppppppK...',
-  '..KpppppppppK..',
-  '..KpppppppppK..',
-  '...KKKKKKKKK...'], { K: '#1d1712' }];
-const pawSvg = (color, big) => pixSvg(PAW_ART[0], { ...PAW_ART[1], p: color }, 1.3, 0, { grow: big ? 1 : 0 });
-// A name tag (an animal with a name but no owner).
-const TAG_ART = [[
-  '...KKKKKKKKKKKK',
-  '..KtttttttttttK',
-  '.KttttttttttttK',
-  'KtKKtlllllllttK',
-  'KtKKttttttttttK',
-  'KttttlllllttttK',
-  '.KttttttttttttK',
-  '..KtttttttttttK',
-  '...KKKKKKKKKKKK'], { K: '#1d1712', t: '#e3cf9f', l: '#8a7350' }];
-const TAG_SVG = pixSvg(...TAG_ART, 1.3);
-const TAG_BIG = pixSvg(...TAG_ART, 1.3, 0, { grow: 1 });
+// Pets and named animals: the animal's face over a collar ('c'). The collar takes the owner's colour (brown leather
+// when nobody owns it), and a little name tag hangs from it when the animal has a name.
+const FACES = {
+  dog: ['.KK......KK.', 'KwwK....KwwK', 'KwwwKKKKwwwK', 'KwwwwwwwwwwK', 'KwKwwwwwwKwK', 'KwwwwwwwwwwK', '.KwwwKKwwwK.',
+    '.KwwwwwwwwK.', '..KccccccK..', '...KKKKKK...'],
+  cat: ['K..........K', 'KK........KK', 'KwK......KwK', 'KwwKKKKKKwwK', 'KwwwwwwwwwwK', 'KwGwwwwwwGwK', 'KwwwwPPwwwwK',
+    '.KwwwwwwwwK.', '..KccccccK..', '...KKKKKK...'],
+  horse: ['.KK....KK.', '.KwK..KwK.', 'KwwwKKwwwK', 'KwKwwwwKwK', 'KwwwwwwwwK', '.KwwwwwwK.', '.KwwwwwwK.', '.KwmmmmwK.',
+    '.KmKmmKmK.', '..KccccK..', '..KKKKKK..'],
+  sheep: ['.KKKKKKKKKK.', 'KwwwwwwwwwwK', 'KwwKKKKKKwwK', 'KwKmmmmmmKwK', 'KwKmKmmKmKwK', 'KwKmmmmmmKwK', '.KKmmPPmmKK.',
+    '..KmmmmmmK..', '..KccccccK..', '...KKKKKK...'],
+  cow: ['KK........KK', 'KhK......KhK', '.KKKKKKKKKK.', 'KwwWWwwwwwwK', 'KwKWWwwwwKwK', 'KwwwwwwWWwwK', '.KmmmmmmmmK.',
+    '.KmKmmmmKmK.', '..KccccccK..', '...KKKKKK...'],
+  pig: ['.KK......KK.', 'KwwK....KwwK', 'KwwwwwwwwwwK', 'KwKwwwwwwKwK', 'KwwwwwwwwwwK', 'KwwwmmmmwwwK', 'KwwwKmmKwwwK',
+    '.KwwmmmmwwK.', '..KccccccK..', '...KKKKKK...'],
+  bird: ['...KKKK...', '..KwwwwK..', '.KwKwwKwK.', '.KwwyywwK.', '.KwwrrwwK.', '..KwwwwK..', '..KccccK..', '..KKKKKK..'],
+};
+// Which face and colours each kind of animal gets (anything else: the dog's face in grey-brown).
+const ANIMALS = {
+  wolf: ['dog', { w: '#e8e4dc' }], cat: ['cat', { w: '#e09a4a', G: '#3fa34d', P: '#e88a9a' }],
+  ocelot: ['cat', { w: '#e8c05a', G: '#3fa34d', P: '#e88a9a' }], fox: ['cat', { w: '#d9772b', G: '#2b2b2b', P: '#f2f0ea' }],
+  horse: ['horse', { w: '#8a5a2e', m: '#b07e52' }], donkey: ['horse', { w: '#8d8478', m: '#b5ada2' }],
+  mule: ['horse', { w: '#5a3a22', m: '#7d573a' }], skeleton_horse: ['horse', { w: '#d8d8cc', m: '#b3b3a6' }],
+  zombie_horse: ['horse', { w: '#4f7a4a', m: '#6f9a68' }], llama: ['horse', { w: '#e2d6b8', m: '#c9b994' }],
+  trader_llama: ['horse', { w: '#3d5a8c', m: '#e2d6b8' }], camel: ['horse', { w: '#c9a26a', m: '#e0c28e' }],
+  sheep: ['sheep', { w: '#f2f0ea', m: '#c9b49b', P: '#e88a9a' }],
+  cow: ['cow', { w: '#4a3326', W: '#eeeeee', m: '#c9a58a', h: '#d9d2c0' }],
+  mooshroom: ['cow', { w: '#a3261c', W: '#d8d8d8', m: '#c9a58a', h: '#d9d2c0' }],
+  pig: ['pig', { w: '#f0a5a2', m: '#e07f86' }],
+  chicken: ['bird', { w: '#f2f0ea', y: '#e8a33a', r: '#d93a2b' }], parrot: ['bird', { w: '#d93a2b', y: '#5a5a5a', r: '#e8c05a' }],
+};
+const LEATHER = '#6b4a2a';
+function animalSvg(kind, collar, named, big = false, size = 1.6) {
+  const [face, pal] = ANIMALS[kind] || ['dog', { w: '#a08a70' }];
+  const rows = [...FACES[face]];
+  const band = rows.findIndex((r) => r.includes('c'));
+  rows.splice(band, 0, rows[band]);  // the collar two rows thick, so its colour shows on the map
+  if (named) {
+    // A name tag below the middle of the collar.
+    const w = rows[0].length, at = w / 2 - 2;
+    const row = (mid) => `${'.'.repeat(at)}${mid}${'.'.repeat(w - at - mid.length)}`;
+    rows.push(row('KttK'), row('KttK'), row('KKKK'));
+  }
+  return pixSvg(rows, { K: '#1d1712', ...pal, c: collar, t: '#f2e2b0' }, size, 0, { grow: big ? 1 : 0 });
+}
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1918,9 +1936,10 @@ function buildFindIndex() {
         animals.get(k).count += 1;
       };
       const kind = mobName(a[3]);
-      if (a[4]) add(`name:${a[4]}`, a[4], `${a[4]} ${a[4].normalize('NFKC')} ${kind} ペット`, a[5] ? pawSvg(playerColor(a[6])) : TAG_SVG, kind);
-      add(`kind:${a[3]}`, `${kind}(ペット)`, `${kind} ${a[3]} ペット`, a[5] ? pawSvg('#c9a27a') : TAG_SVG);
-      if (a[6] && state.players.some((p) => p.key === a[6])) add(`owner:${a[6]}`, `${playerName(a[6])}のペット`, `${playerName(a[6])} ペット`, pawSvg(playerColor(a[6])));
+      const icon = animalSvg(a[3], animalCollar(a), !!a[4]);
+      if (a[4]) add(`name:${a[4]}`, a[4], `${a[4]} ${a[4].normalize('NFKC')} ${kind} ペット 名札`, icon, kind);
+      add(`kind:${a[3]}`, `${kind}(ペット)`, `${kind} ${a[3]} ペット`, animalSvg(a[3], LEATHER, false));
+      if (a[6] && state.players.some((p) => p.key === a[6])) add(`owner:${a[6]}`, `${playerName(a[6])}のペット`, `${playerName(a[6])} ペット`, icon);
     }
   }
   findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()], signs: [...signs.values()],
@@ -1984,13 +2003,15 @@ function signMark(dim, g) {
     popup: `<h4>${g[4] ? '吊り看板' : '看板'}</h4><div class="xyz">X ${g[0]} / Y ${g[1]} / Z ${g[2]}</div>`
       + `<div class="sign-text">${lines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` };
 }
+// The owner's colour for a tamed animal (grey when the owner is not known yet), brown leather otherwise.
+const animalCollar = (a) => (a[5] ? playerColor(a[6]) : LEATHER);
 function animalMark(dim, a) {
   const kind = mobName(a[3]);
   const name = a[4] ? `${a[4]}(${kind})` : kind;
-  const color = a[6] ? playerColor(a[6]) : '#c9a27a';
+  const collar = animalCollar(a);
   const known = a[6] && state.players.some((p) => p.key === a[6]);
   const owner = a[5] ? `<div class="sub">飼い主: ${known ? esc(playerName(a[6])) : 'わからない'}</div>` : '';
-  return { dim, x: a[0], y: a[1], z: a[2], icon: a[5] ? pawSvg(color) : TAG_SVG, iconBig: a[5] ? pawSvg(color, true) : TAG_BIG, name: a[4] || kind,
+  return { dim, x: a[0], y: a[1], z: a[2], icon: animalSvg(a[3], collar, !!a[4]), iconBig: animalSvg(a[3], collar, !!a[4], true), name: a[4] || kind,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${a[0]} / Y ${a[1]} / Z ${a[2]}</div>${owner}` };
 }
 const animalMatches = (a, key) => key === `name:${a[4]}` || key === `kind:${a[3]}` || key === `owner:${a[6]}`;
@@ -2062,7 +2083,7 @@ function setupThingChips() {
   $('#chip-chest').innerHTML = CHEST_SVG;
   $('#chip-trader').innerHTML = TRADER_SVG;
   $('#chip-sign').innerHTML = SIGN_SVG;
-  $('#chip-pet').innerHTML = pawSvg('#c9a27a');
+  $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
   document.querySelectorAll('#chips button').forEach((b) => {
     const k = b.dataset.layer;
