@@ -368,7 +368,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   #dims { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
   #dims { height: 38px; padding: 2px; }
   #dims button { padding: 0 7px; font-size: 12px; }
-  #clock { grid-column: 2; grid-row: 2; position: static; justify-self: end; margin-top: 0; height: 26px; gap: 4px;
+  /* The clock sits one row below the chips (村人・看板…), level with the readout on the left. */
+  #clock { grid-column: 2; grid-row: 2; position: static; justify-self: end; margin-top: 36px; height: 26px; gap: 4px;
     padding: 0 10px 0 8px; font-size: 12px; pointer-events: auto; }
   #clock .ic { width: 14px; height: 14px; }
   #clock[hidden] { display: none; }
@@ -429,13 +430,14 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #chips .chip-ic { display: grid; place-items: center; width: 18px; height: 18px; }
 #chips .chip-ic svg { width: 17px; height: 17px; }
 #chips .chip-ic .gm-shadow { display: none; }
-/* Phone: right under the search box, beside the clock; the readout moves down below them. */
+/* Phone: right under the search box, the whole width; the readout and the clock move down below them. */
 @media (max-width: 700px) {
-  #chips { left: 10px; right: calc(18px + var(--clock-w, 0px)); top: calc(max(10px, env(safe-area-inset-top)) + 50px); overflow-x: auto; scrollbar-width: none; }
+  #chips { left: 10px; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 50px); overflow-x: auto; scrollbar-width: none; }
   #chips::-webkit-scrollbar { display: none; }
   #chips { gap: 6px; }
   #chips button { flex: none; height: 28px; padding: 0 9px 0 5px; gap: 4px; font-size: 12px; }
   #coords, #coords-open { top: calc(max(10px, env(safe-area-inset-top)) + 86px) !important; }
+  #coords { max-width: calc(100vw - 28px - var(--clock-w, 0px)); }
   body.searching #chips { visibility: hidden; }
 }
 
