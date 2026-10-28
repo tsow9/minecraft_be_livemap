@@ -1356,10 +1356,18 @@ function setupCoords() {
   });
   // Close it and bring it back with the small button.
   const box = $('#coords'), open = $('#coords-open');
-  const show = (visible) => {
-    box.hidden = !visible; open.hidden = visible;
-    try { localStorage.setItem('mcmap.coords', visible ? 'open' : 'closed'); } catch { /* private mode */ }
+  // The fold button switches between everything and the X/Y/Z alone.
+  const save = () => {
+    const mode = box.hidden ? 'closed' : box.classList.contains('only') ? 'only' : 'open';
+    try { localStorage.setItem('mcmap.coords', mode); } catch { /* private mode */ }
   };
+  const show = (visible) => { box.hidden = !visible; open.hidden = visible; save(); };
+  const fold = (only) => {
+    box.classList.toggle('only', only);
+    $('#coords-mode').title = only ? 'ブロック名やバイオームも表示する' : '座標だけの表示にする';
+    save();
+  };
+  $('#coords-mode').addEventListener('click', (e) => { e.stopPropagation(); fold(!box.classList.contains('only')); });
   $('#coords-close').addEventListener('click', (e) => { e.stopPropagation(); show(false); });
   open.addEventListener('click', () => show(true));
   // Phones: the readout reaches right up to the dimension switch beside it.
@@ -1387,6 +1395,7 @@ function setupCoords() {
   let saved = null;
   try { saved = localStorage.getItem('mcmap.coords'); } catch { /* private mode */ }
   if (saved === 'closed') show(false);
+  if (saved === 'only') fold(true);
 }
 
 // ---------- dimensions ----------
@@ -1548,6 +1557,7 @@ function setupPanels() {
 }
 
 // ---------- search ----------
+let searchText = () => {};  // puts a name in the search box (set up below)
 function setupSearch() {
   const input = $('#search'), list = $('#search-results');
   let items = [], active = 0, picked = '';
@@ -1558,13 +1568,17 @@ function setupSearch() {
     document.body.classList.remove('searching');
     if (document.activeElement?.closest?.('.search, #find')) document.activeElement.blur();
   };
+  let picking = false;
   const pick = (i) => {
     const it = items[i];
     if (!it) return;
     close();
     input.value = picked = it.title;  // the picked name stays in the box (the × clears it with the highlight)
-    it.go();
-    if (it.kind !== 'find') focusPlace(it);
+    picking = true;  // the bubble this opens keeps the searched name
+    try {
+      it.go();
+      if (it.kind !== 'find') focusPlace(it);
+    } finally { picking = false; }
   };
   const render = () => {
     list.innerHTML = '';
@@ -1632,6 +1646,11 @@ function setupSearch() {
   // The × in the box: empties it, closes the suggestions and takes away any marking on the map.
   const clear = $('#search-clear');
   const showClear = () => { clear.hidden = !input.value && !finds; };
+  searchText = (text) => {
+    if (picking) return;
+    input.value = picked = text;
+    showClear();
+  };
   input.addEventListener('input', showClear);
   clear.addEventListener('mousedown', (e) => e.preventDefault());
   clear.addEventListener('click', () => {
@@ -1917,14 +1936,15 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
         const li = document.createElement('li');
         li.innerHTML = `<span class="s-icon">${m.icon}</span><span class="grow"></span><span class="sub">Y ${m.y}</span>`;
         li.querySelector('.grow').textContent = m.name;
-        li.addEventListener('click', () => { show(m); refresh(); });
+        li.addEventListener('click', () => { show(m); refresh(); if (!hit) searchText(m.name); });
         ul.append(li);
       }
       el.append(ul);
     };
     marker.bindPopup(el);
     marker.on('popupopen', () => { if (list.length > 1) showList(); else show(first); refresh(); });
-    marker.mark = { small: first.icon, big: first.iconBig || first.icon };  // swapped when the mark is picked
+    // Swapped when the mark is picked; the name goes into the search box on a click (a group waits for its pick).
+    marker.mark = { small: first.icon, big: first.iconBig || first.icon, name: list.length > 1 ? '' : first.name };
     marker.addTo(group);
   }
 }
@@ -2051,6 +2071,10 @@ function focusClicked(e) {
     const at = src.getLatLng();
     finds = { type: 'place', label: '', place: { dim: state.dim, x: Math.floor(at.lng), z: Math.floor(-at.lat) }, matches: [] };
     renderFinds();
+    // The clicked mark's name goes into the search box, as if it had been searched for.
+    // (A group of marks in one block clears it until one of them is picked from its list.)
+    const name = src.mark ? src.mark.name : e.popup.getElement()?.querySelector('h4')?.textContent.trim();
+    if (name || src.mark) searchText(name);
   }
   fitPopup(e.popup, src);
 }
