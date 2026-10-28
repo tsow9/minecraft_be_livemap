@@ -1888,12 +1888,33 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null)
     for (let i = 0; i < 2; i++) grid.push(grid[0].map((_, x) => (x === mid || x === mid + 1 ? 't' : '.')));
   }
   grid.push(Array(w).fill('.'));
-  // A dark outline round the whole shape, so it stands out on any ground.
-  const solid = (x, y) => grid[y]?.[x] !== undefined && grid[y][x] !== '.' && grid[y][x] !== 'K';
-  const rows = grid.map((r, y) => r.map((ch, x) => (ch === '.' && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1)) ? 'K' : ch)).join(''));
   // Heads differ in size (a cat's is small, a cow's wide): scale them to about the same size on the map.
-  const scale = Math.min(2.2, 14 / rows[0].length, 17 / rows.length);
-  return pixSvg(rows, { ...pal, K: '#231c17', c: collar, t: '#f2e2b0' }, size * scale, 0, { grow: big ? 1 : 0 });
+  const scale = Math.min(2.2, 14 / w, 17 / grid.length);
+  const dots = Math.max(1, Math.round(size * scale * SCREEN)) + (big ? 1 : 0);  // screen pixels per drawing pixel
+  // A dark outline round the whole shape, so it stands out on any ground. It is the same thickness on screen for
+  // every animal (as thin as on the widest heads), not one drawing pixel, which would be thicker on the small heads.
+  const e = Math.max(1, Math.round(size * SCREEN)) / dots;
+  const colours = { ...pal, c: collar, t: '#f2e2b0' };
+  let edge = '', body = '';
+  grid.forEach((row, y) => {
+    for (let x = 0; x < row.length;) {
+      if (row[x] === '.') { x += 1; continue; }
+      let end = x + 1;
+      while (end < row.length && row[end] !== '.') end += 1;
+      edge += `<rect x="${x - e}" y="${y - e}" width="${end - x + 2 * e}" height="${1 + 2 * e}"/>`;
+      for (let i = x; i < end;) {
+        let j = i + 1;
+        while (j < end && row[j] === row[i]) j += 1;
+        body += `<rect x="${i}" y="${y}" width="${j - i}" height="1" fill="${colours[row[i]]}"/>`;
+        i = j;
+      }
+      x = end;
+    }
+  });
+  const unit = dots / SCREEN, h = grid.length;
+  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + 1}" width="${w * unit}" height="${(h + 1) * unit}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h - 0.2}" rx="${w / 2 - 1.5}" ry="0.9"/>`
+    + `<g class="gm-body"><g fill="#231c17">${edge}</g>${body}</g></svg>`;
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
