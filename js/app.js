@@ -1831,61 +1831,59 @@ const signTitle = (text) => text.split('\n').join(' ');
 // Pets and named animals: the animal's face over a collar ('c'). The collar takes the owner's colour (brown leather
 // when nobody owns it), and a little name tag hangs from it when the animal has a name.
 const FACES = {
-  // Front views of the game's head models, made chibi: square ears standing on the wolf's head, the pig's flat box snout,
-  // the cow's horns sticking out sideways, the chicken's tall head with its beak and wattle, the horse's long face.
-  wolf: ['KKKK....KKKK', 'KwMwKKKKwMwK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KwwwwwwwwwwK', 'KwwwmKKmwwwK',
-    'KwwwmmmmwwwK', 'KwwwmmmmwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  cat: ['.KK......KK.', '.KwKKKKKKwK.', 'KwSwSwwSwSwK', 'KwwwwwwwwwwK', 'KwGgwwwwgGwK', 'KwwwwmmwwwwK', 'KwwwmPPmwwwK',
-    'KwwwwmmwwwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  fox: ['KK........KK', 'KdK......KdK', 'KwdKKKKKKdwK', 'KwwwwwwwwwwK', 'KwKKwwwwKKwK', 'KmmmmKKmmmmK', 'KmmmmmmmmmmK',
-    '.KmmmmmmmmK.', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  horse: ['..KK..KK..', '..KwKKwK..', '.KwwMMwwK.', '.KwwMMwwK.', '.KKwwwwKK.', '.KwwwwwwK.', '.KwwwwwwK.', '.KmmmmmmK.',
-    '.KmKmmKmK.', '.KmmmmmmK.', 'KccccccccK', 'KKKKKKKKKK'],
-  donkey: ['.KK....KK.', '.KwK..KwK.', '.KwK..KwK.', '.KwKKKKwK.', '.KwwwwwwK.', '.KKwwwwKK.', '.KwwwwwwK.', '.KmmmmmmK.',
-    '.KmKmmKmK.', '.KmmmmmmK.', 'KccccccccK', 'KKKKKKKKKK'],
-  sheep: ['.KKKKKKKKKK.', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwmmmmmmmmwK', 'KwmWKmmKWmwK', 'KwmmmmmmmmwK', 'KwmmmPPmmmwK',
-    'KwwmmmmmmwwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  cow: ['KK..........KK', 'KhK........KhK', 'KhhKKKKKKKKhhK', '.KwwwWWwwwwwK.', '.KwWKwwwwWKwK.', '.KwwwwwwwwwwK.',
-    '.KmmmmmmmmmmK.', '.KmKKmmmmKKmK.', '.KmmmmmmmmmmK.', '.KccccccccccK.', '.KKKKKKKKKKKK.'],
-  pig: ['KKKKKKKKKKKK', 'KwwwwwwwwwwK', 'KwwwwwwwwwwK', 'KwWKwwwwKWwK', 'KwwwwwwwwwwK', 'KwKKKKKKKKwK', 'KwKmKmmKmKwK',
-    'KwKmmmmmmKwK', 'KwKKKKKKKKwK', 'KccccccccccK', 'KKKKKKKKKKKK'],
-  bird: ['..KKKKKK..', '..KwwwwK..', '..KKwwKK..', '.KKyyyyKK.', '.KyyyyyyK.', '..KKrrKK..', '..KwrrwK..', '..KwwwwK..',
-    '.KccccccK.', '.KKKKKKKK.'],
-  rabbit: ['.KK....KK.', '.KwK..KwK.', '.KPK..KPK.', '.KwKKKKwK.', 'KwwwwwwwwK', 'KwKwwwwKwK', 'KwwwPPwwwK', '.KwwwwwwK.',
+  // Drawn after the game's own head models, face for face (wolf 6×6, cat 5×4, pig and cow 8×8, chicken 4×6...):
+  // the same eyes, snouts, ears and horns in the same places, a little brighter, with an outline for the map.
+  wolf: ['KKK..KKK', 'KwMKKMwK', 'KwwwwwwK', 'KwwwwwwK', 'KwKwwKwK', 'KwmKKmwK', 'KwmmmmwK', 'KwmmmmwK', 'KccccccK', 'KKKKKKKK'],
+  cat: ['KK...KK', 'KwKKKwK', 'KSwSwSK', 'KGwwwGK', 'KwmPmwK', 'KcccccK', 'KKKKKKK'],
+  fox: ['.KK....KK.', 'KddK..KddK', 'KwwKKKKwwK', 'KwwwwwwwwK', 'KWKwwwwKWK', 'KwwwwwwwwK', 'KmmwKKwmmK', 'KmmmmmmmmK',
     'KccccccccK', 'KKKKKKKKKK'],
+  horse: ['.KK..KK.', '.KwKKwK.', 'KwwMMwwK', 'KwwMMwwK', 'KwwwwwwK', 'KwwwwwwK', '.KmmmmK.', '.KmmmmK.', '.KNmmNK.',
+    'KccccccK', 'KKKKKKKK'],
+  donkey: ['KK....KK', 'KwK..KwK', 'KwK..KwK', 'KwKKKKwK', 'KwwwwwwK', 'KwwwwwwK', '.KmmmmK.', '.KmmmmK.', '.KNmmNK.',
+    'KccccccK', 'KKKKKKKK'],
+  sheep: ['KKKKKKKKKK', 'KwwwwwwwwK', 'KwwwwwwwwK', 'KwffffffwK', 'KwWKffKWwK', 'KwffffffwK', 'KwffPPffwK', 'KwffffffwK',
+    'KccccccccK', 'KKKKKKKKKK'],
+  cow: ['KK........KK', 'KhK......KhK', 'KhhKKKKKKhhK', '.KbbbbbbbbK.', '.KbbbbWWWbK.', '.KbWKbbKWbK.', '.KbbbbbbbbK.',
+    '.KbbMMMMbbK.', '.KbbNMMNbbK.', '.KbbMMMMbbK.', '.KbbbbbbbbK.', '.KccccccccK.', '.KKKKKKKKKK.'],
+  pig: ['KKKKKKKKKK', 'KwwwwwwwwK', 'KwwwwwwwwK', 'KwwwwwwwwK', 'KwWKwwKWwK', 'KwwSSSSwwK', 'KwwNSSNwwK', 'KwwSSSSwwK',
+    'KwwwwwwwwK', 'KccccccccK', 'KKKKKKKKKK'],
+  bird: ['KKKKKK', 'KwwwwK', 'KKwwKK', 'KyyyyK', 'KyyyyK', 'KwrrwK', 'KwrrwK', 'KccccK', 'KKKKKK'],
+  rabbit: ['.KK.KK.', '.KwKwK.', '.KPKPK.', 'KKwKwKK', 'KwwwwwK', 'KKwwwKK', 'KwwPwwK', 'KcccccK', 'KKKKKKK'],
 };
 // Which face and colours each kind of animal gets (anything else: the wolf's face in a soft brown).
 const ANIMALS = {
-  wolf: ['wolf', { w: '#f2efea', M: '#c4bdb3', m: '#d3ccc2' }],
-  cat: ['cat', { w: '#f2a650', S: '#c9742a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#e8798f' }],
-  ocelot: ['cat', { w: '#f2cf6a', S: '#b98a2a', G: '#7bd35a', g: '#1d1712', m: '#fbe9d6', P: '#f29bb0' }],
-  fox: ['fox', { w: '#f08a3a', d: '#3a2a22', m: '#fbf3ea' }],
-  horse: ['horse', { w: '#b07440', M: '#5a3a24', m: '#d7a678' }],
-  camel: ['horse', { w: '#e2b878', M: '#b88a4e', m: '#f0d4a4' }],
-  skeleton_horse: ['horse', { w: '#ecece2', M: '#b9b9ad', m: '#d4d4c8' }],
-  zombie_horse: ['horse', { w: '#6fa868', M: '#3f6b3a', m: '#8fc488' }],
-  donkey: ['donkey', { w: '#a9a196', m: '#d6cfc5' }], mule: ['donkey', { w: '#7a5236', m: '#a87c5a' }],
-  llama: ['donkey', { w: '#f0e6cc', m: '#ddd0ae' }], trader_llama: ['donkey', { w: '#f0e6cc', m: '#5b7fc0' }],
-  sheep: ['sheep', { w: '#ffffff', m: '#f0cfae', W: '#ffffff', P: '#f2a0a8' }],
-  cow: ['cow', { w: '#6e4a34', W: '#f7f7f7', m: '#f0d6c2', h: '#ece8dc' }],
-  mooshroom: ['cow', { w: '#d8483a', W: '#ececec', m: '#f0d6c2', h: '#ece8dc' }],
-  pig: ['pig', { w: '#ffb8c0', W: '#ffffff', m: '#f590a0' }],
-  chicken: ['bird', { w: '#ffffff', y: '#f5b13a', r: '#e8402f' }], parrot: ['bird', { w: '#ef4a3a', y: '#5a5a5a', r: '#f5d04a' }],
-  rabbit: ['rabbit', { w: '#d8b088', P: '#f2a0a8' }],
+  wolf: ['wolf', { w: '#eeebe6', M: '#c9c1b6', m: '#d9d3ca' }],
+  cat: ['cat', { w: '#f0a24c', S: '#cf7a2e', G: '#8ad85e', m: '#f7d9b4', P: '#e8798f' }],
+  ocelot: ['cat', { w: '#f2d26e', S: '#c99a3a', G: '#8ad85e', m: '#f7e3b4', P: '#e8798f' }],
+  fox: ['fox', { w: '#f0923e', d: '#3d2c22', W: '#ffffff', m: '#fdf5ec' }],
+  horse: ['horse', { w: '#b5794a', M: '#5c3c26', m: '#a06a3e', N: '#3d2a1c' }],
+  camel: ['horse', { w: '#e8c088', M: '#c4945a', m: '#d8ac72', N: '#6b4a2a' }],
+  skeleton_horse: ['horse', { w: '#ecece2', M: '#c4c4b8', m: '#d8d8cc', N: '#6b6b60' }],
+  zombie_horse: ['horse', { w: '#74b06c', M: '#46703f', m: '#5f9a58', N: '#2c4628' }],
+  donkey: ['donkey', { w: '#aaa196', m: '#cfc7bc', N: '#4a443d' }], mule: ['donkey', { w: '#80583a', m: '#a37a58', N: '#3a281a' }],
+  llama: ['donkey', { w: '#f2e8cf', m: '#e2d4b0', N: '#6b5a40' }], trader_llama: ['donkey', { w: '#f2e8cf', m: '#e2d4b0', N: '#6b5a40' }],
+  sheep: ['sheep', { w: '#ffffff', f: '#f2d1b2', W: '#ffffff', P: '#e8a0a8' }],
+  cow: ['cow', { b: '#5e4231', W: '#f7f7f7', M: '#d8c3b4', N: '#5e4231', h: '#eae5d8' }],
+  mooshroom: ['cow', { b: '#d84a3c', W: '#eeeeee', M: '#d8c3b4', N: '#8a2a20', h: '#eae5d8' }],
+  pig: ['pig', { w: '#fbb5bd', W: '#ffffff', S: '#f7a3ae', N: '#c9606f' }],
+  chicken: ['bird', { w: '#ffffff', y: '#f7b43c', r: '#ea3f30' }], parrot: ['bird', { w: '#ef4a3a', y: '#55555a', r: '#f5d04a' }],
+  rabbit: ['rabbit', { w: '#d8b08a', P: '#f2a0a8' }],
 };
 const LEATHER = '#6b4a2a';
 function animalSvg(kind, collar, named, big = false, size = 1.6) {
   const [face, pal] = ANIMALS[kind] || ['wolf', { w: '#d9c2a2', M: '#b59c7c', m: '#c9b190' }];
+  // The game's heads differ in width (a cat's is small, a cow's wide): scale them to about the same size on the map.
+  const scale = Math.min(1.7, 12 / FACES[face][0].length, 14 / FACES[face].length);
   const rows = [...FACES[face]];
   const band = rows.findIndex((r) => r.includes('c'));
   rows.splice(band, 0, rows[band]);  // the collar two rows thick, so its colour shows on the map
   if (named) {
     // A name tag below the middle of the collar.
-    const w = rows[0].length, at = w / 2 - 2;
+    const w = rows[0].length, at = Math.floor(w / 2) - 2;
     const row = (mid) => `${'.'.repeat(at)}${mid}${'.'.repeat(w - at - mid.length)}`;
     rows.push(row('KttK'), row('KttK'), row('KKKK'));
   }
-  return pixSvg(rows, { K: '#231c17', ...pal, c: collar, t: '#f2e2b0' }, size, 0, { grow: big ? 1 : 0 });
+  return pixSvg(rows, { K: '#231c17', ...pal, c: collar, t: '#f2e2b0' }, size * scale, 0, { grow: big ? 1 : 0 });
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
