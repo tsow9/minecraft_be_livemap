@@ -1,8 +1,8 @@
 """What is stored where: the contents of chests and other containers, and what villagers sell.
 
 Writes items.json for the site's search ("鉄インゴット" finds the chests holding it, "修繕" finds the
-librarians selling mending books, "農場" finds signs saying so). Containers and signs come from each chunk's
-block entities, villagers from the world's actors. Japanese names for items, enchantments and villager jobs come from the game's own
+librarians selling mending books, "農場" finds signs saying so, "ポチ" finds the dog of that name). Containers and signs come from each chunk's
+block entities, villagers and tamed or named animals from the world's actors. Japanese names for items, enchantments and villager jobs come from the game's own
 language file when it could be downloaded.
 """
 import json
@@ -12,6 +12,7 @@ import struct
 
 import bedrock_db
 import nbt
+import players
 
 DIM_NAMES = {0: 'overworld', 1: 'nether', 2: 'end'}
 BLOCK_ENTITY, OLD_ENTITY = 49, 50  # chunk key tags
@@ -21,6 +22,9 @@ CONTAINERS = {
     'BrewingStand': 'brewing_stand', 'Crafter': 'crafter', 'ChiseledBookshelf': 'chiseled_bookshelf', 'DecoratedPot': 'decorated_pot',
 }
 SIGNS = {'Sign': 0, 'HangingSign': 1}  # block entity id -> 1 for a hanging sign
+# Things that are not animals even when they carry a name.
+NOT_ANIMALS = {'minecraft:item', 'minecraft:xp_orb', 'minecraft:arrow', 'minecraft:thrown_trident', 'minecraft:player',
+               'minecraft:falling_block', 'minecraft:tnt', 'minecraft:fireworks_rocket', 'minecraft:snowball', 'minecraft:egg'}
 VILLAGERS = {'minecraft:villager_v2', 'minecraft:villager', 'minecraft:wandering_trader'}
 JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographer', 'cleric', 'armorer', 'weaponsmith',
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
@@ -91,6 +95,36 @@ def _sign_text(be):
     return '\n'.join(out)[:200]
 
 
+def _owners(db_dir, secret):
+    """Player number in the world -> the hashed player key live.json uses (pets store their owner's number)."""
+    out = {}
+    if not secret:
+        return out
+    for key, value in bedrock_db.scan(db_dir, lambda k: k.startswith(b'player_server_')):
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except (ValueError, IndexError, struct.error):
+            continue
+        if isinstance(root.get('UniqueID'), int):
+            out[root['UniqueID']] = players._hash(secret, key.decode('latin-1'))
+    return out
+
+
+def _animal(actor, dim, owners):
+    """A tamed animal or one with a name tag; None for anything else."""
+    kind = actor.get('identifier')
+    if not isinstance(kind, str) or kind in VILLAGERS or kind in NOT_ANIMALS:
+        return None
+    name = str(actor.get('CustomName') or '')[:40]
+    tamed = actor.get('IsTamed') == 1
+    pos = actor.get('Pos')
+    if not (name or tamed) or not (isinstance(pos, list) and len(pos) == 3):
+        return None
+    owner = owners.get(actor.get('OwnerNew')) if tamed else None
+    return {'dim': dim, 'x': int(pos[0] // 1), 'y': int(pos[1] // 1), 'z': int(pos[2] // 1), 'kind': _short(kind),
+            'name': name or None, 'tamed': tamed, 'owner': owner}
+
+
 def _villager(actor, dim):
     pos = actor.get('Pos')
     if not (isinstance(pos, list) and len(pos) == 3):
@@ -114,8 +148,9 @@ def _villager(actor, dim):
             'name': str(actor.get('CustomName') or '')[:40] or None, 'trades': trades}
 
 
-def scan(db_dir):
-    containers, villagers, signs, actor_dims, actors = [], [], [], {}, {}
+def scan(db_dir, secret=''):
+    containers, villagers, signs, animals, actor_dims, actors = [], [], [], [], {}, {}
+    owners = _owners(db_dir, secret)
 
     def want(key):
         if key.startswith(b'actorprefix') or key.startswith(b'digp'):
@@ -141,6 +176,10 @@ def scan(db_dir):
                     v = _villager(actor, dim)
                     if v:
                         villagers.append(v)
+                else:
+                    a = _animal(actor, dim, owners)
+                    if a:
+                        animals.append(a)
             continue
         for be in _compounds(value):
             if be.get('id') in SIGNS and all(isinstance(be.get(k), int) for k in 'xyz'):
@@ -162,8 +201,12 @@ def scan(db_dir):
             v = _villager(actor, actor_dims.get(uid, 0))
             if v:
                 villagers.append(v)
+        else:
+            a = _animal(actor, actor_dims.get(uid, 0), owners)
+            if a:
+                animals.append(a)
     # Empty containers are left out (after joining double chests, so a half-empty double chest still shows).
-    return [c for c in _merge_pairs(containers) if c['items']], villagers, signs
+    return [c for c in _merge_pairs(containers) if c['items']], villagers, signs, animals
 
 
 def _merge_pairs(containers):
@@ -219,8 +262,8 @@ def _names(lang, ids):
     return out
 
 
-def write(site, db_dir, lang):
-    containers, villagers, signs = scan(db_dir)
+def write(site, db_dir, lang, secret=''):
+    containers, villagers, signs, animals = scan(db_dir, secret)
     ids = {it[0] for c in containers for it in c['items']}
     ids |= {it[0] for v in villagers for t in v['trades'] for it in t[0] + [t[1]]}
     ids |= set(CONTAINERS.values()) | {'large_chest'}
@@ -233,6 +276,11 @@ def write(site, db_dir, lang):
         if v:
             ench[n] = v
     ench.update({k: v for k, v in ENCH_EXTRA.items() if k not in ench})
+    mobs = {}
+    for k in sorted({a['kind'] for a in animals}):
+        v = (lang or {}).get(f'entity.{k}.name')
+        if v:
+            mobs[k] = v
     jobs = {}
     for j in JOBS:
         v = JOB_JA.get(j) or (lang or {}).get(f'entity.villager.{JOB_LANG.get(j, j)}')
@@ -240,15 +288,18 @@ def write(site, db_dir, lang):
             jobs[j] = v
     dims = {}
     def of(dim):
-        return dims.setdefault(DIM_NAMES.get(dim, str(dim)), {'containers': [], 'villagers': [], 'signs': []})
+        return dims.setdefault(DIM_NAMES.get(dim, str(dim)), {'containers': [], 'villagers': [], 'signs': [], 'animals': []})
     for c in containers:
         of(c['dim'])['containers'].append([c['x'], c['y'], c['z'], c['kind'], c['items']])
     for v in villagers:
         of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades']])
     for g in signs:
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
-    out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs}
+    for a in animals:
+        of(a['dim'])['animals'].append([a['x'], a['y'], a['z'], a['kind'], a['name'], int(a['tamed']), a['owner']])
+    out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs, 'mobs': mobs}
     with open(os.path.join(site, 'items.json'), 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
     traded = sum(1 for v in villagers if v['trades'])
-    return len(containers), len(villagers), traded, len(signs)
+    owned = sum(1 for a in animals if a['owner'])
+    return len(containers), len(villagers), traded, len(signs), len(animals), owned

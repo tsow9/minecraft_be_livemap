@@ -1379,7 +1379,10 @@ function setupCoords() {
     const clock = $('#clock');
     const above = clock.hidden || getComputedStyle(clock).position !== 'static' ? dims : clock;
     root.setProperty('--clock-w', `${clock.hidden ? 0 : Math.ceil(clock.getBoundingClientRect().width)}px`);
-    root.setProperty('--side-top', `${Math.ceil(above.getBoundingClientRect().bottom + 8)}px`);
+    // Phones: the chips run the whole width, so the side buttons also start below them.
+    const chips = $('#chips');
+    const phone = matchMedia('(max-width: 700px)').matches && !chips.hidden;
+    root.setProperty('--side-top', `${Math.ceil(Math.max(above.getBoundingClientRect().bottom, phone ? chips.getBoundingClientRect().bottom : 0) + 8)}px`);
     // Bubbles that open move the map so they are not hidden under the boxes at the top (and the side buttons).
     const top = Math.max(...[dims, clock, box, $('#chips')].map((e) => {
       const r = e.getBoundingClientRect();
@@ -1723,7 +1726,7 @@ function setupSearch() {
 // items.json comes from the map maker; picking a search result marks every place it was found.
 const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
-let findIndex = { items: [], trades: [], jobs: [], signs: [] };
+let findIndex = { items: [], trades: [], jobs: [], signs: [], animals: [] };
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
 // wherever it sits.
@@ -1825,6 +1828,33 @@ const SIGN_ART = [[
 const SIGN_SVG = pixSvg(...SIGN_ART, 1.3);
 const SIGN_BIG = pixSvg(...SIGN_ART, 1.3, 0, { grow: 1 });  // search hits
 const signTitle = (text) => text.split('\n').join(' ');
+// A paw print for a tamed animal, in its owner's colour.
+const PAW_ART = [[
+  '....KKK.KKK....',
+  '...KpppKpppK...',
+  '...KpppKpppK...',
+  'KKK.KpK.KpK.KKK',
+  'KppK.K...K.KppK',
+  'KppK.KKKKK.KppK',
+  '.KK.KpppppK.KK.',
+  '...KpppppppK...',
+  '..KpppppppppK..',
+  '..KpppppppppK..',
+  '...KKKKKKKKK...'], { K: '#1d1712' }];
+const pawSvg = (color, big) => pixSvg(PAW_ART[0], { ...PAW_ART[1], p: color }, 1.3, 0, { grow: big ? 1 : 0 });
+// A name tag (an animal with a name but no owner).
+const TAG_ART = [[
+  '...KKKKKKKKKKKK',
+  '..KtttttttttttK',
+  '.KttttttttttttK',
+  'KtKKtlllllllttK',
+  'KtKKttttttttttK',
+  'KttttlllllttttK',
+  '.KttttttttttttK',
+  '..KtttttttttttK',
+  '...KKKKKKKKKKKK'], { K: '#1d1712', t: '#e3cf9f', l: '#8a7350' }];
+const TAG_SVG = pixSvg(...TAG_ART, 1.3);
+const TAG_BIG = pixSvg(...TAG_ART, 1.3, 0, { grow: 1 });
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1837,6 +1867,9 @@ function itemLabel(it) {
   return it[2]?.length ? `${itemName(it[0])}(${enchText(it[2])})` : itemName(it[0]);
 }
 const itemKey = (it) => `${it[0]}|${(it[2] || []).map((e) => e.join(':')).sort().join(',')}`;
+function mobName(kind) {
+  return state.items?.mobs?.[kind] || kind;
+}
 function jobName(job) {
   return (job && state.items?.jobs?.[job]) || '村人';
 }
@@ -1850,7 +1883,7 @@ async function loadItems() {
 
 // One search entry per kind of item stored, per kind of item sold, and per villager job.
 function buildFindIndex() {
-  const items = new Map(), trades = new Map(), jobs = new Map(), signs = new Map();
+  const items = new Map(), trades = new Map(), jobs = new Map(), signs = new Map(), animals = new Map();
   for (const [dim, d] of Object.entries(state.items?.dims || {})) {
     for (const c of d.containers || []) {
       for (const it of c[4]) {
@@ -1878,14 +1911,29 @@ function buildFindIndex() {
       if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} ${k.normalize('NFKC')} 看板`, count: 0 });
       signs.get(k).count += 1;
     }
+    // Pets and named animals: one entry per name, one per kind ("オオカミ") and one per owner ("〇〇のペット").
+    for (const a of d.animals || []) {
+      const add = (k, label, hay, icon, meta) => {
+        if (!animals.has(k)) animals.set(k, { key: k, label, hay, icon, meta, count: 0 });
+        animals.get(k).count += 1;
+      };
+      const kind = mobName(a[3]);
+      if (a[4]) add(`name:${a[4]}`, a[4], `${a[4]} ${a[4].normalize('NFKC')} ${kind} ペット`, a[5] ? pawSvg(playerColor(a[6])) : TAG_SVG, kind);
+      add(`kind:${a[3]}`, `${kind}(ペット)`, `${kind} ${a[3]} ペット`, a[5] ? pawSvg('#c9a27a') : TAG_SVG);
+      if (a[6] && state.players.some((p) => p.key === a[6])) add(`owner:${a[6]}`, `${playerName(a[6])}のペット`, `${playerName(a[6])} ペット`, pawSvg(playerColor(a[6])));
+    }
   }
-  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()], signs: [...signs.values()] };
+  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()], signs: [...signs.values()],
+    animals: [...animals.values()] };
 }
 
 // Search suggestions for a typed word (sign writing, stored items, things villagers sell, villager jobs).
 function findSuggestions(q) {
   const out = [];
   const hit = (e) => e.hay.toLowerCase().includes(q);
+  for (const e of findIndex.animals.filter(hit)) {
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.icon, meta: e.meta && e.count === 1 ? e.meta : `${e.count}匹`, go: () => showFinds('animal', e.key) });
+  }
   for (const e of findIndex.signs.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: `看板・${e.count}枚`, go: () => showFinds('sign', e.key) });
   }
@@ -1936,6 +1984,16 @@ function signMark(dim, g) {
     popup: `<h4>${g[4] ? '吊り看板' : '看板'}</h4><div class="xyz">X ${g[0]} / Y ${g[1]} / Z ${g[2]}</div>`
       + `<div class="sign-text">${lines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` };
 }
+function animalMark(dim, a) {
+  const kind = mobName(a[3]);
+  const name = a[4] ? `${a[4]}(${kind})` : kind;
+  const color = a[6] ? playerColor(a[6]) : '#c9a27a';
+  const known = a[6] && state.players.some((p) => p.key === a[6]);
+  const owner = a[5] ? `<div class="sub">飼い主: ${known ? esc(playerName(a[6])) : 'わからない'}</div>` : '';
+  return { dim, x: a[0], y: a[1], z: a[2], icon: a[5] ? pawSvg(color) : TAG_SVG, iconBig: a[5] ? pawSvg(color, true) : TAG_BIG, name: a[4] || kind,
+    popup: `<h4>${esc(name)}</h4><div class="xyz">X ${a[0]} / Y ${a[1]} / Z ${a[2]}</div>${owner}` };
+}
+const animalMatches = (a, key) => key === `name:${a[4]}` || key === `kind:${a[3]}` || key === `owner:${a[6]}`;
 
 // Search hits (hit = true) are drawn larger and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset, hit = false) {
@@ -1986,11 +2044,12 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
 // The chips under the search box (PC): show every villager / wandering trader / chest, barrel and shulker box here.
 const thingGroup = L.layerGroup();
 const STORAGE_KINDS = new Set(['chest', 'large_chest', 'barrel', 'shulker_box']);
-const thingsOn = { villagers: false, traders: false, chests: false, signs: false };
+const thingsOn = { villagers: false, traders: false, chests: false, signs: false, pets: false };
 function renderThings() {
   thingGroup.clearLayers();
   const d = state.items?.dims?.[state.dim] || {};
   const marks = [];
+  if (thingsOn.pets) marks.push(...(d.animals || []).map((a) => animalMark(state.dim, a)));
   if (thingsOn.signs) marks.push(...(d.signs || []).map((g) => signMark(state.dim, g)));
   if (thingsOn.chests) marks.push(...(d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)));
   if (thingsOn.villagers) marks.push(...(d.villagers || []).filter((v) => v[3] !== 'wandering_trader').map((v) => villagerMark(state.dim, v, null)));
@@ -2003,6 +2062,7 @@ function setupThingChips() {
   $('#chip-chest').innerHTML = CHEST_SVG;
   $('#chip-trader').innerHTML = TRADER_SVG;
   $('#chip-sign').innerHTML = SIGN_SVG;
+  $('#chip-pet').innerHTML = pawSvg('#c9a27a');
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
   document.querySelectorAll('#chips button').forEach((b) => {
     const k = b.dataset.layer;
@@ -2024,6 +2084,8 @@ function showFinds(type, key, move = true) {
       for (const c of d.containers || []) {
         if (c[4].some((it) => itemKey(it) === key)) matches.push(containerMark(dim, c, key));
       }
+    } else if (type === 'animal') {
+      for (const a of d.animals || []) if (animalMatches(a, key)) matches.push(animalMark(dim, a));
     } else if (type === 'sign') {
       for (const g of d.signs || []) if (signTitle(g[3]) === key) matches.push(signMark(dim, g));
     } else {
@@ -2033,7 +2095,8 @@ function showFinds(type, key, move = true) {
       }
     }
   }
-  const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'sign' ? findIndex.signs.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
+  const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'sign' ? findIndex.signs.find((e) => e.key === key)
+    : type === 'animal' ? findIndex.animals.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
     : findIndex.jobs.find((e) => e.key === key);
   if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
   finds = { type, key, label: entry?.label || '', matches };
@@ -2718,6 +2781,8 @@ async function refreshLive() {
     state.players = players;
     renderPlayers();
     renderExploreLegend();
+    // Pet owners' names and colours come from the player list.
+    if (state.items) { buildFindIndex(); renderThings(); if (finds && finds.type !== 'place') showFinds(finds.type, finds.key, false); }
   }
 }
 

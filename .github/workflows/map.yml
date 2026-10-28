@@ -137,6 +137,8 @@ jobs:
           python-version: '3.12'
       - name: 地図を作る
         if: steps.compare.outputs.changed == 'true'
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # pet owners are stored as the same hashed keys live.json uses
         run: |
           pip install --quiet numpy pillow
           live=""
