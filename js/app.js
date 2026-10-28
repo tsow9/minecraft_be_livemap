@@ -1807,7 +1807,7 @@ const CHEST_ART = [[
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }];
+  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#4a3f33', B: '#4a3f33', D: '#b6823a', N: '#d8d8d8' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
 const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1 });  // search hits
 // A wooden sign on its post: a plank board with lines of writing.
