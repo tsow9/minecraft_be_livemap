@@ -9,6 +9,7 @@ import json
 import os
 import re
 import struct
+import tempfile
 
 import bedrock_db
 import nbt
@@ -264,6 +265,22 @@ def _names(lang, ids):
     return out
 
 
+def _faces(site, animals):
+    """Faces for the pet marks, made from the game's own files; last time's when those can't be fetched."""
+    wanted = {(a['kind'], a['variant']) for a in animals} | {('wolf', None)}  # the wolf is the pet chip's face
+    try:
+        import pet_faces
+        with tempfile.TemporaryDirectory(prefix='mcassets-') as repo:
+            return pet_faces.build(wanted, os.path.join(repo, 'pack'))
+    except Exception as e:  # git missing, no network, the pack changed shape...
+        print(f'ペットの顔を作れませんでした(前回の顔を使います): {e}')
+        try:
+            with open(os.path.join(site, 'items.json'), encoding='utf-8') as f:
+                return json.load(f).get('faces') or {}
+        except (OSError, ValueError):
+            return {}
+
+
 def write(site, db_dir, lang, secret=''):
     containers, villagers, signs, animals = scan(db_dir, secret)
     ids = {it[0] for c in containers for it in c['items']}
@@ -299,7 +316,7 @@ def write(site, db_dir, lang, secret=''):
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     for a in animals:
         of(a['dim'])['animals'].append([a['x'], a['y'], a['z'], a['kind'], a['name'], int(a['tamed']), a['owner'], a['variant']])
-    out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs, 'mobs': mobs}
+    out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs, 'mobs': mobs, 'faces': _faces(site, animals)}
     with open(os.path.join(site, 'items.json'), 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
     traded = sum(1 for v in villagers if v['trades'])

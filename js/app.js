@@ -1831,52 +1831,13 @@ const signTitle = (text) => text.split('\n').join(' ');
 // Pets and named animals: the animal's head as the game draws it (traced from the game's head models and textures,
 // a little brighter; horses, cats and llamas in their own coat, 'kind:variant'), over a collar in the owner's colour (brown leather when nobody owns it); a little name tag
 // hangs from the collar when the animal has a name.
-const PET_FACES = {
-  wolf: [['aa..aa', 'bb..bb', 'dbaabd', 'debbef', 'eghhge', 'hijgjh', 'iljjji', 'lbmmml'], {'a': '#e2dfe0', 'b': '#d9d6d6', 'd': '#cac7c7', 'e': '#ffffff', 'f': '#d1cfd0', 'g': '#333537', 'h': '#b39f90', 'i': '#9c836a', 'j': '#e8ddde', 'l': '#a89c99', 'm': '#55575a'}],
-  cat: [['.a..a', 'abbba', 'deaed', 'aafgf', 'aahih'], {'a': '#edb555', 'b': '#e08c3f', 'd': '#ededed', 'e': '#669a2f', 'f': '#c79f5d', 'g': '#c78787', 'h': '#e3bd7a', 'i': '#dbbc87'}],
-  ocelot: [['.a..a', 'bdedb', 'fgegf', 'hihjh', 'iieee'], {'a': '#f3be79', 'b': '#e0ac6d', 'd': '#bf9864', 'e': '#f2d287', 'f': '#fffffd', 'g': '#3e834f', 'h': '#f4d7a8', 'i': '#ffe287', 'j': '#9e6d48'}],
-  fox: [['aa....aa', 'ba....ab', 'deeeeeed', 'deeeeeed', 'fdeeeedf', 'gaehheag', 'ddiggidd', 'iiaaaaii'], {'a': '#faf6f6', 'b': '#be9f94', 'd': '#d37e3f', 'e': '#e68e40', 'f': '#bb6941', 'g': '#292730', 'h': '#ea9f5c', 'i': '#eaded9'}],
-  sheep: [['aaaaaaaa', 'aabdaeaa', 'afghgija', 'almnompa', 'aqorssua', 'abvwwqba', 'abqxyqba'], {'a': '#efefef', 'b': '#e3e3e3', 'd': '#f9f7f6', 'e': '#d8d8d8', 'f': '#bda28d', 'g': '#c0a691', 'h': '#bda38e', 'i': '#c1a997', 'j': '#b8a08d', 'l': '#2b2b2b', 'm': '#ffffff', 'n': '#bb9f89', 'o': '#b69a84', 'p': '#242424', 'q': '#9e8675', 'r': '#b4967f', 's': '#b2947d', 'u': '#9a8271', 'v': '#a38b7a', 'w': '#ffbfbf', 'x': '#d9a5a5', 'y': '#dfabab'}],
-  cow: [['a........a', 'bdeefffgeb', 'hdeefffedh', '.iiegfdii.', '.jlegeelj.', '.eeeeeeee.', '.demmmmde.', '.dmjnnjmd.', '.donppnmd.'], {'a': '#848484', 'b': '#5e5e5e', 'd': '#5a4d43', 'e': '#5e5244', 'f': '#bebebe', 'g': '#aeaeae', 'h': '#505050', 'i': '#d1d1d1', 'j': '#242424', 'l': '#ffffff', 'm': '#e1e1e1', 'n': '#767676', 'o': '#cccccc', 'p': '#626262'}],
-  mooshroom: [['a........a', 'bdeefffgeb', 'hdeefffedh', '.iiegfdii.', '.iiegeeii.', '.eeeeeeee.', '.dejjjjde.', '.djillijd.', '.dmlnnljd.'], {'a': '#848484', 'b': '#5e5e5e', 'd': '#ad3131', 'e': '#b43133', 'f': '#bebebe', 'g': '#aeaeae', 'h': '#505050', 'i': '#242424', 'j': '#e1e1e1', 'l': '#767676', 'm': '#cccccc', 'n': '#626262'}],
-  pig: [['aabaabab', 'bbbaabaa', 'ddbbabdd', 'efdggdfe', 'dbbbbbbd', 'gdhighdg', 'ggbbbbgg', 'iggggggi'], {'a': '#f0b2b1', 'b': '#f3aca6', 'd': '#eaa09b', 'e': '#252425', 'f': '#ffffff', 'g': '#ea9694', 'h': '#9a6160', 'i': '#ea8c87'}],
-  chicken: [['aaaa', 'bddb', 'eeee', 'ffff', 'ghhg', 'ihhi'], {'a': '#ffffff', 'b': '#242424', 'd': '#e6e6e6', 'e': '#caa25d', 'f': '#a58650', 'g': '#d9d9d9', 'h': '#ff2424', 'i': '#cecece'}],
-  horse: [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdeedb', 'fgeegf', 'feeeef', 'beeeeb', 'aeeeea'], {'a': '#634c46', 'b': '#725149', 'd': '#494949', 'e': '#7c5a48', 'f': '#7b544a', 'g': '#6f5650'}],
-  skeleton_horse: [['......', '......', 'a....a', 'abddba', 'aeeeea', 'f....f', 'adbbda'], {'a': '#8c8989', 'b': '#e7e7e7', 'd': '#d2d1d1', 'e': '#d9d9d9', 'f': '#626262'}],
-  zombie_horse: [['.a..a.', '.a..a.', '.aaaa.', '.baab.', 'adeeda', 'afggfa', 'hgggga', 'aeggea', 'aiieih'], {'a': '#66754b', 'b': '#70814f', 'd': '#282b27', 'e': '#3b4132', 'f': '#2e312b', 'g': '#444a39', 'h': '#596748', 'i': '#34372e'}],
-  donkey: [['ab..ba', 'aa..aa', 'ba..ab', 'db..bd', 'be..eb', 'ff..ff', 'ghiihg', 'jlaalj', 'jbddbj', 'gaaaag', 'mdaadm'], {'a': '#d2cfc5', 'b': '#bdb7ac', 'd': '#cac5b8', 'e': '#9c9388', 'f': '#9b8b7c', 'g': '#71675d', 'h': '#434343', 'i': '#dfddd5', 'j': '#7b6f62', 'l': '#78756f', 'm': '#6a6056'}],
-  mule: [['ab..ba', 'aa..aa', 'ba..ab', 'db..bd', 'be..eb', 'ff..ff', 'ghiihg', 'jlaalj', 'jddddj', 'maaaam', 'ndaadn'], {'a': '#b5a895', 'b': '#958175', 'd': '#a99b90', 'e': '#816c5f', 'f': '#7a5f51', 'g': '#584c4a', 'h': '#595959', 'i': '#bbab95', 'j': '#604f4c', 'l': '#706e6a', 'm': '#68554f', 'n': '#715b50'}],
-  llama: [['aba..aba', 'bdb..bdb', 'beb..beb', 'baaaaaab', 'affggffg', 'ghgggghg', 'gbiaaibg', 'aaajjaba', 'aalddlaa', 'abbaabab'], {'a': '#f6e6c2', 'b': '#f3e1ba', 'd': '#b29a7b', 'e': '#e7d1a4', 'f': '#ccaf8c', 'g': '#fceece', 'h': '#504742', 'i': '#796958', 'j': '#d3b590', 'l': '#baa081'}],
-  trader_llama: [['aba..aba', 'bdb..bdb', 'beb..beb', 'baaaaaab', 'affggffg', 'ghgggghg', 'gbiaaibg', 'aaajjaba', 'aalddlaa', 'abbaabab'], {'a': '#f6e6c2', 'b': '#f3e1ba', 'd': '#b29a7b', 'e': '#e7d1a4', 'f': '#ccaf8c', 'g': '#fceece', 'h': '#504742', 'i': '#796958', 'j': '#d3b590', 'l': '#baa081'}],
-  camel: [['...abbbade..', 'effghahgdife', '...ebgbedj..', '...hhhhhdl..', '...beeebdf..', '...emdddme..', '...fmmmmmf..', '...femmmef..', '...efeeefe..'], {'a': '#aa9168', 'b': '#b49a72', 'd': '#c29445', 'e': '#ecb863', 'f': '#f6c474', 'g': '#8a7450', 'h': '#756242', 'i': '#4c463c', 'j': '#bba799', 'l': '#918379', 'm': '#e0ac58'}],
-  'horse:0': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdeedb', 'fgeegf', 'feeeef', 'beeeeb', 'aeeeea'], {'a': '#afafaf', 'b': '#bbbbbb', 'd': '#494949', 'e': '#868686', 'f': '#c6c6c6', 'g': '#757575'}],
-  'horse:1': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdefdb', 'ghfehg', 'gijjig', 'biiiib', 'aiiiia'], {'a': '#735d43', 'b': '#806546', 'd': '#494949', 'e': '#cbb0a2', 'f': '#b4998b', 'g': '#886a48', 'h': '#6f5650', 'i': '#594a42', 'j': '#8b6f61'}],
-  'horse:2': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdeedb', 'fgeegf', 'feeeef', 'beeeeb', 'aeeeea'], {'a': '#634c46', 'b': '#725149', 'd': '#494949', 'e': '#7c5a48', 'f': '#7b544a', 'g': '#6f5650'}],
-  'horse:3': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdeedb', 'fgeehf', 'feeeef', 'beeeeb', 'aeeeea'], {'a': '#57483f', 'b': '#604c40', 'd': '#3e3e3e', 'e': '#524741', 'f': '#694f41', 'g': '#49433f', 'h': '#47423f'}],
-  'horse:4': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'baaaab', 'daaaad', 'dbaaad', 'bbaaab', 'abbaaa'], {'a': '#414143', 'b': '#47494b', 'd': '#4c4d50'}],
-  'horse:5': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bdeedb', 'faeeaf', 'ffffff', 'bffffb', 'affffa'], {'a': '#606060', 'b': '#696969', 'd': '#494949', 'e': '#7a7a7a', 'f': '#6f6f6f'}],
-  'horse:6': [['.a..a.', '.a..a.', '.aaaa.', '.aaaa.', 'bbddbb', 'dddddd', 'dbaaad', 'bbaaab', 'abbaaa'], {'a': '#48423f', 'b': '#4c4540', 'd': '#514742'}],
-  'cat:0': [['.a..a', 'bbbbb', 'debef', 'bbbgb', 'hbhbh'], {'a': '#edf0f2', 'b': '#fdfafc', 'd': '#ebebb2', 'e': '#333946', 'f': '#b2e9eb', 'g': '#c88db2', 'h': '#f5f6f7'}],
-  'cat:1': [['.a..a', 'bbbbb', 'debed', 'bbfgf', 'bbhhh'], {'a': '#43434e', 'b': '#3c3845', 'd': '#ededed', 'e': '#71ab33', 'f': '#6e6b75', 'g': '#c78787', 'h': '#bababb'}],
-  'cat:2': [['.a..a', 'abbba', 'deaed', 'aafgf', 'aahih'], {'a': '#edb555', 'b': '#e08c3f', 'd': '#ededed', 'e': '#669a2f', 'f': '#c79f5d', 'g': '#c78787', 'h': '#e3bd7a', 'i': '#dbbc87'}],
-  'cat:3': [['.a..a', 'baaab', 'deaed', 'bbfaf', 'fbbab'], {'a': '#4e4a3f', 'b': '#6d6556', 'd': '#ededed', 'e': '#2f91d0', 'f': '#aaa49b'}],
-  'cat:4': [['.a..a', 'bdddb', 'efdfe', 'dbbgb', 'dhhhh'], {'a': '#979a9a', 'b': '#b2b3b2', 'd': '#c5c5c5', 'e': '#f1daa5', 'f': '#333946', 'g': '#8d9092', 'h': '#a7aba9'}],
-  'cat:5': [['.a..b', 'defgg', 'hijil', 'dmmnm', 'joooo'], {'a': '#d19a5a', 'b': '#d1d4d6', 'd': '#5c564f', 'e': '#68625b', 'f': '#e0aa59', 'g': '#e9c795', 'h': '#f1daa5', 'i': '#333946', 'j': '#ffffff', 'l': '#85e5f9', 'm': '#eaeced', 'n': '#edadad', 'o': '#e1e3e3'}],
-  'cat:6': [['.a..a', 'bbbbb', 'defed', 'ggagg', 'gagag'], {'a': '#f5d19d', 'b': '#ffedd2', 'd': '#76bef9', 'e': '#414e68', 'f': '#ef9b8d', 'g': '#ffe4bd'}],
-  'cat:7': [['.a..a', 'bdedb', 'fghgf', 'dhhbh', 'ehhhh'], {'a': '#b7aca3', 'b': '#9a877e', 'd': '#dfdcd8', 'e': '#f1f1f1', 'f': '#d2eaff', 'g': '#526387', 'h': '#ffffff'}],
-  'cat:8': [['.a..a', 'aabaa', 'defed', 'bbbgb', 'hbifi'], {'a': '#a4866e', 'b': '#d7c1ae', 'd': '#f3df57', 'e': '#c59a31', 'f': '#f5ece0', 'g': '#c78787', 'h': '#987b63', 'i': '#ecdecb'}],
-  'cat:9': [['.a..a', 'bbbbb', 'debed', 'bbbfb', 'gbgbg'], {'a': '#2e2d36', 'b': '#373643', 'd': '#e5c35f', 'e': '#c98b4f', 'f': '#a17e94', 'g': '#33313d'}],
-  'cat:10': [['.a..a', 'abdbb', 'efgfe', 'ggghg', 'dgdgd'], {'a': '#6a6a69', 'b': '#646363', 'd': '#f2f2f2', 'e': '#b9c9a7', 'f': '#333946', 'g': '#fdfafc', 'h': '#c88db2'}],
-  'llama:0': [['aba..aba', 'bdb..bdb', 'beb..beb', 'baaaaaab', 'affggffg', 'ghgggghg', 'gbiaaibg', 'aaajjaba', 'aalddlaa', 'abbaabab'], {'a': '#f6e6c2', 'b': '#f3e1ba', 'd': '#b29a7b', 'e': '#e7d1a4', 'f': '#ccaf8c', 'g': '#fceece', 'h': '#504742', 'i': '#796958', 'j': '#d3b590', 'l': '#baa081'}],
-  'llama:1': [['aba..aba', 'bdb..bdb', 'beb..beb', 'baaaaaab', 'affggffg', 'ghgggghg', 'gaiaaiga', 'agajjaga', 'aalddlga', 'abgagaab'], {'a': '#f6f6ee', 'b': '#f0f0f0', 'd': '#b29a7b', 'e': '#d0d0d0', 'f': '#ccaf8c', 'g': '#fcfcf6', 'h': '#504742', 'i': '#796958', 'j': '#d3b590', 'l': '#baa081'}],
-  'llama:2': [['aba..aba', 'bdb..bdb', 'beb..beb', 'fggggggf', 'ghhiihhi', 'ijiiiiji', 'iflgglfi', 'gggmmgfg', 'ggnoongg', 'gpfggfap'], {'a': '#a47744', 'b': '#9d7444', 'd': '#8a663c', 'e': '#8f683d', 'f': '#f3e1ba', 'g': '#f6e6c2', 'h': '#ccaf8c', 'i': '#fceece', 'j': '#504742', 'l': '#796958', 'm': '#d3b590', 'n': '#baa081', 'o': '#b29a7b', 'p': '#dfc09d'}],
-  'llama:3': [['aba..aba', 'bdb..bdb', 'beb..beb', 'baaaaaab', 'affggffg', 'ghgggghg', 'gbiaaibg', 'aaajjaba', 'aalddlaa', 'abbaabab'], {'a': '#eaeadb', 'b': '#dbdccd', 'd': '#b29a7b', 'e': '#b8b6b1', 'f': '#ccaf8c', 'g': '#f0f0e3', 'h': '#504742', 'i': '#796958', 'j': '#d3b590', 'l': '#baa081'}],
-  rabbit: [['.b.b.', '.b.b.', 'bbbbb', 'bebeb', 'bbpbb', 'bwwwb'], {'b': '#b58a62', 'e': '#1d1712', 'p': '#f2a0a8', 'w': '#e2cdb0'}],
-  parrot: [['.rr.', 'rrrr', 'erre', 'rggr', '.gg.'], {'r': '#ef4a3a', 'e': '#1d1712', 'g': '#55555a'}],
-};
+// The faces themselves are made from the game's own models and textures each time the map is built
+// (tools/pet_faces.py) and come in items.json; this plain face is for when they are not there.
+const PLAIN_FACE = [['a....a', 'aa..aa', 'aaaaaa', 'abaaba', 'aaaaaa', 'aaddaa'], { a: '#c9c2b8', b: '#2b2622', d: '#8a7f74' }];
 const LEATHER = '#6b4a2a';
 function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null) {
-  const [face, pal] = PET_FACES[`${kind}:${variant}`] || PET_FACES[kind] || PET_FACES.wolf;
+  const faces = state.items?.faces || {};
+  const [face, pal] = faces[`${kind}:${variant}`] || faces[kind] || PLAIN_FACE;
   const w = face[0].length + 2;
   const grid = [Array(w).fill('.'), ...face.map((r) => ['.', ...r, '.'])];
   // The collar: two rows as wide as the bottom of the head.
@@ -1937,6 +1898,7 @@ function jobName(job) {
 
 async function loadItems() {
   state.items = await fetchJson(`items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
   buildFindIndex();
   if (finds) showFinds(finds.type, finds.key, false);
   renderThings();
