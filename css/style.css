@@ -413,6 +413,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 .pop ul.inv li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 2px; font-size: 12px; border-bottom: 1px solid var(--line); }
 .pop ul.inv li b { font-weight: 600; white-space: nowrap; }
 .pop ul.inv li.hit { color: var(--accent); font-weight: 700; }
+/* A sign's writing, centred on a plank like in the game. */
+.pop .sign-text { margin-top: 6px; padding: 7px 12px; min-width: 150px; max-width: 240px; background: #c49a5c; color: #2b1d10; border: 2px solid #6b4a26; border-radius: 3px; text-align: center; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
 .pop ul.trades li { flex-direction: column; gap: 1px; }
 .pop ul.trades li b { color: var(--sub); font-weight: 500; white-space: normal; }
 

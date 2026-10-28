@@ -1723,7 +1723,7 @@ function setupSearch() {
 // items.json comes from the map maker; picking a search result marks every place it was found.
 const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
-let findIndex = { items: [], trades: [], jobs: [] };
+let findIndex = { items: [], trades: [], jobs: [], signs: [] };
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
 // wherever it sits.
@@ -1807,6 +1807,24 @@ const CHEST_ART = [[
   'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#3a3229', B: '#3a3229', D: '#a0702a', N: '#c8c8c8' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
 const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1 });  // search hits
+// A wooden sign on its post: a plank board with lines of writing.
+const SIGN_ART = [[
+  'KKKKKKKKKKKKKK',
+  'KWWWWWWWWWWWWK',
+  'KWllllllllllWK',
+  'KWWWWWWWWWWWWK',
+  'KWlllllllWWWWK',
+  'KWWWWWWWWWWWWK',
+  'KWllllllllWWWK',
+  'KWWWWWWWWWWWWK',
+  'KKKKKKKKKKKKKK',
+  '.....KPPK.....',
+  '.....KPPK.....',
+  '.....KPPK.....',
+  '.....KKKK.....'], { K: '#2b1d10', W: '#c49a5c', l: '#4a3220', P: '#7a5430' }];
+const SIGN_SVG = pixSvg(...SIGN_ART, 1.3);
+const SIGN_BIG = pixSvg(...SIGN_ART, 1.3, 0, { grow: 1 });  // search hits
+const signTitle = (text) => text.split('\n').join(' ');
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
@@ -1832,7 +1850,7 @@ async function loadItems() {
 
 // One search entry per kind of item stored, per kind of item sold, and per villager job.
 function buildFindIndex() {
-  const items = new Map(), trades = new Map(), jobs = new Map();
+  const items = new Map(), trades = new Map(), jobs = new Map(), signs = new Map();
   for (const [dim, d] of Object.entries(state.items?.dims || {})) {
     for (const c of d.containers || []) {
       for (const it of c[4]) {
@@ -1853,14 +1871,23 @@ function buildFindIndex() {
         trades.get(k).villagers.add(`${dim}:${v[0]}:${v[1]}:${v[2]}`);
       }
     }
+    // Signs with the same words (signposts along a road) are one entry.
+    for (const g of d.signs || []) {
+      const k = signTitle(g[3]);
+      if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} 看板`, count: 0 });
+      signs.get(k).count += 1;
+    }
   }
-  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()] };
+  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()], signs: [...signs.values()] };
 }
 
-// Search suggestions for a typed word (stored items, things villagers sell, villager jobs).
+// Search suggestions for a typed word (sign writing, stored items, things villagers sell, villager jobs).
 function findSuggestions(q) {
   const out = [];
   const hit = (e) => e.hay.toLowerCase().includes(q);
+  for (const e of findIndex.signs.filter(hit)) {
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: `看板・${e.count}枚`, go: () => showFinds('sign', e.key) });
+  }
   for (const e of findIndex.trades.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
   }
@@ -1901,6 +1928,12 @@ function villagerMark(dim, v, key) {
   const trader = v[3] === 'wandering_trader';
   return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : VILLAGER_SVG, iconBig: trader ? TRADER_BIG : VILLAGER_BIG, name,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
+}
+function signMark(dim, g) {
+  const lines = g[3].split('\n');
+  return { dim, x: g[0], y: g[1], z: g[2], icon: SIGN_SVG, iconBig: SIGN_BIG, name: signTitle(g[3]),
+    popup: `<h4>${g[4] ? '吊り看板' : '看板'}</h4><div class="xyz">X ${g[0]} / Y ${g[1]} / Z ${g[2]}</div>`
+      + `<div class="sign-text">${lines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` };
 }
 
 // Search hits (hit = true) are drawn larger and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
@@ -1952,11 +1985,12 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
 // The chips under the search box (PC): show every villager / wandering trader / chest, barrel and shulker box here.
 const thingGroup = L.layerGroup();
 const STORAGE_KINDS = new Set(['chest', 'large_chest', 'barrel', 'shulker_box']);
-const thingsOn = { villagers: false, traders: false, chests: false };
+const thingsOn = { villagers: false, traders: false, chests: false, signs: false };
 function renderThings() {
   thingGroup.clearLayers();
   const d = state.items?.dims?.[state.dim] || {};
   const marks = [];
+  if (thingsOn.signs) marks.push(...(d.signs || []).map((g) => signMark(state.dim, g)));
   if (thingsOn.chests) marks.push(...(d.containers || []).filter((c) => STORAGE_KINDS.has(c[3])).map((c) => containerMark(state.dim, c, null)));
   if (thingsOn.villagers) marks.push(...(d.villagers || []).filter((v) => v[3] !== 'wandering_trader').map((v) => villagerMark(state.dim, v, null)));
   if (thingsOn.traders) marks.push(...(d.villagers || []).filter((v) => v[3] === 'wandering_trader').map((v) => villagerMark(state.dim, v, null)));
@@ -1967,6 +2001,7 @@ function setupThingChips() {
   $('#chip-villager').innerHTML = VILLAGER_SVG;
   $('#chip-chest').innerHTML = CHEST_SVG;
   $('#chip-trader').innerHTML = TRADER_SVG;
+  $('#chip-sign').innerHTML = SIGN_SVG;
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
   document.querySelectorAll('#chips button').forEach((b) => {
     const k = b.dataset.layer;
@@ -1988,6 +2023,8 @@ function showFinds(type, key, move = true) {
       for (const c of d.containers || []) {
         if (c[4].some((it) => itemKey(it) === key)) matches.push(containerMark(dim, c, key));
       }
+    } else if (type === 'sign') {
+      for (const g of d.signs || []) if (signTitle(g[3]) === key) matches.push(signMark(dim, g));
     } else {
       for (const v of d.villagers || []) {
         const ok = type === 'job' ? jobName(v[3]) === key : v[5].some(([, sell]) => itemKey(sell) === key);
@@ -1995,7 +2032,7 @@ function showFinds(type, key, move = true) {
       }
     }
   }
-  const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
+  const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'sign' ? findIndex.signs.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
     : findIndex.jobs.find((e) => e.key === key);
   if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
   finds = { type, key, label: entry?.label || '', matches };

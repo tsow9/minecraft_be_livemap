@@ -1,12 +1,13 @@
 """What is stored where: the contents of chests and other containers, and what villagers sell.
 
 Writes items.json for the site's search ("鉄インゴット" finds the chests holding it, "修繕" finds the
-librarians selling mending books). Containers come from each chunk's block entities, villagers from the
-world's actors. Japanese names for items, enchantments and villager jobs come from the game's own
+librarians selling mending books, "農場" finds signs saying so). Containers and signs come from each chunk's
+block entities, villagers from the world's actors. Japanese names for items, enchantments and villager jobs come from the game's own
 language file when it could be downloaded.
 """
 import json
 import os
+import re
 import struct
 
 import bedrock_db
@@ -19,6 +20,7 @@ CONTAINERS = {
     'Dropper': 'dropper', 'Furnace': 'furnace', 'BlastFurnace': 'blast_furnace', 'Smoker': 'smoker',
     'BrewingStand': 'brewing_stand', 'Crafter': 'crafter', 'ChiseledBookshelf': 'chiseled_bookshelf', 'DecoratedPot': 'decorated_pot',
 }
+SIGNS = {'Sign': 0, 'HangingSign': 1}  # block entity id -> 1 for a hanging sign
 VILLAGERS = {'minecraft:villager_v2', 'minecraft:villager', 'minecraft:wandering_trader'}
 JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographer', 'cleric', 'armorer', 'weaponsmith',
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
@@ -75,6 +77,20 @@ def _items(raw):
     return out
 
 
+def _sign_text(be):
+    """What is written on a sign, front then back, without colour codes; '' when blank."""
+    sides = [be.get('FrontText'), be.get('BackText')] if isinstance(be.get('FrontText'), dict) else [be]
+    out = []
+    for side in sides:
+        text = side.get('Text') if isinstance(side, dict) else None
+        if isinstance(text, str):
+            lines = [re.sub(r'§.', '', line).strip() for line in text.split('\n')]
+            text = '\n'.join(line for line in lines if line)
+            if text and text not in out:
+                out.append(text)
+    return '\n'.join(out)[:200]
+
+
 def _villager(actor, dim):
     pos = actor.get('Pos')
     if not (isinstance(pos, list) and len(pos) == 3):
@@ -99,7 +115,7 @@ def _villager(actor, dim):
 
 
 def scan(db_dir):
-    containers, villagers, actor_dims, actors = [], [], {}, {}
+    containers, villagers, signs, actor_dims, actors = [], [], [], {}, {}
 
     def want(key):
         if key.startswith(b'actorprefix') or key.startswith(b'digp'):
@@ -127,6 +143,11 @@ def scan(db_dir):
                         villagers.append(v)
             continue
         for be in _compounds(value):
+            if be.get('id') in SIGNS and all(isinstance(be.get(k), int) for k in 'xyz'):
+                text = _sign_text(be)
+                if text:
+                    signs.append({'dim': dim, 'x': be['x'], 'y': be['y'], 'z': be['z'], 'text': text, 'hanging': SIGNS[be['id']]})
+                continue
             kind = CONTAINERS.get(be.get('id'))
             if not kind or not all(isinstance(be.get(k), int) for k in 'xyz'):
                 continue
@@ -142,7 +163,7 @@ def scan(db_dir):
             if v:
                 villagers.append(v)
     # Empty containers are left out (after joining double chests, so a half-empty double chest still shows).
-    return [c for c in _merge_pairs(containers) if c['items']], villagers
+    return [c for c in _merge_pairs(containers) if c['items']], villagers, signs
 
 
 def _merge_pairs(containers):
@@ -199,7 +220,7 @@ def _names(lang, ids):
 
 
 def write(site, db_dir, lang):
-    containers, villagers = scan(db_dir)
+    containers, villagers, signs = scan(db_dir)
     ids = {it[0] for c in containers for it in c['items']}
     ids |= {it[0] for v in villagers for t in v['trades'] for it in t[0] + [t[1]]}
     ids |= set(CONTAINERS.values()) | {'large_chest'}
@@ -218,14 +239,16 @@ def write(site, db_dir, lang):
         if v:
             jobs[j] = v
     dims = {}
+    def of(dim):
+        return dims.setdefault(DIM_NAMES.get(dim, str(dim)), {'containers': [], 'villagers': [], 'signs': []})
     for c in containers:
-        dims.setdefault(DIM_NAMES.get(c['dim'], str(c['dim'])), {'containers': [], 'villagers': []})['containers'].append(
-            [c['x'], c['y'], c['z'], c['kind'], c['items']])
+        of(c['dim'])['containers'].append([c['x'], c['y'], c['z'], c['kind'], c['items']])
     for v in villagers:
-        dims.setdefault(DIM_NAMES.get(v['dim'], str(v['dim'])), {'containers': [], 'villagers': []})['villagers'].append(
-            [v['x'], v['y'], v['z'], v['job'], v['name'], v['trades']])
+        of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades']])
+    for g in signs:
+        of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs}
     with open(os.path.join(site, 'items.json'), 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
     traded = sum(1 for v in villagers if v['trades'])
-    return len(containers), len(villagers), traded
+    return len(containers), len(villagers), traded, len(signs)

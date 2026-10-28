@@ -584,8 +584,8 @@ def main():
         surfaces = read_surfaces(db_dir, dims)
         try:
             import world_items
-            n_box, n_vil, n_trade = world_items.write(args.site, db_dir, lang)
-            print(f'中身のある入れ物: {n_box} 個、村人: {n_vil} 人(取引あり {n_trade} 人)')
+            n_box, n_vil, n_trade, n_sign = world_items.write(args.site, db_dir, lang)
+            print(f'中身のある入れ物: {n_box} 個、村人: {n_vil} 人(取引あり {n_trade} 人)、文字のある看板: {n_sign} 枚')
         except Exception as e:  # the map itself matters more than the search data
             print(f'入れ物・村人の読み込みに失敗しました: {e}')
         if args.live is not None:
