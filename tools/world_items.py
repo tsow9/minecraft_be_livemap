@@ -121,8 +121,10 @@ def _animal(actor, dim, owners):
     if not (name or tamed) or not (isinstance(pos, list) and len(pos) == 3):
         return None
     owner = owners.get(actor.get('OwnerNew')) if tamed else None
+    # Coat colour or pattern (horses, cats, llamas...), so the map can draw the animal as it looks.
+    variant = actor.get('Variant') if isinstance(actor.get('Variant'), int) else None
     return {'dim': dim, 'x': int(pos[0] // 1), 'y': int(pos[1] // 1), 'z': int(pos[2] // 1), 'kind': _short(kind),
-            'name': name or None, 'tamed': tamed, 'owner': owner}
+            'name': name or None, 'tamed': tamed, 'owner': owner, 'variant': variant}
 
 
 def _villager(actor, dim):
@@ -296,7 +298,7 @@ def write(site, db_dir, lang, secret=''):
     for g in signs:
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     for a in animals:
-        of(a['dim'])['animals'].append([a['x'], a['y'], a['z'], a['kind'], a['name'], int(a['tamed']), a['owner']])
+        of(a['dim'])['animals'].append([a['x'], a['y'], a['z'], a['kind'], a['name'], int(a['tamed']), a['owner'], a['variant']])
     out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs, 'mobs': mobs}
     with open(os.path.join(site, 'items.json'), 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
