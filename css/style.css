@@ -373,13 +373,12 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   #clock .ic { width: 14px; height: 14px; }
   #clock[hidden] { display: none; }
   #coords, #coords-open { top: calc(max(10px, env(safe-area-inset-top)) + 50px) !important; }
-  #coords { width: calc(var(--dims-left, 210px) - 18px); container-type: inline-size; }
-  /* Narrow phones: the numbers shrink a little so the close button never covers them. */
-  #coords .xyz { font-size: clamp(11px, 7.4cqw, 15px) !important; gap: clamp(4px, 2.6cqw, 8px) !important; margin-right: 0; }
+  /* The numbers keep one size in both views; the box grows to fit them instead. */
+  #coords { min-width: calc(var(--dims-left, 210px) - 18px); max-width: calc(100vw - 76px); }
+  #coords .xyz { margin-right: 2px; }
   #sidebuttons { top: var(--side-top, 142px) !important; }
   #coords { padding: 6px 4px 4px 10px !important; grid-template-columns: minmax(0, 1fr) auto auto auto; }
-  #coords.only { width: auto; container-type: normal; padding-bottom: 6px !important; grid-template-columns: auto auto auto auto; }
-  #coords.only .xyz { font-size: 14px !important; gap: 7px !important; margin-right: 2px; }
+  #coords.only { min-width: 0; padding-bottom: 6px !important; }
   #coords .icon-btn { width: 26px; height: 26px; }
   .coordfind label { gap: 4px; }
   .coordfind input { padding: 0 6px; }
