@@ -359,7 +359,7 @@ function gatePage() {
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Blockmap</title><link rel="icon" href="/favicon.svg">
 <style>
-:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
 font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
 .box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:#1f2229;border:1px solid #2e323b}
 h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6;font-size:14px}
@@ -369,9 +369,9 @@ details{margin-top:18px;color:#a7abb3;font-size:13px}summary{cursor:pointer}
 form{display:flex;gap:8px;margin-top:10px}input{flex:1;min-width:0;height:38px;padding:0 12px;border-radius:10px;border:1px solid #2e323b;
 background:#15171c;color:inherit;font-size:16px}form button{height:38px;padding:0 14px;border:0;border-radius:10px;background:#2e323b;color:inherit}
 </style></head><body><div class="box"><h1>Blockmap</h1>
-<p>Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。</p>
-<button id="ms">Microsoft でログイン</button><p id="msg"></p>
-<details><summary>招待リンクをお持ちの方</summary><form id="f"><input id="link" placeholder="招待リンク" autocomplete="off"><button>開く</button></form></details>
+<div id="start"><p>Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。</p>
+<button id="ms">Microsoft でログイン</button></div><p id="msg"></p>
+<details id="old"><summary>招待リンクをお持ちの方</summary><form id="f"><input id="link" placeholder="招待リンク" autocomplete="off"><button>開く</button></form></details>
 </div>
 <script>
 const msg = document.getElementById('msg');
@@ -380,18 +380,25 @@ document.getElementById('ms').onclick = async () => {
   const r = await fetch('/api/ms/start', { method: 'POST' }).then((x) => x.json()).catch(() => null);
   if (r && r.url) location.href = r.url; else msg.textContent = 'ログインを始められませんでした。もう一度ためしてください';
 };
+// While a sign-in is being checked, only that is shown; the buttons come back if it does not work out.
+function busy(on) {
+  document.getElementById('start').hidden = on;
+  document.getElementById('old').hidden = on;
+}
 async function finish(code, ms) {
+  busy(true);
   msg.style.color = '#a7abb3';
   msg.textContent = 'ゲーマータグを確かめています…';
   try {
     const res = await fetch('/api/ms/finish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, ms }) });
     const d = await res.json().catch(() => ({}));
-    if (res.ok) { location.reload(); return; }
+    if (res.ok) { msg.textContent = 'ログインできました。地図を開いています…'; location.reload(); return; }
+    busy(false);
     msg.style.color = '';
     msg.textContent = d.error === 'not member' ? 'このアカウント(' + d.gamertag + ')は、この Realm のメンバーではありません'
       : d.error === 'expired' ? '時間がたちすぎました。もう一度ログインしてください'
       : 'ログインを確かめられませんでした(' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
-  } catch { msg.style.color = ''; msg.textContent = '通信できませんでした。もう一度ためしてください'; }
+  } catch { busy(false); msg.style.color = ''; msg.textContent = '通信できませんでした。もう一度ためしてください'; }
 }
 function keyFrom(text) {
   const m = String(text).match(/[#&](v|w|join)=([^&\\s]+)/);
