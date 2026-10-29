@@ -20,6 +20,7 @@ const DEMO_SNAPSHOTS = [
 
 // Minecraft X → lng, Z → -lat, so north (-Z) is up and 1 block = 1px at zoom 0.
 const ll = (x, z) => L.latLng(-z, x);
+let topBoxesBottom = 0;  // screen y where the boxes at the top (search, chips, readout, clock) end
 const block = (latlng) => ({ x: Math.floor(latlng.lng), z: Math.floor(-latlng.lat) });
 const round1 = (v) => Math.round(v * 10) / 10;
 // Hand drawings keep finer positions so zooming in never makes them wobble.
@@ -962,6 +963,9 @@ function setupTools() {
   let popupWasOpen = false;
   map.on('preclick', () => { popupWasOpen = !!map._popup && map.hasLayer(map._popup); });
   map.on('click', (e) => {
+    // Phones: the strip of map between the boxes at the top is never tapped on purpose (a finger aiming at a
+    // chip or the clock lands there), so a tap above the last of those boxes does nothing.
+    if (matchMedia('(max-width: 700px)').matches && e.originalEvent && e.originalEvent.clientY < topBoxesBottom) return;
     // A search result is marked: a tap on another spot of the map just takes the marking away.
     if (finds && state.mode === 'none' && !route.from) { clearFinds(); return; }
     const { x, z } = block(e.latlng);
@@ -1389,6 +1393,7 @@ function setupCoords() {
       return e.hidden || r.top > innerHeight / 3 ? 0 : r.bottom;  // only what sits at the top (the PC readout is at the bottom)
     }));
     const side = $('#sidebuttons').getBoundingClientRect();
+    topBoxesBottom = top;
     L.Popup.prototype.options.autoPanPaddingTopLeft = L.point(10, Math.ceil(top + 8));
     L.Popup.prototype.options.autoPanPaddingBottomRight = L.point(side.top < top + 120 ? Math.ceil(innerWidth - side.left + 8) : 10, 80);
   };
