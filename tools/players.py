@@ -1,7 +1,9 @@
 """Player positions, online status, record-to-member matching, and explorer estimates.
 
-World player records (player_server_*) carry positions but no Xbox ID, so we learn which
-member owns which record by matching "whose position moved" with "who was online" between checks.
+World player records (player_server_*) carry positions but no Xbox ID. Each one has a player_<id> record next to
+it holding the account's id in the game (MsaId, a UUID the game makes from the XUID), which ties it to a Realm
+member exactly. For records without one, we still learn the owner by matching "whose position moved" with
+"who was online" between checks.
 The state lives in live.json, which the site reads directly.
 """
 import hashlib
@@ -22,8 +24,24 @@ def _hash(secret, value):
     return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()[:16]
 
 
+def _identities(db_dir, secret):
+    """player_server_<id> key -> hashed game id of the account it belongs to (from the player_<id> records)."""
+    out = {}
+    for key, value in bedrock_db.scan(db_dir, lambda k: k.startswith(b'player_') and not k.startswith(b'player_server_')):
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except (KeyError, ValueError, IndexError):
+            continue
+        msa, server = root.get('MsaId'), root.get('ServerId')
+        if isinstance(msa, str) and msa and isinstance(server, str) and server:
+            server = server if server.startswith('player_server_') else f'player_server_{server}'
+            out[server] = _hash(secret, msa.lower().replace('-', ''))
+    return out
+
+
 def read_records(db_dir, secret):
     out = []
+    identities = _identities(db_dir, secret)
     for key, value in bedrock_db.scan(db_dir, lambda k: k.startswith(b'player_server_')):
         try:
             root, _ = nbt.root_compound(value, 0)
@@ -35,6 +53,7 @@ def read_records(db_dir, secret):
             'dim': DIM_NAMES.get(root.get('DimensionId', 0), 'overworld'),
             'x': math.floor(pos[0]), 'y': math.floor(pos[1] - 1.62), 'z': math.floor(pos[2]),
             'death': None,
+            'identity': identities.get(key.decode('latin-1')),
         }
         # The bed (or respawn anchor) the player last used; NaturalSpawn = 1 means "no bed, world spawn".
         if root.get('NaturalSpawn') == 0 and 'SpawnBlockPositionX' in root and abs(root['SpawnBlockPositionX']) < 30_000_000:
@@ -61,6 +80,11 @@ def anyone_online(state, members):
 
 
 def _match(players, members, since):
+    # Exact: the world says which account each record belongs to.
+    by_identity = {m['identity']: m['id'] for m in members if m.get('identity')}
+    for p in players:
+        if by_identity.get(p.get('identity')):
+            p['member'] = by_identity[p['identity']]
     linked = {p['member'] for p in players if p.get('member')}
     moved = [p for p in players if not p.get('member') and p['_moved']]
     active = [m for m in members if m['id'] not in linked and (
