@@ -1783,7 +1783,7 @@ const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
 const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1 });  // search hits
 // Each job's clothes on the villager above, after the game's: hats, aprons, an eye patch, the armorer's goggles.
 const JOB_ART = {
-  farmer: [['...KKKKKK...', '..KYYYYYYK..', 'KKYYYYYYYYKK', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#d9b24c' }],
+  farmer: [['..KKKKKKKK..', '..KYyYYyYK..', '..KUUUUUUK..', 'KYYyYYYYyYYK', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#e3be55', y: '#c9a23d', U: '#5a3a22' }],
   fisherman: [['..KKKKKKKK..', '..KTTTTTTK..', '.KQQQQQQQQK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KQQQQKKQQQQK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { T: '#c9a66b', Q: '#3e8c8c' }],
   shepherd: [['..KKKKKKKK..', '..KHHHHHHK..', '.KWWWWWWWWK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KWWWWKKWWWWK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { H: '#6b4428', W: '#ece8df' }],
   fletcher: [['..KKKKKKKKF.', '..KGGGGGGKF.', '..KGGGGGGK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KGGGGKKGGGGK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { G: '#4f7a3a', F: '#f4f1ea' }],
