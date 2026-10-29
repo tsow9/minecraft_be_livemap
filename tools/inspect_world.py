@@ -131,9 +131,11 @@ def account_links(db):
     secret = os.environ.get('CACHE_KEY', '')
     try:
         with open('members.json', encoding='utf-8') as f:
-            member_ids = {m['id'] for m in json.load(f).get('members', []) if m.get('id')}
+            listed = json.load(f).get('members', [])
+        member_ids = {m['id'] for m in listed if m.get('id')}
+        identities = {m['identity'] for m in listed if m.get('identity')}
     except (OSError, ValueError):
-        member_ids = set()
+        member_ids, identities = set(), set()
     server_keys = {k.decode('latin-1') for k, _ in bedrock_db.scan(db, lambda k: k.startswith(b'player_server_'))}
     links = 0
     fields = collections.Counter()
@@ -153,6 +155,9 @@ def account_links(db):
                 hits[f'{k} → プレイヤー記録'] += 1
             if secret and players._hash(secret, v) in member_ids:
                 hits[f'{k} → Realmのメンバー'] += 1
+            plain = v.lower().replace('-', '')
+            if secret and players._hash(secret, plain) in identities:
+                hits[f'{k} → メンバーのゲーム内ID'] += 1
             if v.isdigit():
                 hits[f'{k} は数字だけ({len(v)}桁)'] += 1
         own = key.decode('latin-1')[len('player_'):]

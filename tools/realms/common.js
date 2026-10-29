@@ -72,6 +72,15 @@ function hashId (value) {
   return crypto.createHmac('sha256', SECRET).update(String(value)).digest('hex').slice(0, 16)
 }
 
+// The id the game itself gives an Xbox account (a name-based UUID made from the XUID), as 32 hex digits.
+// The world keeps it in each player_<id> record (MsaId), next to that player's record (ServerId).
+function gameIdentity (xuid) {
+  const b = crypto.createHash('md5').update(`pocket-auth-1-xuid:${xuid}`).digest()
+  b[6] = (b[6] & 0x0f) | 0x30
+  b[8] = (b[8] & 0x3f) | 0x80
+  return b.toString('hex')
+}
+
 // Realms reports lastLogin in epoch seconds; accept milliseconds or ISO strings too.
 function toMillis (v) {
   if (v == null) return null
@@ -161,6 +170,7 @@ async function memberList (auth, realm) {
   }
   return { names, members: players.map(p => ({
     id: hashId(p.uuid),
+    identity: hashId(gameIdentity(p.uuid)),
     name: names[p.uuid] || p.name || null,
     online: p.online === true,
     lastLogin: toMillis(p.lastLogin)
