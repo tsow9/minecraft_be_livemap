@@ -158,6 +158,75 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+  # The invite-only site on Cloudflare (worker/): the site, the map data in a hidden folder, and the shared pins.
+  cloudflare:
+    needs: [update]
+    if: >-
+      always() && !cancelled() && (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開') ||
+        needs.update.outputs.changed == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
+      CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+    steps:
+      - name: 設定の確認
+        id: check
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$SHARE_PASSPHRASE" ] && [ -n "$CACHE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Cloudflare の Secrets がそろっていないので、招待制のサイトは作りません"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - name: 鍵を用意(ログには伏せ字で出ます)
+        if: steps.check.outputs.ready == 'true'
+        run: python3 tools/site_keys.py "$RUNNER_TEMP"
+      - name: 地図データを取得
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          mkdir -p data
+          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
+      - name: 公開するファイルをまとめる
+        if: steps.check.outputs.ready == 'true'
+        run: python3 tools/build_site.py data _site --data-folder "$(cat "$RUNNER_TEMP/data_dir")"
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+      - name: 準備
+        if: steps.check.outputs.ready == 'true'
+        run: npm ci --prefix worker --no-audit --no-fund
+      - name: データベースを用意
+        if: steps.check.outputs.ready == 'true'
+        working-directory: worker
+        run: |
+          find_db() { npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="blockmap-share");process.stdout.write(d?d.uuid:"")})'; }
+          id=$(find_db)
+          if [ -z "$id" ]; then
+            npx wrangler d1 create blockmap-share
+            id=$(find_db)
+          fi
+          [ -n "$id" ] || { echo "::error::データベースを作れませんでした"; exit 1; }
+          sed -e "s/__DB_ID__/$id/" wrangler.template.toml > wrangler.toml
+          npx wrangler d1 execute blockmap-share --remote --file schema.sql --yes
+      - name: Cloudflare に公開
+        if: steps.check.outputs.ready == 'true'
+        working-directory: worker
+        run: |
+          npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -n1)
+          [ -n "$url" ] || { echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"; exit 1; }
+          echo "招待制のサイト: $url" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/secrets.json"
+
   deploy:
     needs: [update]
     if: >-

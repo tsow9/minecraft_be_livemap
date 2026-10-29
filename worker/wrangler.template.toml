@@ -1,0 +1,18 @@
+# Filled in by the 地図サイト workflow (database_id). The site and map data are built into ../_site first.
+name = "blockmap"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[assets]
+directory = "../_site"
+binding = "ASSETS"
+html_handling = "none"
+not_found_handling = "none"
+# The page itself and the api go through the worker (the invite check); everything else is served as plain files.
+run_worker_first = ["/", "/index.html", "/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blockmap-share"
+database_id = "__DB_ID__"

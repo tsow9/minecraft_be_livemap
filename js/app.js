@@ -20,6 +20,8 @@ const DEMO_SNAPSHOTS = [
 
 // Minecraft X → lng, Z → -lat, so north (-Z) is up and 1 block = 1px at zoom 0.
 const ll = (x, z) => L.latLng(-z, x);
+// On Cloudflare the map data sits in a folder whose name only invited visitors are given (set by the page).
+const DATA = typeof window.BLOCKMAP_DATA === 'string' ? window.BLOCKMAP_DATA : '';
 let noTapAbove = 0;  // phones: screen y where the search box, the dimension switch and the chips end
 const block = (latlng) => ({ x: Math.floor(latlng.lng), z: Math.floor(-latlng.lat) });
 const round1 = (v) => Math.round(v * 10) / 10;
@@ -73,6 +75,11 @@ const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
 const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false };
 
 function sharing() { return !!share.url; }
+// Writers get the invite buttons; the view-only link exists only on Cloudflare (where the map is behind an invite).
+function showInvites(on) {
+  $('#share-invite').hidden = !on;
+  $('#view-invite').hidden = !on || !DATA;
+}
 function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
 function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch { /* private mode */ } }
 
@@ -224,7 +231,7 @@ function askPass() {
           setPass(pass);
           dlg.close();
           toast('書き込めるようになりました');
-      $('#share-invite').hidden = false;
+      showInvites(true);
           pushChanges();
           return;
         }
@@ -265,7 +272,7 @@ async function joinFromLink() {
     if (res.ok) {
       setPass(pass);
       toast('招待リンクを確認しました。ピンや図形を書き込めます');
-      $('#share-invite').hidden = false;
+      showInvites(true);
       pushChanges();
     } else if (res.status === 401) {
       toast('この招待リンクは使えません。合言葉が合っているか確かめてください');
@@ -288,8 +295,16 @@ function setupShare() {
   window.addEventListener('hashchange', joinFromLink);
   if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
-  $('#share-invite').hidden = !getPass();
-  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '招待リンクをコピーしました。仲間にだけ送ってください'));
+  showInvites(!!getPass());
+  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
+  // The view-only link comes from the server (only writers may ask for it).
+  $('#view-invite').addEventListener('click', async () => {
+    try {
+      const res = await fetch(`${share.url}/invite`, { headers: { 'X-Passphrase': getPass() }, cache: 'no-store' });
+      if (!res.ok) throw new Error(String(res.status));
+      copyText((await res.json()).link, '見る用の招待リンクをコピーしました。地図を見せたい仲間に送ってください');
+    } catch { toast('招待リンクを用意できませんでした'); }
+  });
   loadSyncState();
   renderAll();
   joinFromLink();
@@ -613,7 +628,7 @@ const HistoryTileLayer = L.TileLayer.extend({
 
 async function loadManifest(id) {
   const v = encodeURIComponent(state.config.updatedAt || '');
-  if (!manifests.has(id)) manifests.set(id, (await fetchJson(`manifests/${encodeURIComponent(id)}.json?v=${v}`))?.tiles || null);
+  if (!manifests.has(id)) manifests.set(id, (await fetchJson(`${DATA}manifests/${encodeURIComponent(id)}.json?v=${v}`))?.tiles || null);
 }
 
 function updatedText() {
@@ -1118,7 +1133,7 @@ let blockNamesJa = [];
 let centerInfo = null;
 
 async function loadBlockNames() {
-  const data = await fetchJson(`blocks.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  const data = await fetchJson(`${DATA}blocks.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   blockNames = Array.isArray(data?.names) ? data.names : [];
   blockNamesJa = Array.isArray(data?.ja) ? data.ja : [];
 }
@@ -1930,7 +1945,7 @@ function jobName(job) {
 }
 
 async function loadItems() {
-  state.items = await fetchJson(`items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  state.items = await fetchJson(`${DATA}items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
   buildFindIndex();
   if (finds) showFinds(finds.type, finds.key, false);
@@ -2260,7 +2275,7 @@ const PORTAL_SVG = `<svg class="gm-svg" viewBox="0 0 20 28" width="17" height="2
   + '<path d="M6 8c3-1 5 1 8 0M6 13c3-1 5 1 8 0M6 18c3-1 5 1 8 0" stroke="#d6b8ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g></svg>';
 
 async function loadPortals() {
-  state.portals = (await fetchJson(`portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
+  state.portals = (await fetchJson(`${DATA}portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
   renderPortals();
 }
 
@@ -2772,7 +2787,7 @@ async function fetchLive() {
 }
 
 async function refreshConfig() {
-  const cfg = await fetchJson(`config.json?t=${Date.now()}`);
+  const cfg = await fetchJson(`${DATA}config.json?t=${Date.now()}`);
   noteVersion(cfg?.version);
   if (!cfg || !Array.isArray(cfg.snapshots) || cfg.updatedAt === state.config.updatedAt) return;
   const before = snapshots();
@@ -2789,7 +2804,7 @@ async function refreshConfig() {
   renderTimeline();
   await loadBlockNames();
   refreshBase();
-  state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  state.explore = await fetchJson(`${DATA}explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   refreshExplore();
   loadPortals();
   loadItems();
@@ -2893,7 +2908,7 @@ function renderRealm(r, online, memberCount) {
 }
 
 async function setupPlayers() {
-  state.explore = await fetchJson(`explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  state.explore = await fetchJson(`${DATA}explore.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   playerGroup.addTo(map);
   portalGroup.addTo(map);
   findGroup.addTo(map);
@@ -2994,7 +3009,7 @@ function setupUpdates() {
 // ---------- boot ----------
 async function loadConfig() {
   try {
-    const res = await fetch(`config.json?t=${Date.now()}`, { cache: 'no-cache' });
+    const res = await fetch(`${DATA}config.json?t=${Date.now()}`, { cache: 'no-cache' });
     if (res.ok) return await res.json();
   } catch { /* fall through to demo */ }
   return {};
@@ -3004,7 +3019,7 @@ async function main() {
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',
-    tileUrl: cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png',
+    tileUrl: DATA + (cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png'),
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
@@ -3032,8 +3047,9 @@ async function main() {
   await loadBlockNames();
   refreshBase();
   state.annotations = store.load();
-  share.url = new URLSearchParams(location.search).get('share') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-    ? new URLSearchParams(location.search).get('share') : state.config.shareUrl;
+  share.url = DATA ? `${location.origin}/api`
+    : new URLSearchParams(location.search).get('share') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+      ? new URLSearchParams(location.search).get('share') : state.config.shareUrl;
   renderAll();
   setupShare();
   setupTools();
