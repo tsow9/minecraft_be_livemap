@@ -72,6 +72,13 @@ function hashId (value) {
   return crypto.createHmac('sha256', SECRET).update(String(value)).digest('hex').slice(0, 16)
 }
 
+// The id the map site on Cloudflare checks a Microsoft sign-in against (worker/worker.js holds MEMBER_KEY, made the
+// same way by tools/site_keys.py). It shows nobody's XUID.
+const MEMBER_KEY = SECRET ? crypto.createHmac('sha256', SECRET).update('blockmap member').digest('hex') : ''
+function siteId (xuid) {
+  return crypto.createHmac('sha256', MEMBER_KEY).update(String(xuid)).digest('hex').slice(0, 32)
+}
+
 // The id the game itself gives an Xbox account (a name-based UUID made from the XUID), as 32 hex digits.
 // The world keeps it in each player_<id> record (MsaId), next to that player's record (ServerId).
 function gameIdentity (xuid) {
@@ -157,6 +164,8 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
   // The owner's gamertag (the account the map uses), looked up together with the members' names.
   const owner = names[realm.ownerUUID] || realm.owner
   info.owner = owner ? String(owner).slice(0, 40) : null
+  // The site's owner (the account the map uses, which set the site up) manages who may write on the site.
+  info.ownerXid = realm.ownerUUID ? siteId(realm.ownerUUID) : null
   return { members, realm: info }
 }
 
@@ -171,6 +180,7 @@ async function memberList (auth, realm) {
   return { names, members: players.map(p => ({
     id: hashId(p.uuid),
     identity: hashId(gameIdentity(p.uuid)),
+    xid: siteId(p.uuid),
     name: names[p.uuid] || p.name || null,
     online: p.online === true,
     lastLogin: toMillis(p.lastLogin)

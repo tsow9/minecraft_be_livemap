@@ -10,7 +10,7 @@ binding = "ASSETS"
 html_handling = "none"
 not_found_handling = "none"
 # The page itself and the api go through the worker (the invite check); everything else is served as plain files.
-run_worker_first = ["/", "/index.html", "/ms-test", "/api/*"]
+run_worker_first = ["/", "/index.html", "/api/*"]
 
 # The Microsoft sign-in app shared by every Blockmap site (not a secret: it shows in the sign-in address anyway).
 [vars]

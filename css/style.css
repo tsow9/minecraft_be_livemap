@@ -504,3 +504,5 @@ body.finding .pl-icon.off { opacity: .4; }
   #dims button { padding: 0 6px; }
   #clock span { display: none; }
 }
+.mini.on { background: var(--accent); border-color: var(--accent); color: #06130d; }
+#me-line .mini { margin-left: 6px; }

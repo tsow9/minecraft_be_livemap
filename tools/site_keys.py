@@ -21,11 +21,13 @@ def main():
     if not secret or not passphrase:
         sys.exit('REALMS_CACHE_KEY と SHARE_PASSPHRASE が必要です')
     view, data = derive(secret, 'blockmap view'), derive(secret, 'blockmap data')
-    print(f'::add-mask::{view}')
-    print(f'::add-mask::{data}')
+    # Checks a Microsoft sign-in against the members (tools/realms/common.js makes the members' side the same way).
+    member = hmac.new(secret.encode(), b'blockmap member', hashlib.sha256).hexdigest()
+    for key in (view, data, member):
+        print(f'::add-mask::{key}')
     path = os.path.join(out, 'secrets.json')
     with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w', encoding='utf-8') as f:
-        json.dump({'VIEW_KEY': view, 'DATA_DIR': data, 'PASSPHRASE': passphrase}, f)
+        json.dump({'VIEW_KEY': view, 'DATA_DIR': data, 'PASSPHRASE': passphrase, 'MEMBER_KEY': member}, f)
     with open(os.path.join(out, 'data_dir'), 'w', encoding='utf-8') as f:
         f.write(data)
 

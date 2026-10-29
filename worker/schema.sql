@@ -32,3 +32,17 @@ CREATE TABLE IF NOT EXISTS ms_sessions (
   verifier TEXT NOT NULL,
   created INTEGER NOT NULL
 );
+-- Signed in with Microsoft: one row per device (the cookie's value is kept only as a hash).
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  xid TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created INTEGER NOT NULL,
+  seen INTEGER
+);
+-- Which members the site's owner lets write (members not listed only look).
+CREATE TABLE IF NOT EXISTS access (
+  xid TEXT PRIMARY KEY,
+  write INTEGER NOT NULL DEFAULT 0,
+  updated INTEGER
+);

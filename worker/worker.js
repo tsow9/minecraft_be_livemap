@@ -1,22 +1,24 @@
 // The whole map site on Cloudflare: the site's files, the map data, and the shared pins.
 //
-// Only people who opened an invite link see the map. The link's key is swapped for a cookie on this device;
-// the page is then handed the name of the folder the map data sits in (DATA_DIR, a long random name), so the
-// map pictures can be served as plain files (free and unlimited) without checking each one.
-// Writing pins and drawings needs a write link: the owner makes one per person (and can stop it) while signed in
-// with the passphrase (PASSPHRASE), which only the owner keeps.
+// People sign in with Microsoft. Realm members may look; the site's owner (the account the map uses, which set the
+// site up) may also choose which members may write. Once someone is in, the page is handed the name of the folder
+// the map data sits in (DATA_DIR, a long random name), so the map pictures can be served as plain files (free and
+// unlimited) without checking each one.
+// The older ways in still work until the switch-over: the view invite link (VIEW_KEY, a cookie), write links, and
+// the owner's passphrase (PASSPHRASE, also used by the live check to put in player data).
 //
-// Secrets: VIEW_KEY (the key in the view invite link), DATA_DIR, PASSPHRASE.
+// Secrets: VIEW_KEY, DATA_DIR, PASSPHRASE, MEMBER_KEY (checks a sign-in against the members' ids).
 const MAX_ITEM_BYTES = 64 * 1024;
 const MAX_ITEMS = 10000;
 const MAX_BATCH = 300;
 const KEEP_DELETED_MS = 30 * 24 * 3600 * 1000;
 const MAX_FAILS = 10;
 const FAIL_WINDOW_MS = 3600 * 1000;
-const COOKIE = 'bm';
+const COOKIE = 'bm';            // the older view-link cookie
+const SESSION = 'bms';          // signed in with Microsoft
 const COOKIE_DAYS = 400;
 const MAX_WRITERS = 200;
-const USED_EVERY_MS = 3600 * 1000;  // how often a write link's "last used" is brought up to date
+const USED_EVERY_MS = 3600 * 1000;  // how often "last used" / "last seen" is brought up to date
 
 export default {
   async fetch(req, env) {
@@ -24,36 +26,45 @@ export default {
     const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
       status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers },
     });
+    const cookie = (name, value, days) => `${name}=${value}; Max-Age=${days * 86400}; Path=/; Secure; HttpOnly; SameSite=Lax`;
     try {
+      const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+      const me = await whoIs(req, env, ip);
       if (url.pathname === '/' || url.pathname === '/index.html') {
-        if (!(await viewer(req, env))) return gatePage();
+        if (!me) return gatePage();
         const page = await env.ASSETS.fetch(new Request(new URL('/index.html', url)));
         const html = (await page.text()).replace('<head>', `<head><script>window.BLOCKMAP_DATA=${JSON.stringify(`/d/${env.DATA_DIR}/`)};</script>`);
         return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
       }
-      if (url.pathname === '/ms-test') return (await viewer(req, env)) ? msTestPage() : gatePage();
       if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
       const path = url.pathname.slice(4);
-      const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
 
-      // Opening an invite link: the view key (or a write link, or the passphrase) becomes a cookie on this device.
+      // Signing in with Microsoft (open to anyone: only Realm members get through).
+      if (path === '/ms/start' && req.method === 'POST') return json(await msStart(env, url));
+      if (path === '/ms/finish' && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        const r = await msFinish(env, String(body?.code || ''), String(body?.ms || ''));
+        if (!r.session) return json(r, r.error === 'not member' ? 403 : 400);
+        return json({ ok: true, name: r.name }, 200, { 'Set-Cookie': cookie(SESSION, r.session, COOKIE_DAYS) });
+      }
+      if (path === '/logout' && req.method === 'POST') {
+        const token = cookies(req)[SESSION];
+        if (token) await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(await sha(token)).run();
+        return json({ ok: true }, 200, { 'Set-Cookie': `${SESSION}=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax` });
+      }
+
+      // An older invite link: the view key (or a write link, or the passphrase) becomes a cookie on this device.
       if (path === '/join' && req.method === 'POST') {
         const body = await req.json().catch(() => null);
         const key = typeof body?.key === 'string' ? body.key : '';
         if (!(await keyOk(env, ip, key, [env.VIEW_KEY], false)) && !(await roleOf(env, ip, key))) return json({ error: 'key' }, 401);
-        return json({ ok: true }, 200, {
-          'Set-Cookie': `${COOKIE}=${await cookieValue(env)}; Max-Age=${COOKIE_DAYS * 86400}; Path=/; Secure; HttpOnly; SameSite=Lax`,
-        });
+        return json({ ok: true }, 200, { 'Set-Cookie': cookie(COOKIE, await cookieValue(env), COOKIE_DAYS) });
       }
 
-      if (!(await viewer(req, env))) return json({ error: 'invite' }, 401);
+      if (!me) return json({ error: 'invite' }, 401);
+      const admin = me.role === 'admin', writer = admin || me.role === 'writer';
 
-      // Microsoft sign-in, to learn a visitor's gamertag (see msStart / msFinish).
-      if (path === '/ms/start' && req.method === 'POST') return json(await msStart(env, url));
-      if (path === '/ms/finish' && req.method === 'POST') {
-        const body = await req.json().catch(() => null);
-        return json(await msFinish(env, String(body?.code || ''), String(body?.ms || '')));
-      }
+      if (req.method === 'GET' && path === '/me') return json({ name: me.name, role: me.role, via: me.via });
 
       if (req.method === 'GET' && path === '/items') {
         const since = Number(url.searchParams.get('since')) || 0;
@@ -74,16 +85,26 @@ export default {
         });
       }
 
-      const role = await roleOf(env, ip, req.headers.get('X-Passphrase') || '');
-      if (!role) return json({ error: 'passphrase' }, 401);
-      const admin = role === 'admin';
+      // The owner's list of members, and who of them may write (nobody until the owner says so).
+      if (path === '/access' && admin && req.method === 'GET') {
+        const live = await liveInfo(env);
+        const { results } = await env.DB.prepare('SELECT xid, write FROM access').all();
+        const may = new Map(results.map((r) => [r.xid, !!r.write]));
+        return json({ owner: live.ownerName, members: live.members.filter((m) => m.xid !== live.ownerXid)
+          .map((m) => ({ xid: m.xid, name: m.name, write: !!may.get(m.xid) })) });
+      }
+      if (path === '/access' && admin && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        const xid = String(body?.xid || '');
+        if (!/^[0-9a-f]{32}$/.test(xid)) return json({ error: 'bad request' }, 400);
+        await env.DB.prepare('INSERT INTO access (xid, write, updated) VALUES (?1, ?2, ?3) ON CONFLICT(xid) DO UPDATE SET write = ?2, updated = ?3')
+          .bind(xid, body?.write ? 1 : 0, Date.now()).run();
+        return json({ ok: true });
+      }
 
-      if (path === '/check') return json({ ok: true, role });
-
-      // Anyone who may write can hand out the view-only invite link.
-      if (req.method === 'GET' && path === '/invite') return json({ link: `${url.origin}/#v=${encodeURIComponent(env.VIEW_KEY)}` });
-
-      // The owner's list of write links: one per person, each can be stopped on its own.
+      // Older ways (until the switch-over): the passphrase check, the view link, and write links.
+      if (path === '/check') return writer ? json({ ok: true, role: me.role }) : json({ error: 'passphrase' }, 401);
+      if (req.method === 'GET' && path === '/invite' && writer) return json({ link: `${url.origin}/#v=${encodeURIComponent(env.VIEW_KEY)}` });
       const link = (w) => ({ id: w.id, name: w.name, created: w.created, used: w.used, link: `${url.origin}/#w=${w.token}` });
       if (path === '/writers' && admin && req.method === 'GET') {
         const { results } = await env.DB.prepare('SELECT id, name, token, created, used FROM writers ORDER BY created').all();
@@ -108,7 +129,7 @@ export default {
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
 
       // Only the live check (with the passphrase) puts in player data.
-      if (path === '/live' && admin) {
+      if (path === '/live' && admin && me.via === 'key') {
         const text = await req.text();
         if (text.length > 900 * 1024) return json({ error: 'too big' }, 413);
         try { JSON.parse(text); } catch { return json({ error: 'bad json' }, 400); }
@@ -118,20 +139,31 @@ export default {
       }
 
       if (path === '/items') {
+        if (!writer) return json({ error: 'passphrase' }, 401);
         const body = await req.json().catch(() => null);
         const list = Array.isArray(body?.items) ? body.items : null;
         if (!list || list.length > MAX_BATCH) return json({ error: 'bad request' }, 400);
+        for (const it of list) {
+          if (typeof it?.id !== 'string' || !/^[\w-]{1,40}$/.test(it.id) || typeof it.data !== 'object' || !it.data) {
+            return json({ error: 'bad item' }, 400);
+          }
+        }
+        // Who made each pin is kept from its first writing; a new one gets this person's name (never the page's say).
+        const before = new Map();
+        for (let i = 0; i < list.length; i += 90) {
+          const ids = list.slice(i, i + 90).map((it) => it.id);
+          const { results } = await env.DB.prepare(`SELECT id, data FROM items WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
+          for (const r of results) before.set(r.id, JSON.parse(r.data).by);
+        }
         const count = (await env.DB.prepare('SELECT COUNT(*) AS n FROM items').first()).n;
         const now = Date.now();
         const stmts = [];
         let added = 0;
         for (const [i, it] of list.entries()) {
-          if (typeof it?.id !== 'string' || !/^[\w-]{1,40}$/.test(it.id) || typeof it.data !== 'object' || !it.data) {
-            return json({ error: 'bad item' }, 400);
-          }
-          const data = JSON.stringify({ ...it.data, id: it.id });
+          const by = before.has(it.id) ? before.get(it.id) : me.name;
+          const data = JSON.stringify({ ...it.data, id: it.id, by: by || undefined });
           if (data.length > MAX_ITEM_BYTES) return json({ error: 'too big' }, 413);
-          if (!it.deleted) added++;
+          if (!it.deleted && !before.has(it.id)) added++;
           stmts.push(env.DB.prepare(
             'INSERT INTO items (id, data, deleted, rev) VALUES (?1, ?2, ?3, ?4) '
             + 'ON CONFLICT(id) DO UPDATE SET data = ?2, deleted = ?3, rev = ?4',
@@ -173,7 +205,7 @@ const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replac
 
 async function msStart(env, url) {
   const session = randomHex(16), verifier = randomHex(32);
-  const page = url.searchParams.get('p') === 'a' ? 'a' : 't';
+  const page = 'a';
   await env.DB.prepare('DELETE FROM ms_sessions WHERE created < ?').bind(Date.now() - MS_SESSION_MS).run();
   await env.DB.prepare('INSERT INTO ms_sessions (id, verifier, created) VALUES (?1, ?2, ?3)').bind(session, verifier, Date.now()).run();
   const q = new URLSearchParams({
@@ -184,10 +216,10 @@ async function msStart(env, url) {
   return { url: `${MS}/authorize?${q}` };
 }
 
-async function msFinish(env, code, session) {
-  if (!/^[0-9a-f]{32}$/.test(session) || !code) return { error: 'bad request' };
-  const row = await env.DB.prepare('SELECT verifier, created FROM ms_sessions WHERE id = ?').bind(session).first();
-  await env.DB.prepare('DELETE FROM ms_sessions WHERE id = ?').bind(session).run();
+async function msFinish(env, code, signIn) {
+  if (!/^[0-9a-f]{32}$/.test(signIn) || !code) return { error: 'bad request' };
+  const row = await env.DB.prepare('SELECT verifier, created FROM ms_sessions WHERE id = ?').bind(signIn).first();
+  await env.DB.prepare('DELETE FROM ms_sessions WHERE id = ?').bind(signIn).run();
   if (!row || Date.now() - row.created > MS_SESSION_MS) return { error: 'expired', step: 'session' };
   const post = async (step, address, init) => {
     const res = await fetch(address, init);
@@ -214,43 +246,78 @@ async function msFinish(env, code, session) {
         Properties: { SandboxId: 'RETAIL', UserTokens: [user.Token] } }),
     });
     const who = xsts?.DisplayClaims?.xui?.[0] || {};
-    if (!who.gtg) return { error: 'no gamertag', step: 'claims' };
-    const live = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
-    const names = (JSON.parse(live?.v || '{}').members || []).map((m) => String(m.name || '').toLowerCase());
-    return { gamertag: who.gtg, member: names.includes(String(who.gtg).toLowerCase()) };
+    if (!who.gtg || !who.xid) return { error: 'no gamertag', step: 'claims' };
+    const xid = await siteId(env, who.xid);
+    const live = await liveInfo(env);
+    if (xid !== live.ownerXid && !live.members.some((m) => m.xid === xid)) return { error: 'not member', gamertag: who.gtg };
+    const session = randomHex(32), now = Date.now();
+    await env.DB.prepare('INSERT INTO sessions (token, xid, name, created, seen) VALUES (?1, ?2, ?3, ?4, ?4)')
+      .bind(await sha(session), xid, String(who.gtg).slice(0, 40), now).run();
+    return { session, name: who.gtg };
   } catch (e) {
     return { error: 'failed', ...(e.info || { step: 'other' }) };
   }
 }
 
-// A page to try the sign-in by hand: shows the gamertag that came back.
-function msTestPage() {
-  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Blockmap ログインの試し</title>
-<style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
-font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}.box{width:min(420px,calc(100vw - 32px));padding:24px;
-border-radius:16px;background:#1f2229;border:1px solid #2e323b}h1{margin:0 0 8px;font-size:20px}p{color:#a7abb3;line-height:1.6;font-size:14px}
-button{width:100%;height:44px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}#out{color:#e8e6e3;font-size:16px}</style>
-</head><body><div class="box"><h1>Microsoft でログイン(試し)</h1><p>ログインして、ゲーマータグが分かるか確かめます。</p>
-<button id="go">Microsoft でログイン</button><p id="out"></p></div><script>
-const out = document.getElementById('out');
-document.getElementById('go').onclick = async () => {
-  out.textContent = '準備しています…';
-  const r = await fetch('/api/ms/start?p=t', { method: 'POST' }).then((x) => x.json()).catch(() => null);
-  if (r?.url) location.href = r.url; else out.textContent = '始められませんでした';
-};
-const h = new URLSearchParams(location.hash.slice(1));
-history.replaceState(null, '', '/ms-test');
-if (h.get('mscode')) {
-  out.textContent = 'ゲーマータグを確かめています…';
-  fetch('/api/ms/finish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: h.get('mscode'), ms: h.get('ms') }) })
-    .then((x) => x.json()).then((d) => {
-      out.textContent = d.gamertag ? 'ゲーマータグ: ' + d.gamertag + ' / Realm のメンバー: ' + (d.member ? 'はい' : 'いいえ')
-        : 'うまくいきませんでした(' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
-    }).catch(() => { out.textContent = '通信できませんでした'; });
+// ---------- who is asking ----------
+function cookies(req) {
+  const out = {};
+  for (const part of (req.headers.get('Cookie') || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  }
+  return out;
 }
-</script></body></html>`;
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+
+async function sha(text) {
+  return hex(await crypto.subtle.digest('SHA-256', enc.encode(text)));
+}
+
+// The members' ids as the live check last saw them (tools/realms/common.js makes them with the same MEMBER_KEY).
+async function siteId(env, xuid) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(String(env.MEMBER_KEY || '')), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', key, enc.encode(String(xuid)))).slice(0, 32);
+}
+
+async function liveInfo(env) {
+  const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
+  let live = {};
+  try { live = JSON.parse(row?.v || '{}'); } catch { /* none yet */ }
+  const members = (Array.isArray(live.members) ? live.members : []).filter((m) => m && typeof m.xid === 'string')
+    .map((m) => ({ xid: m.xid, name: String(m.name || '') }));
+  return { members, ownerXid: live.realm?.ownerXid || null, ownerName: live.realm?.owner || null };
+}
+
+// { role: 'admin' | 'writer' | 'viewer', name, via } for whoever is asking, or null.
+// Signed in with Microsoft: the site's owner is the admin; members the owner allowed may write; other members look.
+// Someone no longer in the Realm is let in no more.
+async function whoIs(req, env, ip) {
+  const pass = req.headers.get('X-Passphrase') || '';
+  if (pass) {
+    const role = await roleOf(env, ip, pass);
+    if (role === 'admin') return { role, name: null, via: 'key' };
+    if (role === 'writer') {
+      const w = await env.DB.prepare('SELECT name FROM writers WHERE token = ?').bind(pass).first();
+      return { role, name: w?.name || null, via: 'key' };
+    }
+  }
+  const jar = cookies(req);
+  if (jar[SESSION] && /^[0-9a-f]{64}$/.test(jar[SESSION])) {
+    const id = await sha(jar[SESSION]);
+    const row = await env.DB.prepare('SELECT xid, name, seen FROM sessions WHERE token = ?').bind(id).first();
+    if (row) {
+      const live = await liveInfo(env);
+      const member = live.members.find((m) => m.xid === row.xid);
+      const owner = row.xid === live.ownerXid;
+      if (owner || member) {
+        if (!row.seen || Date.now() - row.seen > USED_EVERY_MS) await env.DB.prepare('UPDATE sessions SET seen = ? WHERE token = ?').bind(Date.now(), id).run();
+        const may = owner ? null : await env.DB.prepare('SELECT write FROM access WHERE xid = ?').bind(row.xid).first();
+        return { role: owner ? 'admin' : may?.write ? 'writer' : 'viewer', name: (owner ? live.ownerName : member.name) || row.name, via: 'microsoft' };
+      }
+    }
+  }
+  if (env.VIEW_KEY && env.DATA_DIR && jar[COOKIE] && (await same(jar[COOKIE], await cookieValue(env)))) return { role: 'viewer', name: null, via: 'link' };
+  return null;
 }
 
 function randomHex(bytes) {
@@ -265,12 +332,6 @@ async function roleOf(env, ip, given) {
   if (!w) return (await keyOk(env, ip, given, [])) && null;
   if (!w.used || Date.now() - w.used > USED_EVERY_MS) await env.DB.prepare('UPDATE writers SET used = ? WHERE id = ?').bind(Date.now(), w.id).run();
   return 'writer';
-}
-
-async function viewer(req, env) {
-  if (!env.VIEW_KEY || !env.DATA_DIR) return false;
-  const m = (req.headers.get('Cookie') || '').match(new RegExp(`(?:^|;\\s*)${COOKIE}=([0-9a-f]+)`));
-  return !!m && same(m[1], await cookieValue(env));
 }
 
 // Checks a key without leaking timing, and locks an address out for an hour after 10 misses.
@@ -292,8 +353,8 @@ async function keyOk(env, ip, given, keys, count = true) {
   return ok;
 }
 
-// Shown to anyone without the cookie. Opening an invite link lands here: the key after # never leaves
-// the browser except to be swapped for the cookie.
+// Shown to anyone not let in yet: sign in with Microsoft (the Realm's members get in). A sign-in comes back here
+// (#mscode=…); an older invite link (#v= / #w= / #join=) still works until the switch-over.
 function gatePage() {
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Blockmap</title><link rel="icon" href="/favicon.svg">
@@ -302,14 +363,36 @@ function gatePage() {
 font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
 .box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:#1f2229;border:1px solid #2e323b}
 h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6;font-size:14px}
-form{display:flex;gap:8px}input{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:10px;border:1px solid #2e323b;
-background:#15171c;color:inherit;font-size:16px}button{height:40px;padding:0 16px;border:0;border-radius:10px;background:#3ecf8e;
-color:#06130d;font-weight:700;font-size:15px}#msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
+#ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}
+#msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
+details{margin-top:18px;color:#a7abb3;font-size:13px}summary{cursor:pointer}
+form{display:flex;gap:8px;margin-top:10px}input{flex:1;min-width:0;height:38px;padding:0 12px;border-radius:10px;border:1px solid #2e323b;
+background:#15171c;color:inherit;font-size:16px}form button{height:38px;padding:0 14px;border:0;border-radius:10px;background:#2e323b;color:inherit}
 </style></head><body><div class="box"><h1>Blockmap</h1>
-<p>この地図を見るには招待リンクが必要です。仲間からもらったリンクを開くか、ここに貼り付けてください。</p>
-<form id="f"><input id="link" placeholder="招待リンク" autocomplete="off"><button>開く</button></form><p id="msg"></p></div>
+<p>Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。</p>
+<button id="ms">Microsoft でログイン</button><p id="msg"></p>
+<details><summary>招待リンクをお持ちの方</summary><form id="f"><input id="link" placeholder="招待リンク" autocomplete="off"><button>開く</button></form></details>
+</div>
 <script>
 const msg = document.getElementById('msg');
+document.getElementById('ms').onclick = async () => {
+  msg.textContent = '';
+  const r = await fetch('/api/ms/start', { method: 'POST' }).then((x) => x.json()).catch(() => null);
+  if (r && r.url) location.href = r.url; else msg.textContent = 'ログインを始められませんでした。もう一度ためしてください';
+};
+async function finish(code, ms) {
+  msg.style.color = '#a7abb3';
+  msg.textContent = 'ゲーマータグを確かめています…';
+  try {
+    const res = await fetch('/api/ms/finish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, ms }) });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { location.reload(); return; }
+    msg.style.color = '';
+    msg.textContent = d.error === 'not member' ? 'このアカウント(' + d.gamertag + ')は、この Realm のメンバーではありません'
+      : d.error === 'expired' ? '時間がたちすぎました。もう一度ログインしてください'
+      : 'ログインを確かめられませんでした(' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
+  } catch { msg.style.color = ''; msg.textContent = '通信できませんでした。もう一度ためしてください'; }
+}
 function keyFrom(text) {
   const m = String(text).match(/[#&](v|w|join)=([^&\\s]+)/);
   if (!m) return null;
@@ -322,20 +405,21 @@ async function join(found) {
   try {
     const res = await fetch('/api/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: found.key }) });
     if (res.ok) {
-      // The map page takes a writer's passphrase from the address (#join=…) and keeps it on this device.
+      // The map page takes a writer's key from the address (#join=…) and keeps it on this device.
       history.replaceState(null, '', '/' + (found.write ? '#join=' + encodeURIComponent(found.key) : ''));
       location.reload();
       return;
     }
-    msg.textContent = res.status === 401 ? 'このリンクは使えません。新しいリンクを仲間にもらってください' : 'うまくいきませんでした(' + res.status + ')';
+    msg.textContent = res.status === 401 ? 'このリンクは使えません' : 'うまくいきませんでした(' + res.status + ')';
   } catch { msg.textContent = '通信できませんでした。もう一度ためしてください'; }
 }
 document.getElementById('f').addEventListener('submit', (e) => { e.preventDefault(); join(keyFrom(document.getElementById('link').value)); });
-// A link opened here, or pasted into the address bar of this page (only the part after # changes then).
 function fromAddress() {
+  const h = new URLSearchParams(location.hash.slice(1));
   const found = keyFrom(location.hash);
   history.replaceState(null, '', '/');
-  if (found) join(found);
+  if (h.get('mscode')) finish(h.get('mscode'), h.get('ms') || '');
+  else if (found) join(found);
 }
 addEventListener('hashchange', fromAddress);
 fromAddress();

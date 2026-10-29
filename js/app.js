@@ -72,7 +72,10 @@ const store = {
 const PASS_KEY = 'mcmap.pass';
 const SYNC_KEY = 'mcmap.sync.v1';
 const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
-const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false };
+const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false, me: null };
+// On Cloudflare, signed in with Microsoft: the server knows who this is ({ name, role, via }); no passphrase needed.
+const signedIn = () => share.me?.via === 'microsoft';
+const mayWrite = () => (signedIn() ? share.me.role === 'admin' || share.me.role === 'writer' : !!getPass());
 
 function sharing() { return !!share.url; }
 // What this device may do: 'admin' (the owner's passphrase), 'writer' (a write link), or null (look only).
@@ -81,9 +84,50 @@ function sharing() { return !!share.url; }
 function showInvites(role) {
   share.role = role || null;
   $('#share-invite').hidden = !role || !!DATA;
-  $('#view-invite').hidden = !role || !DATA;
+  $('#view-invite').hidden = !role || !DATA || signedIn();
+  $('#site-invite').hidden = !DATA || !signedIn() || role !== 'admin';
   $('#writers').hidden = role !== 'admin' || !DATA;
-  if (role === 'admin' && DATA) loadWriters();
+  $('#writer-form').hidden = signedIn();
+  if (role === 'admin' && DATA) (signedIn() ? loadAccess() : loadWriters());
+  renderMe();
+}
+function renderMe() {
+  const line = $('#me-line');
+  line.hidden = !signedIn();
+  if (!signedIn()) return;
+  const what = { admin: '管理者', writer: '書き込みOK', viewer: '見るだけ' }[share.me.role] || '';
+  line.textContent = `${share.me.name || ''} としてログイン中(${what}) `;
+  line.append(button('ログアウト', async () => {
+    await fetch(`${share.url}/logout`, { method: 'POST' }).catch(() => {});
+    location.reload();
+  }));
+}
+
+// The owner's list of the Realm's members: each one looks only until the owner lets them write.
+async function loadAccess() {
+  const list = $('#writer-list');
+  $('#writers h3').textContent = '書き込みできるメンバー(管理者だけに見えます)';
+  try {
+    const res = await fetch(`${share.url}/access`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    const { members } = await res.json();
+    list.innerHTML = members.length ? '' : '<li class="sub">メンバーの情報がまだありません</li>';
+    for (const m of members) {
+      const li = document.createElement('li');
+      li.innerHTML = '<span class="grow"></span>';
+      li.querySelector('.grow').textContent = m.name || '(名前なし)';
+      const b = button(m.write ? '書き込みOK' : '見るだけ', async () => {
+        b.disabled = true;
+        const r = await fetch(`${share.url}/access`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xid: m.xid, write: !m.write }) }).catch(() => null);
+        toast(r?.ok ? `${m.name}さんを「${m.write ? '見るだけ' : '書き込みOK'}」にしました` : '変えられませんでした。もう一度ためしてください');
+        loadAccess();
+      });
+      b.classList.toggle('on', m.write);
+      b.title = '押すと切り替わります';
+      li.append(b);
+      list.append(li);
+    }
+  } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
 }
 const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
 
@@ -190,17 +234,22 @@ function queueChanges() {
 async function pushChanges() {
   if (share.pushing || !share.pending.size) return;
   const pass = getPass();
-  if (!pass) { askPass(); return; }
+  if (!pass && !signedIn()) { askPass(); return; }
+  if (!mayWrite()) return;
   share.pushing = true;
   let retry = 10000;
   const batch = [...share.pending].slice(0, 200);
   try {
     const res = await fetch(`${share.url}/items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Passphrase': pass },
+      headers: { 'Content-Type': 'application/json', ...(pass ? { 'X-Passphrase': pass } : {}) },
       body: JSON.stringify({ items: batch.map(([id, p]) => ({ id, data: p.data, deleted: p.deleted })) }),
     });
-    if (res.status === 401) {
+    if (res.status === 401 && signedIn() && !pass) {
+      retry = 0;
+      share.me.role = 'viewer';
+      toast('書き込みの許可がなくなりました(管理者に頼んでください)');
+    } else if (res.status === 401) {
       setPass('');
       retry = 0;
       toast('書き込みの許可が切れました。新しい招待リンクを開いてください');
@@ -216,7 +265,7 @@ async function pushChanges() {
     }
   } catch { /* offline: try again shortly */ }
   share.pushing = false;
-  if (share.pending.size && getPass()) setTimeout(pushChanges, retry);
+  if (share.pending.size && mayWrite()) setTimeout(pushChanges, retry);
 }
 
 // Brings in what others changed. A full pull (page open) also drops things the server no longer has.
@@ -347,6 +396,11 @@ async function joinFromLink() {
 // Call before anything that changes pins or drawings.
 async function ensureWriter() {
   if (!sharing() || getPass()) return true;
+  if (signedIn()) {
+    if (mayWrite()) return true;
+    toast('書き込みは、管理者が許可したメンバーだけです');
+    return false;
+  }
   return askPass();
 }
 
@@ -356,13 +410,17 @@ function setupShare() {
   if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
   showInvites(getPass() ? 'writer' : null);
-  // On Cloudflare, ask what this device's key allows (the owner, or a write link that may have been stopped).
-  if (DATA && getPass()) {
-    fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': getPass() } }).then(async (res) => {
-      if (res.ok) showInvites(await roleFrom(res));
-      else if (res.status === 401) { setPass(''); showInvites(null); }
+  // On Cloudflare, ask who this is: signed in with Microsoft, or an older key (the owner's, or a write link).
+  if (DATA) {
+    fetch(`${share.url}/me`, { headers: getPass() ? { 'X-Passphrase': getPass() } : {}, cache: 'no-store' }).then(async (res) => {
+      const me = res.ok ? await res.json() : null;
+      if (getPass() && me?.via !== 'key') setPass('');  // that key no longer works
+      share.me = me;
+      showInvites(me && me.role !== 'viewer' ? me.role : null);
+      if (share.pending.size && mayWrite()) pushChanges();
     }).catch(() => {});
   }
+  $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, '地図の住所をコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)'));
   $('#writer-pick').addEventListener('change', () => {
     fillWriterChoices();
     if ($('#writer-pick').value === '__other') $('#writer-name').focus();
@@ -387,7 +445,7 @@ function setupShare() {
   loadSyncState();
   renderAll();
   joinFromLink();
-  pullChanges(true).then(() => { if (share.pending.size && getPass()) pushChanges(); });
+  pullChanges(true).then(() => { if (share.pending.size && mayWrite()) pushChanges(); });
   setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullChanges(); });
 }
@@ -404,6 +462,7 @@ function sanitize(a) {
     weight: Math.min(12, Math.max(1, num(a.weight) ?? 4)),
     updatedAt: num(a.updatedAt) ?? Date.now(),
   };
+  if (typeof a.by === 'string' && a.by) out.by = a.by.slice(0, 40);  // who made it (set by the server)
   if (a.type === 'waypoint' || a.type === 'text') {
     out.x = num(a.x); out.z = num(a.z);
     if (out.x === null || out.z === null) return null;
@@ -878,6 +937,7 @@ function openAnnPopup(id, at) {
   if (isPoint) el.append(coordBlock(c.x, c.z, a.y, a.dim));
   if (a.type === 'circle') el.insertAdjacentHTML('beforeend', `<div class="sub">半径 ${Math.round(a.r)} ブロック</div>`);
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
+  if (a.by) { const b = document.createElement('div'); b.className = 'sub'; b.textContent = `作った人: ${a.by}`; el.append(b); }
   const acts = document.createElement('div'); acts.className = 'acts';
   if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
   if (a.type === 'waypoint') acts.append(routeButton({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim }));
