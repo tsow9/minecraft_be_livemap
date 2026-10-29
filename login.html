@@ -37,11 +37,11 @@
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host || '') || !/^[0-9a-f]{32}$/.test(session || '') || !pages[page]) {
     msg.textContent = 'このページは、Blockmap の「Microsoft でログイン」から開いてください。';
   } else if (q.get('error')) {
-    msg.textContent = 'ログインできませんでした。もう一度ためしてください。';
+    msg.textContent = `ログインできませんでした。もう一度ためしてください。(${q.get('error')}: ${String(q.get('error_description') || '').slice(0, 200)})`;
     go.textContent = 'サイトに戻る';
     go.hidden = false;
     go.onclick = () => location.replace(`https://${host}${pages[page]}`);
-  } else if (/^[\w.*-]{10,}$/.test(q.get('code') || '')) {
+  } else if ((q.get('code') || '').length >= 10 && (q.get('code') || '').length <= 4000) {
     const code = q.get('code');
     msg.innerHTML = '';
     msg.append('ログインできました。この地図サイトに戻ります:', document.createElement('br'));
