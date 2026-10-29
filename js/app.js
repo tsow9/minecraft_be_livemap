@@ -1604,9 +1604,10 @@ function setupSearch() {
     list.hidden = items.length === 0;
   };
   // Everything that can be found: pins, text and shapes, players, beds, last deaths and nether gates (all dimensions).
-  const where = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
+  const where = whereText;
   const all = () => {
     const out = [];
+    for (const b of findIndex.beings) out.push({ ...b, kind: 'find', go: () => showFinds(b.type, b.key) });
     for (const a of state.annotations) {
       const c = annCenter(a);
       const shape = { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
@@ -1731,7 +1732,8 @@ function setupSearch() {
 // items.json comes from the map maker; picking a search result marks every place it was found.
 const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
-let findIndex = { items: [], trades: [], jobs: [], signs: [], animals: [] };
+let findIndex = { items: [], trades: [], signs: [], beings: [] };
+const whereText = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
 // wherever it sits.
@@ -1911,7 +1913,7 @@ async function loadItems() {
 
 // One search entry per kind of item stored, per kind of item sold, and per villager job.
 function buildFindIndex() {
-  const items = new Map(), trades = new Map(), jobs = new Map(), signs = new Map(), animals = new Map();
+  const items = new Map(), trades = new Map(), signs = new Map(), beings = [];
   for (const [dim, d] of Object.entries(state.items?.dims || {})) {
     for (const c of d.containers || []) {
       for (const it of c[4]) {
@@ -1922,13 +1924,17 @@ function buildFindIndex() {
         e.total += it[1];
       }
     }
+    // Each villager, wandering trader and pet is its own search hit, shown with its place like a pin.
     for (const v of d.villagers || []) {
-      const job = jobName(v[3]);
-      if (!jobs.has(job)) jobs.set(job, { key: job, label: v[3] === 'wandering_trader' ? job : `${job}の村人`, hay: `${job} 村人`, count: 0 });
-      jobs.get(job).count += 1;
+      const job = jobName(v[3]), trader = v[3] === 'wandering_trader';
+      const title = v[4] ? `${v[4]}(${job})` : job;
+      beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
+        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : VILLAGER_SVG,
+        meta: `${trader ? '行商人' : '村人'} ・ ${whereText(dim, v[0], v[2])}` });
+      // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
-        if (!trades.has(k)) trades.set(k, { key: k, label: itemLabel(sell), hay: `${itemLabel(sell)} ${sell[0]} 取引 村人`, villagers: new Set() });
+        if (!trades.has(k)) trades.set(k, { key: k, label: itemLabel(sell), hay: `${itemLabel(sell)} ${sell[0]}`, villagers: new Set() });
         trades.get(k).villagers.add(`${dim}:${v[0]}:${v[1]}:${v[2]}`);
       }
     }
@@ -1939,30 +1945,23 @@ function buildFindIndex() {
       if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} ${k.normalize('NFKC')} 看板`, count: 0 });
       signs.get(k).count += 1;
     }
-    // Pets and named animals: one entry per name, one per kind ("オオカミ") and one per owner ("〇〇のペット").
+    // Pets and named animals: found by name, kind ("オオカミ") or owner ("〇〇").
     for (const a of d.animals || []) {
-      const add = (k, label, hay, icon, meta) => {
-        if (!animals.has(k)) animals.set(k, { key: k, label, hay, icon, meta, count: 0 });
-        animals.get(k).count += 1;
-      };
       const kind = mobName(a[3]);
-      const icon = animalSvg(a[3], animalCollar(a), !!a[4], false, 1.6, a[7]);
-      if (a[4]) add(`name:${a[4]}`, a[4], `${a[4]} ${a[4].normalize('NFKC')} ${kind} ペット 名札`, icon, kind);
-      add(`kind:${a[3]}`, `${kind}(ペット)`, `${kind} ${a[3]} ペット`, animalSvg(a[3], LEATHER, false));
-      if (a[6] && state.players.some((p) => p.key === a[6])) add(`owner:${a[6]}`, `${playerName(a[6])}のペット`, `${playerName(a[6])} ペット`, icon);
+      const owner = a[6] && state.players.some((p) => p.key === a[6]) ? playerName(a[6]) : '';
+      beings.push({ type: 'pet', key: `${dim}:${a[0]}:${a[1]}:${a[2]}`, dim, x: a[0], z: a[2], title: a[4] || kind,
+        hay: `${a[4] ? `${a[4].normalize('NFKC')} 名札` : ''} ${kind} ${a[3]} ペット ${owner}`,
+        icon: animalSvg(a[3], animalCollar(a), !!a[4], false, 1.6, a[7]),
+        meta: `${a[4] ? kind : 'ペット'}${owner ? `(${owner})` : ''} ・ ${whereText(dim, a[0], a[2])}` });
     }
   }
-  findIndex = { items: [...items.values()], trades: [...trades.values()], jobs: [...jobs.values()], signs: [...signs.values()],
-    animals: [...animals.values()] };
+  findIndex = { items: [...items.values()], trades: [...trades.values()], signs: [...signs.values()], beings };
 }
 
-// Search suggestions for a typed word (sign writing, stored items, things villagers sell, villager jobs).
+// Search suggestions for a typed word (sign writing, stored items, things villagers sell).
 function findSuggestions(q) {
   const out = [];
   const hit = (e) => e.hay.toLowerCase().includes(q);
-  for (const e of findIndex.animals.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.icon, meta: e.meta && e.count === 1 ? e.meta : `${e.count}匹`, go: () => showFinds('animal', e.key) });
-  }
   for (const e of findIndex.signs.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: `看板・${e.count}枚`, go: () => showFinds('sign', e.key) });
   }
@@ -1971,9 +1970,6 @@ function findSuggestions(q) {
   }
   for (const e of findIndex.items.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `${e.places.size}件・全${e.total}個`, go: () => showFinds('item', e.key) });
-  }
-  for (const e of findIndex.jobs.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: e.label === jobName('wandering_trader') ? TRADER_SVG : VILLAGER_SVG, meta: `${e.count}人`, go: () => showFinds('job', e.key) });
   }
   return out.slice(0, 60);
 }
@@ -2024,7 +2020,6 @@ function animalMark(dim, a) {
   return { dim, x: a[0], y: a[1], z: a[2], icon: animalSvg(a[3], collar, !!a[4], false, 1.6, a[7]), iconBig: animalSvg(a[3], collar, !!a[4], true, 1.6, a[7]), name: a[4] || kind,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${a[0]} / Y ${a[1]} / Z ${a[2]}</div>${owner}` };
 }
-const animalMatches = (a, key) => key === `name:${a[4]}` || key === `kind:${a[3]}` || key === `owner:${a[6]}`;
 
 // Search hits (hit = true) are drawn larger and get a circle under them. Marks in the same block share one mark; its bubble first lists the candidates so each one can be picked.
 function markLayer(marks, group, zIndexOffset, hit = false) {
@@ -2115,22 +2110,21 @@ function showFinds(type, key, move = true) {
       for (const c of d.containers || []) {
         if (c[4].some((it) => itemKey(it) === key)) matches.push(containerMark(dim, c, key));
       }
-    } else if (type === 'animal') {
-      for (const a of d.animals || []) if (animalMatches(a, key)) matches.push(animalMark(dim, a));
+    } else if (type === 'pet') {
+      for (const a of d.animals || []) if (`${dim}:${a[0]}:${a[1]}:${a[2]}` === key) matches.push(animalMark(dim, a));
+    } else if (type === 'villager') {
+      for (const v of d.villagers || []) if (`${dim}:${v[0]}:${v[1]}:${v[2]}` === key) matches.push(villagerMark(dim, v, null));
     } else if (type === 'sign') {
       for (const g of d.signs || []) if (signTitle(g[3]) === key) matches.push(signMark(dim, g));
     } else {
-      for (const v of d.villagers || []) {
-        const ok = type === 'job' ? jobName(v[3]) === key : v[5].some(([, sell]) => itemKey(sell) === key);
-        if (ok) matches.push(villagerMark(dim, v, type === 'job' ? null : key));
-      }
+      for (const v of d.villagers || []) if (v[5].some(([, sell]) => itemKey(sell) === key)) matches.push(villagerMark(dim, v, key));
     }
   }
   const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'sign' ? findIndex.signs.find((e) => e.key === key)
-    : type === 'animal' ? findIndex.animals.find((e) => e.key === key) : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
-    : findIndex.jobs.find((e) => e.key === key);
+    : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
+    : findIndex.beings.find((e) => e.type === type && e.key === key);
   if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
-  finds = { type, key, label: entry?.label || '', matches };
+  finds = { type, key, label: entry?.label || entry?.title || '', matches };
   if (move) {
     const count = (dim) => matches.filter((m) => m.dim === dim).length;
     const dim = count(state.dim) ? state.dim : Object.keys(DIMS).sort((a, b) => count(b) - count(a))[0];
