@@ -3,7 +3,8 @@
 // Only people who opened an invite link see the map. The link's key is swapped for a cookie on this device;
 // the page is then handed the name of the folder the map data sits in (DATA_DIR, a long random name), so the
 // map pictures can be served as plain files (free and unlimited) without checking each one.
-// Writing pins and drawings needs the group's passphrase (PASSPHRASE), as before.
+// Writing pins and drawings needs a write link: the owner makes one per person (and can stop it) while signed in
+// with the passphrase (PASSPHRASE), which only the owner keeps.
 //
 // Secrets: VIEW_KEY (the key in the view invite link), DATA_DIR, PASSPHRASE.
 const MAX_ITEM_BYTES = 64 * 1024;
@@ -14,6 +15,8 @@ const MAX_FAILS = 10;
 const FAIL_WINDOW_MS = 3600 * 1000;
 const COOKIE = 'bm';
 const COOKIE_DAYS = 400;
+const MAX_WRITERS = 200;
+const USED_EVERY_MS = 3600 * 1000;  // how often a write link's "last used" is brought up to date
 
 export default {
   async fetch(req, env) {
@@ -32,11 +35,11 @@ export default {
       const path = url.pathname.slice(4);
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
 
-      // Opening an invite link: the view key (or the writers' passphrase) becomes a cookie on this device.
+      // Opening an invite link: the view key (or a write link, or the passphrase) becomes a cookie on this device.
       if (path === '/join' && req.method === 'POST') {
         const body = await req.json().catch(() => null);
         const key = typeof body?.key === 'string' ? body.key : '';
-        if (!(await keyOk(env, ip, key, [env.VIEW_KEY, env.PASSPHRASE]))) return json({ error: 'key' }, 401);
+        if (!(await keyOk(env, ip, key, [env.VIEW_KEY], false)) && !(await roleOf(env, ip, key))) return json({ error: 'key' }, 401);
         return json({ ok: true }, 200, {
           'Set-Cookie': `${COOKIE}=${await cookieValue(env)}; Max-Age=${COOKIE_DAYS * 86400}; Path=/; Secure; HttpOnly; SameSite=Lax`,
         });
@@ -63,16 +66,41 @@ export default {
         });
       }
 
-      if (!(await keyOk(env, ip, req.headers.get('X-Passphrase') || '', [env.PASSPHRASE]))) return json({ error: 'passphrase' }, 401);
+      const role = await roleOf(env, ip, req.headers.get('X-Passphrase') || '');
+      if (!role) return json({ error: 'passphrase' }, 401);
+      const admin = role === 'admin';
 
-      if (path === '/check') return json({ ok: true });
+      if (path === '/check') return json({ ok: true, role });
 
-      // Writers can hand out the view-only invite link.
+      // Anyone who may write can hand out the view-only invite link.
       if (req.method === 'GET' && path === '/invite') return json({ link: `${url.origin}/#v=${encodeURIComponent(env.VIEW_KEY)}` });
+
+      // The owner's list of write links: one per person, each can be stopped on its own.
+      const link = (w) => ({ id: w.id, name: w.name, created: w.created, used: w.used, link: `${url.origin}/#w=${w.token}` });
+      if (path === '/writers' && admin && req.method === 'GET') {
+        const { results } = await env.DB.prepare('SELECT id, name, token, created, used FROM writers ORDER BY created').all();
+        return json({ writers: results.map(link) });
+      }
+      if (path === '/writers' && admin && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 30) : '';
+        if (!name) return json({ error: 'name' }, 400);
+        const count = (await env.DB.prepare('SELECT COUNT(*) AS n FROM writers').first()).n;
+        if (count >= MAX_WRITERS) return json({ error: 'full' }, 507);
+        const w = { id: randomHex(8), name, token: randomHex(32), created: Date.now(), used: null };
+        await env.DB.prepare('INSERT INTO writers (id, name, token, created) VALUES (?1, ?2, ?3, ?4)').bind(w.id, w.name, w.token, w.created).run();
+        return json(link(w));
+      }
+      if (path === '/writers/stop' && admin && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        await env.DB.prepare('DELETE FROM writers WHERE id = ?').bind(String(body?.id || '')).run();
+        return json({ ok: true });
+      }
 
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
 
-      if (path === '/live') {
+      // Only the live check (with the passphrase) puts in player data.
+      if (path === '/live' && admin) {
         const text = await req.text();
         if (text.length > 900 * 1024) return json({ error: 'too big' }, 413);
         try { JSON.parse(text); } catch { return json({ error: 'bad json' }, 400); }
@@ -127,6 +155,20 @@ async function same(a, b) {
   return crypto.subtle.timingSafeEqual(x, y);
 }
 
+function randomHex(bytes) {
+  return hex(crypto.getRandomValues(new Uint8Array(bytes)));
+}
+
+// 'admin' for the owner's passphrase, 'writer' for a write link that has not been stopped, else null.
+async function roleOf(env, ip, given) {
+  if (await keyOk(env, ip, given, [env.PASSPHRASE], false)) return 'admin';
+  if (!/^[0-9a-f]{64}$/.test(given)) return (await keyOk(env, ip, given, [])) && null;
+  const w = await env.DB.prepare('SELECT id, used FROM writers WHERE token = ?').bind(given).first();
+  if (!w) return (await keyOk(env, ip, given, [])) && null;
+  if (!w.used || Date.now() - w.used > USED_EVERY_MS) await env.DB.prepare('UPDATE writers SET used = ? WHERE id = ?').bind(Date.now(), w.id).run();
+  return 'writer';
+}
+
 async function viewer(req, env) {
   if (!env.VIEW_KEY || !env.DATA_DIR) return false;
   const m = (req.headers.get('Cookie') || '').match(new RegExp(`(?:^|;\\s*)${COOKIE}=([0-9a-f]+)`));
@@ -134,7 +176,8 @@ async function viewer(req, env) {
 }
 
 // Checks a key without leaking timing, and locks an address out for an hour after 10 misses.
-async function keyOk(env, ip, given, keys) {
+// With count = false a miss is not counted (another kind of key may still match).
+async function keyOk(env, ip, given, keys, count = true) {
   if (!given) return false;
   const now = Date.now();
   const row = await env.DB.prepare('SELECT count, since FROM fails WHERE ip = ?').bind(ip).first();
@@ -143,7 +186,7 @@ async function keyOk(env, ip, given, keys) {
   for (const k of keys) if (k && (await same(given, String(k)))) ok = true;
   if (ok) {
     if (row) await env.DB.prepare('DELETE FROM fails WHERE ip = ?').bind(ip).run();
-  } else {
+  } else if (count) {
     const fresh = !row || now - row.since >= FAIL_WINDOW_MS;
     await env.DB.prepare('INSERT INTO fails (ip, count, since) VALUES (?1, ?2, ?3) ON CONFLICT(ip) DO UPDATE SET count = ?2, since = ?3')
       .bind(ip, fresh ? 1 : row.count + 1, fresh ? now : row.since).run();
@@ -170,10 +213,10 @@ color:#06130d;font-weight:700;font-size:15px}#msg{margin:12px 0 0;min-height:1.6
 <script>
 const msg = document.getElementById('msg');
 function keyFrom(text) {
-  const m = String(text).match(/[#&](v|join)=([^&\\s]+)/);
+  const m = String(text).match(/[#&](v|w|join)=([^&\\s]+)/);
   if (!m) return null;
   let k; try { k = decodeURIComponent(m[2]); } catch { k = m[2]; }
-  return { key: k, write: m[1] === 'join' };
+  return { key: k, write: m[1] !== 'v' };
 }
 async function join(found) {
   if (!found) { msg.textContent = 'リンクの形が違います。もらったリンクをそのまま貼り付けてください'; return; }

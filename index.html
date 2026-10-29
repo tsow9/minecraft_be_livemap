@@ -194,6 +194,11 @@
   <h2>Realms情報 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <div id="realm-info"><p class="help">まだ情報がありません。少し待つと表示されます。</p></div>
   <p class="share-row"><button id="view-invite" class="mini" hidden>見る用の招待リンクをコピー</button> <button id="share-invite" class="mini" hidden>書き込み用の招待リンクをコピー</button></p>
+  <div id="writers" hidden>
+    <h3>書き込みできる人(管理者だけに見えます)</h3>
+    <ul id="writer-list" class="plist"></ul>
+    <form id="writer-form" class="writer-form"><input id="writer-name" maxlength="30" placeholder="名前(例: たろう)" autocomplete="off" aria-label="書き込みを許す人の名前"><button class="mini" type="submit">書き込みリンクを作る</button></form>
+  </div>
 </section>
 
 <dialog id="pass-dialog" class="box">

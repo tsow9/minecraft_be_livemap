@@ -75,10 +75,51 @@ const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
 const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false };
 
 function sharing() { return !!share.url; }
-// Writers get the invite buttons; the view-only link exists only on Cloudflare (where the map is behind an invite).
-function showInvites(on) {
-  $('#share-invite').hidden = !on;
-  $('#view-invite').hidden = !on || !DATA;
+// What this device may do: 'admin' (the owner's passphrase), 'writer' (a write link), or null (look only).
+// On Cloudflare (DATA) writers can hand out the view link and the owner manages the write links;
+// the old site's link carrying the passphrase itself is not offered there.
+function showInvites(role) {
+  share.role = role || null;
+  $('#share-invite').hidden = !role || !!DATA;
+  $('#view-invite').hidden = !role || !DATA;
+  $('#writers').hidden = role !== 'admin' || !DATA;
+  if (role === 'admin' && DATA) loadWriters();
+}
+const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
+
+// The owner's list of write links, one per person; stopping one turns that person back to looking only.
+async function loadWriters() {
+  const list = $('#writer-list');
+  try {
+    const res = await fetch(`${share.url}/writers`, { headers: { 'X-Passphrase': getPass() }, cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    const { writers } = await res.json();
+    list.innerHTML = writers.length ? '' : '<li class="sub">まだいません</li>';
+    for (const w of writers) {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="grow"></span><span class="sub">${w.used ? `${esc(agoText(w.used))}に使用` : 'まだ使われていません'}</span>`;
+      li.querySelector('.grow').textContent = w.name;
+      li.append(button('リンク', () => copyText(w.link, `${w.name}さん用の書き込みリンクをコピーしました。本人にだけ送ってください`)));
+      li.append(button('止める', async () => {
+        if (!confirm(`${w.name}さんの書き込みリンクを止めますか?(地図は今までどおり見られます)`)) return;
+        const r = await fetch(`${share.url}/writers/stop`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Passphrase': getPass() }, body: JSON.stringify({ id: w.id }) }).catch(() => null);
+        toast(r?.ok ? `${w.name}さんの書き込みリンクを止めました` : '止められませんでした。もう一度ためしてください');
+        loadWriters();
+      }));
+      list.append(li);
+    }
+  } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
+}
+async function addWriter(name) {
+  const res = await fetch(`${share.url}/writers`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Passphrase': getPass() }, body: JSON.stringify({ name }) }).catch(() => null);
+  if (!res?.ok) { toast('書き込みリンクを作れませんでした'); return; }
+  const w = await res.json();
+  // Copying after waiting for the server is refused on some phones; the list's リンク button always works.
+  try {
+    await navigator.clipboard.writeText(w.link);
+    toast(`${w.name}さん用の書き込みリンクをコピーしました。本人にだけ送ってください`);
+  } catch { toast(`${w.name}さん用のリンクを作りました。一覧の「リンク」を押してコピーしてください`); }
+  loadWriters();
 }
 function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
 function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch { /* private mode */ } }
@@ -231,7 +272,7 @@ function askPass() {
           setPass(pass);
           dlg.close();
           toast('書き込めるようになりました');
-      showInvites(true);
+      showInvites(await roleFrom(res));
           pushChanges();
           return;
         }
@@ -251,7 +292,7 @@ function askPass() {
 // The invite link carries the passphrase after # (that part never leaves this device's browser).
 function passFromText(text) {
   const t = String(text || '').trim();
-  const m = t.match(/[#&]join=([^&\s]+)/);
+  const m = t.match(/[#&](?:join|w)=([^&\s]+)/);
   if (m) { try { return decodeURIComponent(m[1]); } catch { return m[1]; } }
   return t;
 }
@@ -261,7 +302,7 @@ function inviteLink() {
 
 // Opening an invite link: remember the passphrase on this device and take it out of the address bar.
 async function joinFromLink() {
-  const m = location.hash.match(/[#&]join=([^&]+)/);
+  const m = location.hash.match(/[#&](?:join|w)=([^&]+)/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
   let pass;
@@ -272,7 +313,7 @@ async function joinFromLink() {
     if (res.ok) {
       setPass(pass);
       toast('招待リンクを確認しました。ピンや図形を書き込めます');
-      showInvites(true);
+      showInvites(await roleFrom(res));
       pushChanges();
     } else if (res.status === 401) {
       toast('この招待リンクは使えません。合言葉が合っているか確かめてください');
@@ -295,7 +336,21 @@ function setupShare() {
   window.addEventListener('hashchange', joinFromLink);
   if (!sharing()) { joinFromLink(); return; }
   document.body.classList.add('shared');
-  showInvites(!!getPass());
+  showInvites(getPass() ? 'writer' : null);
+  // On Cloudflare, ask what this device's key allows (the owner, or a write link that may have been stopped).
+  if (DATA && getPass()) {
+    fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': getPass() } }).then(async (res) => {
+      if (res.ok) showInvites(await roleFrom(res));
+      else if (res.status === 401) { setPass(''); showInvites(null); }
+    }).catch(() => {});
+  }
+  $('#writer-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#writer-name').value.trim();
+    if (!name) { $('#writer-name').focus(); return; }
+    $('#writer-name').value = '';
+    addWriter(name);
+  });
   $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
   // The view-only link comes from the server (only writers may ask for it).
   $('#view-invite').addEventListener('click', async () => {
