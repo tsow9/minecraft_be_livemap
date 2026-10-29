@@ -1616,23 +1616,23 @@ function setupSearch() {
         title: a.name || a.text || shape || 'ピン',
         hay: `${a.name || ''} ${a.text || ''} ${a.note || ''}`,
         icon: a.type === 'waypoint' ? flagSvg(a.color) : `<span class="dot" style="background:${esc(a.color)}"></span>`,
-        meta: `${{ waypoint: 'ピン', text: '文字' }[a.type] || '図形'} ・ ${where(a.dim, c.x, c.z)}`,
+        meta: `${{ waypoint: 'ピン', text: '文字' }[a.type] || '図形'}  ${where(a.dim, c.x, c.z)}`,
         go: () => { goTo(c.x, c.z, a.dim, 0); openAnnPopup(a.id); },
       });
     }
     for (const p of state.players) {
       const color = playerColor(p.key);
       out.push({ kind: 'player', dim: p.dim, x: p.x, z: p.z, title: p.name, hay: p.name,
-        icon: playerSvg(color), meta: `プレイヤー ・ ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
+        icon: playerSvg(color), meta: `プレイヤー  ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
       if (p.bed) out.push({ kind: 'bed', dim: p.bed.dim, x: p.bed.x, z: p.bed.z, title: `${p.name}・ベッド`, hay: `${p.name} ベッド`,
-        icon: BED_SVG(color), meta: `ベッド ・ ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
+        icon: BED_SVG(color), meta: `ベッド  ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
       if (p.death) out.push({ kind: 'death', dim: p.death.dim, x: p.death.x, z: p.death.z, title: `${p.name}・最終死亡地点`, hay: `${p.name} 死亡 最終死亡地点`,
-        icon: DEATH_SVG, meta: `死亡地点 ・ ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
+        icon: DEATH_SVG, meta: `死亡地点  ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
         out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || 'ネザーゲート', hay: `${g.name || ''} ネザーゲート ゲート`,
-          icon: PORTAL_SVG, meta: `ネザーゲート ・ ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+          icon: PORTAL_SVG, meta: `ネザーゲート  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
     return out;
@@ -1814,7 +1814,7 @@ const CHEST_ART = [[
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#4a3f33', B: '#4a3f33', D: '#b6823a', N: '#d8d8d8' }];
+  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#56493b', B: '#56493b', D: '#c6924a', N: '#e2e2e2' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
 const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1 });  // search hits
 // A wooden sign on its post: a plank board with lines of writing.
@@ -1930,7 +1930,7 @@ function buildFindIndex() {
       const title = v[4] ? `${v[4]}(${job})` : job;
       beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
         hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : VILLAGER_SVG,
-        meta: `${trader ? '行商人' : '村人'} ・ ${whereText(dim, v[0], v[2])}` });
+        meta: `${trader ? '行商人' : '村人'}  ${whereText(dim, v[0], v[2])}` });
       // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
@@ -1952,7 +1952,7 @@ function buildFindIndex() {
       beings.push({ type: 'pet', key: `${dim}:${a[0]}:${a[1]}:${a[2]}`, dim, x: a[0], z: a[2], title: a[4] || kind,
         hay: `${a[4] ? `${a[4].normalize('NFKC')} 名札` : ''} ${kind} ${a[3]} ペット ${owner}`,
         icon: animalSvg(a[3], animalCollar(a), !!a[4], false, 1.6, a[7]),
-        meta: `${a[4] ? kind : 'ペット'}${owner ? `(${owner})` : ''} ・ ${whereText(dim, a[0], a[2])}` });
+        meta: `${a[4] ? kind : 'ペット'}${owner ? `(${owner})` : ''}  ${whereText(dim, a[0], a[2])}` });
     }
   }
   findIndex = { items: [...items.values()], trades: [...trades.values()], signs: [...signs.values()], beings };

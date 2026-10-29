@@ -49,7 +49,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .leaflet-control-zoom { background: var(--glass);
   border: 1px solid var(--line); box-shadow: var(--shadow); }
 .search { position: relative; z-index: 10; flex: 0 1 240px; min-width: 0; }
-#search { width: 100%; height: 42px; padding: 0 14px 0 40px; border-radius: 999px; outline: none;
+#search { width: 100%; height: 42px; padding: 0 14px 0 40px; border-radius: 999px; outline: none; font-size: 16px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: 14px center; background-size: 18px; transition: border-color .15s; }
 #search:focus { border-color: var(--accent); }
