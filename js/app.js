@@ -583,7 +583,7 @@ const HistoryTileLayer = L.TileLayer.extend({
     if (!m) return null;
     const key = `${this.options.dim}/${z}/${x}/${y}`;
     const hit = m[key];
-    return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
+    return hit ? `${DATA}tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
   },
 
   _initTile(tile) {
@@ -1170,7 +1170,7 @@ function infoUrl(tx, tz, kind = 'info') {
   const m = manifests.get(snapshots()[state.snapshotIndex]?.id);
   const key = `${kind}/${state.dim}/${tx}/${tz}`;
   const hit = m && m[key];
-  return hit ? `tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
+  return hit ? `${DATA}tiles/${encodeURIComponent(hit[0])}/${key}.png?v=${hit[1]}` : null;
 }
 
 // Answers right away when the tile is already loaded; otherwise starts loading it.
