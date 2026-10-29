@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Blockmap ログイン</title>
+<!--
+  The Microsoft sign-in comes back here (one address registered for every Blockmap site), and this page hands the
+  one-time code to the site that asked for it. The code is useless without the secret that site kept for itself
+  (PKCE), and the visitor sees which site it goes to before it is sent. Nothing is stored here.
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #15171c; color: #e8e6e3;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  .box { width: min(420px, calc(100vw - 32px)); padding: 24px; border-radius: 16px; background: #1f2229; border: 1px solid #2e323b; }
+  h1 { margin: 0 0 8px; font-size: 20px; }
+  p { margin: 0 0 16px; color: #a7abb3; line-height: 1.6; font-size: 14px; }
+  b { color: #e8e6e3; word-break: break-all; }
+  button { width: 100%; height: 44px; border: 0; border-radius: 10px; background: #3ecf8e; color: #06130d; font-weight: 700; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Blockmap</h1>
+  <p id="msg">確認しています…</p>
+  <button id="go" hidden>続ける</button>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const msg = document.getElementById('msg'), go = document.getElementById('go');
+  // state = "<site host>~<site's session id>~<page>", made by the site that started the sign-in.
+  const [host, session, page] = String(q.get('state') || '').split('~');
+  const pages = { t: '/ms-test', a: '/' };
+  history.replaceState(null, '', location.pathname);
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host || '') || !/^[0-9a-f]{32}$/.test(session || '') || !pages[page]) {
+    msg.textContent = 'このページは、Blockmap の「Microsoft でログイン」から開いてください。';
+  } else if (q.get('error')) {
+    msg.textContent = 'ログインできませんでした。もう一度ためしてください。';
+    go.textContent = 'サイトに戻る';
+    go.hidden = false;
+    go.onclick = () => location.replace(`https://${host}${pages[page]}`);
+  } else if (/^[\w.*-]{10,}$/.test(q.get('code') || '')) {
+    const code = q.get('code');
+    msg.innerHTML = '';
+    msg.append('ログインできました。この地図サイトに戻ります:', document.createElement('br'));
+    const b = document.createElement('b'); b.textContent = host; msg.append(b);
+    msg.append(document.createElement('br'), '覚えのないサイトなら、ここで閉じてください。');
+    go.hidden = false;
+    go.onclick = () => location.replace(`https://${host}${pages[page]}#mscode=${encodeURIComponent(code)}&ms=${session}`);
+  } else {
+    msg.textContent = 'ログインの結果を受け取れませんでした。もう一度ためしてください。';
+  }
+</script>
+</body>
+</html>

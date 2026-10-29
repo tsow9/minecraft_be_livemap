@@ -31,6 +31,7 @@ export default {
         const html = (await page.text()).replace('<head>', `<head><script>window.BLOCKMAP_DATA=${JSON.stringify(`/d/${env.DATA_DIR}/`)};</script>`);
         return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
       }
+      if (url.pathname === '/ms-test') return (await viewer(req, env)) ? msTestPage() : gatePage();
       if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
       const path = url.pathname.slice(4);
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
@@ -46,6 +47,13 @@ export default {
       }
 
       if (!(await viewer(req, env))) return json({ error: 'invite' }, 401);
+
+      // Microsoft sign-in, to learn a visitor's gamertag (see msStart / msFinish).
+      if (path === '/ms/start' && req.method === 'POST') return json(await msStart(env, url));
+      if (path === '/ms/finish' && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        return json(await msFinish(env, String(body?.code || ''), String(body?.ms || '')));
+      }
 
       if (req.method === 'GET' && path === '/items') {
         const since = Number(url.searchParams.get('since')) || 0;
@@ -153,6 +161,96 @@ async function cookieValue(env) {
 async function same(a, b) {
   const [x, y] = await Promise.all([a, b].map((s) => crypto.subtle.digest('SHA-256', enc.encode(s))));
   return crypto.subtle.timingSafeEqual(x, y);
+}
+
+// ---------- Microsoft sign-in → gamertag ----------
+// One app (MS_CLIENT_ID, registered once for every Blockmap site) signs people in; the sign-in comes back to a shared
+// page (MS_RELAY) that hands the one-time code to the site that asked. This site keeps the PKCE secret, so only it
+// can turn the code into a token; the token is used once to ask Xbox for the gamertag, then dropped.
+const MS = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
+const MS_SESSION_MS = 15 * 60 * 1000;
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function msStart(env, url) {
+  const session = randomHex(16), verifier = randomHex(32);
+  const page = url.searchParams.get('p') === 'a' ? 'a' : 't';
+  await env.DB.prepare('DELETE FROM ms_sessions WHERE created < ?').bind(Date.now() - MS_SESSION_MS).run();
+  await env.DB.prepare('INSERT INTO ms_sessions (id, verifier, created) VALUES (?1, ?2, ?3)').bind(session, verifier, Date.now()).run();
+  const q = new URLSearchParams({
+    client_id: env.MS_CLIENT_ID, response_type: 'code', redirect_uri: env.MS_RELAY, scope: 'XboxLive.signin',
+    code_challenge: b64url(await crypto.subtle.digest('SHA-256', enc.encode(verifier))), code_challenge_method: 'S256',
+    state: `${url.host}~${session}~${page}`, prompt: 'select_account',
+  });
+  return { url: `${MS}/authorize?${q}` };
+}
+
+async function msFinish(env, code, session) {
+  if (!/^[0-9a-f]{32}$/.test(session) || !code) return { error: 'bad request' };
+  const row = await env.DB.prepare('SELECT verifier, created FROM ms_sessions WHERE id = ?').bind(session).first();
+  await env.DB.prepare('DELETE FROM ms_sessions WHERE id = ?').bind(session).run();
+  if (!row || Date.now() - row.created > MS_SESSION_MS) return { error: 'expired', step: 'session' };
+  const post = async (step, address, init) => {
+    const res = await fetch(address, init);
+    const text = await res.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch { /* not json */ }
+    // Only the step, the status and the error's name come back: never tokens.
+    if (!res.ok) throw Object.assign(new Error(step), { info: { step, status: res.status, error: body?.error || body?.XErr || null } });
+    return body;
+  };
+  try {
+    const token = await post('token', `${MS}/token`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: env.MS_CLIENT_ID, grant_type: 'authorization_code', code, redirect_uri: env.MS_RELAY,
+        code_verifier: row.verifier, scope: 'XboxLive.signin' }),
+    });
+    const xbl = { 'Content-Type': 'application/json', Accept: 'application/json', 'x-xbl-contract-version': '1' };
+    const user = await post('xbox', 'https://user.auth.xboxlive.com/user/authenticate', {
+      method: 'POST', headers: xbl, body: JSON.stringify({ RelyingParty: 'http://auth.xboxlive.com', TokenType: 'JWT',
+        Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: `d=${token.access_token}` } }),
+    });
+    const xsts = await post('xsts', 'https://xsts.auth.xboxlive.com/xsts/authorize', {
+      method: 'POST', headers: xbl, body: JSON.stringify({ RelyingParty: 'http://xboxlive.com', TokenType: 'JWT',
+        Properties: { SandboxId: 'RETAIL', UserTokens: [user.Token] } }),
+    });
+    const who = xsts?.DisplayClaims?.xui?.[0] || {};
+    if (!who.gtg) return { error: 'no gamertag', step: 'claims' };
+    const live = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
+    const names = (JSON.parse(live?.v || '{}').members || []).map((m) => String(m.name || '').toLowerCase());
+    return { gamertag: who.gtg, member: names.includes(String(who.gtg).toLowerCase()) };
+  } catch (e) {
+    return { error: 'failed', ...(e.info || { step: 'other' }) };
+  }
+}
+
+// A page to try the sign-in by hand: shows the gamertag that came back.
+function msTestPage() {
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Blockmap ログインの試し</title>
+<style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
+font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}.box{width:min(420px,calc(100vw - 32px));padding:24px;
+border-radius:16px;background:#1f2229;border:1px solid #2e323b}h1{margin:0 0 8px;font-size:20px}p{color:#a7abb3;line-height:1.6;font-size:14px}
+button{width:100%;height:44px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}#out{color:#e8e6e3;font-size:16px}</style>
+</head><body><div class="box"><h1>Microsoft でログイン(試し)</h1><p>ログインして、ゲーマータグが分かるか確かめます。</p>
+<button id="go">Microsoft でログイン</button><p id="out"></p></div><script>
+const out = document.getElementById('out');
+document.getElementById('go').onclick = async () => {
+  out.textContent = '準備しています…';
+  const r = await fetch('/api/ms/start?p=t', { method: 'POST' }).then((x) => x.json()).catch(() => null);
+  if (r?.url) location.href = r.url; else out.textContent = '始められませんでした';
+};
+const h = new URLSearchParams(location.hash.slice(1));
+history.replaceState(null, '', '/ms-test');
+if (h.get('mscode')) {
+  out.textContent = 'ゲーマータグを確かめています…';
+  fetch('/api/ms/finish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: h.get('mscode'), ms: h.get('ms') }) })
+    .then((x) => x.json()).then((d) => {
+      out.textContent = d.gamertag ? 'ゲーマータグ: ' + d.gamertag + ' / Realm のメンバー: ' + (d.member ? 'はい' : 'いいえ')
+        : 'うまくいきませんでした(' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
+    }).catch(() => { out.textContent = '通信できませんでした'; });
+}
+</script></body></html>`;
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }
 
 function randomHex(bytes) {

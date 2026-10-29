@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS writers (
   created INTEGER NOT NULL,
   used INTEGER
 );
+-- Microsoft sign-ins in progress: the PKCE secret this site keeps until the sign-in comes back (15 minutes at most).
+CREATE TABLE IF NOT EXISTS ms_sessions (
+  id TEXT PRIMARY KEY,
+  verifier TEXT NOT NULL,
+  created INTEGER NOT NULL
+);
