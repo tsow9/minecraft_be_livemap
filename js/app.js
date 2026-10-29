@@ -1781,6 +1781,32 @@ const VILLAGER_ART = [[
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
 const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1 });  // search hits
+// Each job's clothes on the villager above, after the game's: hats, aprons, an eye patch, the armorer's goggles.
+const JOB_ART = {
+  farmer: [['...KKKKKK...', '..KYYYYYYK..', 'KKYYYYYYYYKK', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#d9b24c' }],
+  fisherman: [['..KKKKKKKK..', '..KTTTTTTK..', '.KQQQQQQQQK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KQQQQKKQQQQK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { T: '#c9a66b', Q: '#3e8c8c' }],
+  shepherd: [['..KKKKKKKK..', '..KHHHHHHK..', '.KWWWWWWWWK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KWWWWKKWWWWK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { H: '#6b4428', W: '#ece8df' }],
+  fletcher: [['..KKKKKKKKF.', '..KGGGGGGKF.', '..KGGGGGGK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KGGGGKKGGGGK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { G: '#4f7a3a', F: '#f4f1ea' }],
+  librarian: [['..KKKKKKKK..', '..KLLLLLLK..', '..KPPPPPPK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KLLLLKKLLLLK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { L: '#8c2a2a', P: '#efe6cf' }],
+  cartographer: [['..KKKKKKKK..', '..KHHHHHHK..', '..KssssssK..', '..KbbbbYYK..', '..KwgnngYK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRYYRRRrK', 'KrRRRYYRRRrK', 'KKKKKKKKKKKK'], { H: '#5a3a22', Y: '#d9b24c' }],
+  cleric: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRYYRRRrK', 'KrRRRYYRRRrK', 'KKKKKKKKKKKK'], { r: '#5b2a6b', R: '#7a3a8c', Y: '#d9b24c' }],
+  armorer: [['..KKKKKKKK..', '.KGGGGGGGGK.', '.KGLLGGLLGK.', '.KGGGGGGGGK.', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrAAKKAArrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { G: '#8f8f8f', L: '#4a3226', A: '#4a2e1c' }],
+  weaponsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbKbK..', '..KwgnnKKK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#2b2b2b' }],
+  toolsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#3c4048' }],
+  butcher: [['..KKKKKKKK..', '..KssssssK..', '..KDDDDDDK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRWWWWWWRrK', 'KrRWWDWWWRrK', 'KKKKKKKKKKKK'], { D: '#b3261e', W: '#ece8df' }],
+  leatherworker: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#a0632f' }],
+  mason: [['..KKKKKKKK..', '..KCCCCCCK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#8c8c8c', C: '#8c8c8c' }],
+  nitwit: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { r: '#3f6b30', R: '#4f8a3c' }],
+};
+const jobIcons = {};
+function villagerIcon(job, big = false) {
+  const key = `${JOB_ART[job] ? job : ''}:${big}`;
+  if (!jobIcons[key]) {
+    const [rows, pal] = JOB_ART[job] ? [JOB_ART[job][0], { ...VILLAGER_ART[1], ...JOB_ART[job][1] }] : VILLAGER_ART;
+    jobIcons[key] = pixSvg(rows, pal, 1.6, 0, { grow: big ? 1 : 0 });
+  }
+  return jobIcons[key];
+}
 // The wandering trader: the villager's shape, dressed after the game's trader — dark blue hood with a red-brown rim,
 // a red-brown band round the lower face, and a blue robe with gold trim down the front.
 const TRADER_ART = [[
@@ -1929,7 +1955,7 @@ function buildFindIndex() {
       const job = jobName(v[3]), trader = v[3] === 'wandering_trader';
       const title = v[4] ? `${v[4]}(${job})` : job;
       beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
-        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : VILLAGER_SVG,
+        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
         meta: `${trader ? '行商人' : '村人'}  ${whereText(dim, v[0], v[2])}` });
       // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
@@ -2000,7 +2026,7 @@ function containerMark(dim, c, key) {
 function villagerMark(dim, v, key) {
   const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
   const trader = v[3] === 'wandering_trader';
-  return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : VILLAGER_SVG, iconBig: trader ? TRADER_BIG : VILLAGER_BIG, name,
+  return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : villagerIcon(v[3]), iconBig: trader ? TRADER_BIG : villagerIcon(v[3], true), name,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 function signMark(dim, g) {
