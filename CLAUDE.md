@@ -31,5 +31,5 @@
 
 ## 次にやること
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
-2. 切り替え:map-data / live-data ブランチを暗号化(リポジトリは公開なので今は丸見え)、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」だけ、古い share/(blockmap-share Worker)を片づける。
+2. 切り替え(持ち主が新しいサイトを色々確認して「大丈夫」と言うまで保留。それまでは今の GitHub Pages のサイトも残す):map-data / live-data ブランチを暗号化(リポジトリは公開なので今は丸見え)、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」だけ、古い share/(blockmap-share Worker)を片づける。
 3. 持ち主向けのかんたん設定ページ。私たち専用の設定(config.json の realmPrice / realmBillingDay / shareUrl)を外す。
