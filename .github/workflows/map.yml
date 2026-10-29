@@ -81,6 +81,7 @@ jobs:
       - name: ワールドの中のプレイヤー情報を調べる
         env:
           CHECK: ${{ vars.CHECK_SPOT }}
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # to compare hashed account IDs with the members' (only counts are shown)
         run: |
           pip install --quiet numpy pillow
           python3 tools/inspect_world.py world.mcworld

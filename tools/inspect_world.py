@@ -60,6 +60,7 @@ def main():
         if spawn:
             print('  リスポーン関連:', spawn)
     print('プレイヤー記録の項目(出てきた数):', sorted(names.items()))
+    account_links(db)
     # Where nether portal blocks are, by raw bytes and by the map maker's decoder.
     raw = collections.Counter()
     found = collections.Counter()
@@ -120,6 +121,46 @@ def main():
             print('level.dat の時刻・天気:', keep)
         except Exception as e:  # noqa: BLE001 - diagnostics only
             print('level.dat を読めない', e)
+
+
+def account_links(db):
+    """Whether the world ties player records to accounts: player_<id> records (not player_server_) and what their
+    text fields point at. Only counts are printed; IDs and names never are (the log of a public repo is public)."""
+    import json
+    import players
+    secret = os.environ.get('CACHE_KEY', '')
+    try:
+        with open('members.json', encoding='utf-8') as f:
+            member_ids = {m['id'] for m in json.load(f).get('members', []) if m.get('id')}
+    except (OSError, ValueError):
+        member_ids = set()
+    server_keys = {k.decode('latin-1') for k, _ in bedrock_db.scan(db, lambda k: k.startswith(b'player_server_'))}
+    links = 0
+    fields = collections.Counter()
+    hits = collections.Counter()
+    for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'player_') and not k.startswith(b'player_server_')):
+        links += 1
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except Exception:  # noqa: BLE001 - diagnostics only
+            fields['(NBTとして読めない)'] += 1
+            continue
+        for k, v in root.items():
+            fields[f'{k}:{type(v).__name__}'] += 1
+            if not isinstance(v, str) or not v:
+                continue
+            if v in server_keys or f'player_server_{v}' in server_keys:
+                hits[f'{k} → プレイヤー記録'] += 1
+            if secret and players._hash(secret, v) in member_ids:
+                hits[f'{k} → Realmのメンバー'] += 1
+            if v.isdigit():
+                hits[f'{k} は数字だけ({len(v)}桁)'] += 1
+        own = key.decode('latin-1')[len('player_'):]
+        if secret and players._hash(secret, own) in member_ids:
+            hits['キーの番号 → Realmのメンバー'] += 1
+    print(f'アカウントとのつながり: player_ の記録 {links} 件、プレイヤー記録 {len(server_keys)} 件、メンバー {len(member_ids)} 人')
+    print('  player_ の記録の項目:', sorted(fields.items()))
+    print('  一致した数:', sorted(hits.items()) or 'なし')
 
 
 if __name__ == '__main__':
