@@ -410,9 +410,12 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #panel-realm .share-row { margin: 12px 0 0; }
 #writers { margin-top: 14px; }
 .writer-form { display: flex; gap: 8px; }
-.writer-form input { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.3);
+.writer-form input, .writer-form select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.3);
   color: inherit; font: inherit; font-size: 16px; outline: none; }
 .writer-form input:focus { border-color: var(--accent); }
+.writer-form [hidden] { display: none; }
+#writer-list li { gap: 6px; padding: 5px 4px; }
+#writer-list .grow { min-width: 6em; font-weight: 600; }
 
 /* Search marks for stored items and villagers */
 .pop ul.inv { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow: auto; min-width: 200px; touch-action: pan-y; }

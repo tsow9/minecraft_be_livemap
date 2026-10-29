@@ -94,10 +94,12 @@ async function loadWriters() {
     const res = await fetch(`${share.url}/writers`, { headers: { 'X-Passphrase': getPass() }, cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const { writers } = await res.json();
+    share.writerNames = new Set(writers.map((w) => w.name));
+    fillWriterChoices();
     list.innerHTML = writers.length ? '' : '<li class="sub">まだいません</li>';
     for (const w of writers) {
       const li = document.createElement('li');
-      li.innerHTML = `<span class="grow"></span><span class="sub">${w.used ? `${esc(agoText(w.used))}に使用` : 'まだ使われていません'}</span>`;
+      li.innerHTML = `<span class="grow"></span><span class="sub" title="最後に使われた時">${w.used ? esc(agoText(w.used)) : '未使用'}</span>`;
       li.querySelector('.grow').textContent = w.name;
       li.append(button('リンク', () => copyText(w.link, `${w.name}さん用の書き込みリンクをコピーしました。本人にだけ送ってください`)));
       li.append(button('止める', async () => {
@@ -109,6 +111,23 @@ async function loadWriters() {
       list.append(li);
     }
   } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
+}
+// Write links are named after the Realm's members (their gamertags); anyone else can still be typed in.
+function fillWriterChoices() {
+  const pick = $('#writer-pick'), input = $('#writer-name');
+  if (!pick) return;
+  const names = (state.realmMembers || []).filter((n) => !share.writerNames?.has(n));
+  const was = pick.value;
+  pick.innerHTML = '<option value="">メンバーから選ぶ</option>';
+  for (const n of names) pick.add(new Option(n, n));
+  pick.add(new Option('名前を入力する…', '__other'));
+  pick.hidden = !(state.realmMembers || []).length;
+  pick.value = [...pick.options].some((o) => o.value === was) ? was : '';
+  input.hidden = !pick.hidden && pick.value !== '__other';
+}
+function writerNameChosen() {
+  const pick = $('#writer-pick');
+  return (!pick.hidden && pick.value !== '__other' ? pick.value : $('#writer-name').value).trim();
 }
 async function addWriter(name) {
   const res = await fetch(`${share.url}/writers`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Passphrase': getPass() }, body: JSON.stringify({ name }) }).catch(() => null);
@@ -344,11 +363,16 @@ function setupShare() {
       else if (res.status === 401) { setPass(''); showInvites(null); }
     }).catch(() => {});
   }
+  $('#writer-pick').addEventListener('change', () => {
+    fillWriterChoices();
+    if ($('#writer-pick').value === '__other') $('#writer-name').focus();
+  });
   $('#writer-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = $('#writer-name').value.trim();
-    if (!name) { $('#writer-name').focus(); return; }
+    const name = writerNameChosen();
+    if (!name) { toast('書き込みを許す人を選んでください'); return; }
     $('#writer-name').value = '';
+    $('#writer-pick').value = '';
     addWriter(name);
   });
   $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
@@ -2877,6 +2901,8 @@ async function refreshLive() {
   const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
     .sort((a, b) => (b.online - a.online) || ((b.lastLogin || 0) - (a.lastLogin || 0)));
   const online = members.filter((m) => m.online);
+  state.realmMembers = members.map((m) => m.name);
+  fillWriterChoices();
   badge.textContent = online.length;
   badge.hidden = online.length === 0;
   const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.parse(data.updatedAt);
