@@ -84,11 +84,9 @@ function sharing() { return !!share.url; }
 function showInvites(role) {
   share.role = role || null;
   $('#share-invite').hidden = !role || !!DATA;
-  $('#view-invite').hidden = !role || !DATA || signedIn();
-  $('#site-invite').hidden = !DATA || !signedIn() || role !== 'admin';
-  $('#writers').hidden = role !== 'admin' || !DATA;
-  $('#writer-form').hidden = signedIn();
-  if (role === 'admin' && DATA) (signedIn() ? loadAccess() : loadWriters());
+  $('#site-invite').hidden = !DATA || role !== 'admin';
+  $('#writers').hidden = !DATA || role !== 'admin';
+  if (DATA && role === 'admin') loadAccess();
   renderMe();
 }
 function renderMe() {
@@ -106,7 +104,6 @@ function renderMe() {
 // The owner's list of the Realm's members: each one looks only until the owner lets them write.
 async function loadAccess() {
   const list = $('#writer-list');
-  $('#writers h3').textContent = '書き込みできるメンバー(管理者だけに見えます)';
   try {
     const res = await fetch(`${share.url}/access`, { cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
@@ -131,59 +128,6 @@ async function loadAccess() {
 }
 const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
 
-// The owner's list of write links, one per person; stopping one turns that person back to looking only.
-async function loadWriters() {
-  const list = $('#writer-list');
-  try {
-    const res = await fetch(`${share.url}/writers`, { headers: { 'X-Passphrase': getPass() }, cache: 'no-store' });
-    if (!res.ok) throw new Error(String(res.status));
-    const { writers } = await res.json();
-    share.writerNames = new Set(writers.map((w) => w.name));
-    fillWriterChoices();
-    list.innerHTML = writers.length ? '' : '<li class="sub">まだいません</li>';
-    for (const w of writers) {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="grow"></span><span class="sub" title="最後に使われた時">${w.used ? esc(agoText(w.used)) : '未使用'}</span>`;
-      li.querySelector('.grow').textContent = w.name;
-      li.append(button('リンク', () => copyText(w.link, `${w.name}さん用の書き込みリンクをコピーしました。本人にだけ送ってください`)));
-      li.append(button('止める', async () => {
-        if (!confirm(`${w.name}さんの書き込みリンクを止めますか?(地図は今までどおり見られます)`)) return;
-        const r = await fetch(`${share.url}/writers/stop`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Passphrase': getPass() }, body: JSON.stringify({ id: w.id }) }).catch(() => null);
-        toast(r?.ok ? `${w.name}さんの書き込みリンクを止めました` : '止められませんでした。もう一度ためしてください');
-        loadWriters();
-      }));
-      list.append(li);
-    }
-  } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
-}
-// Write links are named after the Realm's members (their gamertags); anyone else can still be typed in.
-function fillWriterChoices() {
-  const pick = $('#writer-pick'), input = $('#writer-name');
-  if (!pick) return;
-  const names = (state.realmMembers || []).filter((n) => !share.writerNames?.has(n));
-  const was = pick.value;
-  pick.innerHTML = '<option value="">メンバーから選ぶ</option>';
-  for (const n of names) pick.add(new Option(n, n));
-  pick.add(new Option('名前を入力する…', '__other'));
-  pick.hidden = !(state.realmMembers || []).length;
-  pick.value = [...pick.options].some((o) => o.value === was) ? was : '';
-  input.hidden = !pick.hidden && pick.value !== '__other';
-}
-function writerNameChosen() {
-  const pick = $('#writer-pick');
-  return (!pick.hidden && pick.value !== '__other' ? pick.value : $('#writer-name').value).trim();
-}
-async function addWriter(name) {
-  const res = await fetch(`${share.url}/writers`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Passphrase': getPass() }, body: JSON.stringify({ name }) }).catch(() => null);
-  if (!res?.ok) { toast('書き込みリンクを作れませんでした'); return; }
-  const w = await res.json();
-  // Copying after waiting for the server is refused on some phones; the list's リンク button always works.
-  try {
-    await navigator.clipboard.writeText(w.link);
-    toast(`${w.name}さん用の書き込みリンクをコピーしました。本人にだけ送ってください`);
-  } catch { toast(`${w.name}さん用のリンクを作りました。一覧の「リンク」を押してコピーしてください`); }
-  loadWriters();
-}
 function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
 function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch { /* private mode */ } }
 
@@ -421,27 +365,7 @@ function setupShare() {
     }).catch(() => {});
   }
   $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, '地図の住所をコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)'));
-  $('#writer-pick').addEventListener('change', () => {
-    fillWriterChoices();
-    if ($('#writer-pick').value === '__other') $('#writer-name').focus();
-  });
-  $('#writer-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = writerNameChosen();
-    if (!name) { toast('書き込みを許す人を選んでください'); return; }
-    $('#writer-name').value = '';
-    $('#writer-pick').value = '';
-    addWriter(name);
-  });
   $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
-  // The view-only link comes from the server (only writers may ask for it).
-  $('#view-invite').addEventListener('click', async () => {
-    try {
-      const res = await fetch(`${share.url}/invite`, { headers: { 'X-Passphrase': getPass() }, cache: 'no-store' });
-      if (!res.ok) throw new Error(String(res.status));
-      copyText((await res.json()).link, '見る用の招待リンクをコピーしました。地図を見せたい仲間に送ってください');
-    } catch { toast('招待リンクを用意できませんでした'); }
-  });
   loadSyncState();
   renderAll();
   joinFromLink();
@@ -2961,8 +2885,6 @@ async function refreshLive() {
   const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
     .sort((a, b) => (b.online - a.online) || ((b.lastLogin || 0) - (a.lastLogin || 0)));
   const online = members.filter((m) => m.online);
-  state.realmMembers = members.map((m) => m.name);
-  fillWriterChoices();
   badge.textContent = online.length;
   badge.hidden = online.length === 0;
   const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.parse(data.updatedAt);

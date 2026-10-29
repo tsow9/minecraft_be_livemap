@@ -21,9 +21,12 @@
 - 「公式とは関係ありません」の注意書きは、いったん入れない。
 - 見せる範囲(案C):
   - 地図・チェスト・位置などのデータは全部、持ち主の Cloudflare に置く。GitHub にはデータを置かず、リポジトリはプログラムだけの公開にする(Actions を無料で回すため)。
-  - 見るには招待リンクが必要。見る用リンクは全員共通の1本。漏れても見られるだけなので、基本は作り直さない。
-  - 書き込みは、サイトを立てた人(管理者 = SHARE_PASSPHRASE で入った端末)が「〇〇さん用」の書き込みリンク(#w=)を作って渡す。管理者は1人ずつ止められる。招待される側にはリンクを開く以外何もさせない(申し込み・名前入力などはしない)。合言葉入りのリンクは新しいサイトでは出さない。
-  - 実装済み: `worker/`(Cloudflare Worker + D1、https://blockmap.blockmap.workers.dev)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。
+  - 入るときは「Microsoft でログイン」。Realm のメンバーだけが見られる(招待リンクは廃止)。仲間にはサイトの住所を送るだけ。
+  - 管理者はサイトを立てた人(地図が Realms から取るのに使っているアカウント = realm.ownerXid)。メンバーは最初は見るだけで、管理者が「Realms情報」の一覧で人ごとに書き込みをオンにする。ピンには作った人のゲーマータグを Worker 側で付ける。
+  - ログインの仕組み:このプロジェクトとして Azure にアプリを1つ登録(クライアント ID は worker/wrangler.template.toml の MS_CLIENT_ID、個人用 Microsoft アカウントのみ、モバイル/デスクトップのリダイレクト URI = GitHub Pages の login.html)。配った各サイトはこの1つを共通で使い、login.html(中継ページ)経由で戻る。PKCE の秘密は各サイトの Worker が持つ。Xbox の XSTS でゲーマータグと XUID を得て、トークンはすぐ捨てる。
+  - メンバーの照合:tools/realms/common.js がメンバーごとに xid = HMAC(MEMBER_KEY, XUID) を live.json に入れ、Worker は同じ MEMBER_KEY で照合する(MEMBER_KEY は REALMS_CACHE_KEY から作る)。
+  - ワールドのプレイヤーの記録とメンバーは、player_<id> の MsaId(XUID から作るゲーム内 ID)で確実に結びつける(tools/players.py)。
+  - 実装済み: `worker/`(Cloudflare Worker + D1、https://blockmap.blockmap.workers.dev)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。SHARE_PASSPHRASE は位置確認が Worker に送るときだけ使う。
   - Microsoft アカウントのログイン情報は持ち主の GitHub に暗号化したまま。リンクやデータには入れない。
 
 ## 次にやること

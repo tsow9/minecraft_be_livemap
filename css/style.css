@@ -409,11 +409,6 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info > .help:last-child { margin: 10px 0 0; }
 #panel-realm .share-row { margin: 12px 0 0; }
 #writers { margin-top: 14px; }
-.writer-form { display: flex; gap: 8px; }
-.writer-form input, .writer-form select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.3);
-  color: inherit; font: inherit; font-size: 16px; outline: none; }
-.writer-form input:focus { border-color: var(--accent); }
-.writer-form [hidden] { display: none; }
 #writer-list li { gap: 6px; padding: 5px 4px; }
 #writer-list .grow { min-width: 6em; font-weight: 600; }
 
