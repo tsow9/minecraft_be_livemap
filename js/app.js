@@ -20,7 +20,7 @@ const DEMO_SNAPSHOTS = [
 
 // Minecraft X → lng, Z → -lat, so north (-Z) is up and 1 block = 1px at zoom 0.
 const ll = (x, z) => L.latLng(-z, x);
-let topBoxesBottom = 0;  // screen y where the boxes at the top (search, chips, readout, clock) end
+let noTapAbove = 0;  // phones: screen y where the search box, the dimension switch and the chips end
 const block = (latlng) => ({ x: Math.floor(latlng.lng), z: Math.floor(-latlng.lat) });
 const round1 = (v) => Math.round(v * 10) / 10;
 // Hand drawings keep finer positions so zooming in never makes them wobble.
@@ -963,9 +963,9 @@ function setupTools() {
   let popupWasOpen = false;
   map.on('preclick', () => { popupWasOpen = !!map._popup && map.hasLayer(map._popup); });
   map.on('click', (e) => {
-    // Phones: the strip of map between the boxes at the top is never tapped on purpose (a finger aiming at a
-    // chip or the clock lands there), so a tap above the last of those boxes does nothing.
-    if (matchMedia('(max-width: 700px)').matches && e.originalEvent && e.originalEvent.clientY < topBoxesBottom) return;
+    // Phones: the map showing between the search box, the dimension switch and the chips is never tapped on
+    // purpose (a finger aiming at a chip lands there), so a tap up there does nothing.
+    if (matchMedia('(max-width: 700px)').matches && e.originalEvent && e.originalEvent.clientY < noTapAbove) return;
     // A search result is marked: a tap on another spot of the map just takes the marking away.
     if (finds && state.mode === 'none' && !route.from) { clearFinds(); return; }
     const { x, z } = block(e.latlng);
@@ -1393,7 +1393,7 @@ function setupCoords() {
       return e.hidden || r.top > innerHeight / 3 ? 0 : r.bottom;  // only what sits at the top (the PC readout is at the bottom)
     }));
     const side = $('#sidebuttons').getBoundingClientRect();
-    topBoxesBottom = top;
+    noTapAbove = Math.max(...[$('#topbar .search'), dims, $('#chips')].map((e) => (e.hidden ? 0 : e.getBoundingClientRect().bottom)));
     L.Popup.prototype.options.autoPanPaddingTopLeft = L.point(10, Math.ceil(top + 8));
     L.Popup.prototype.options.autoPanPaddingBottomRight = L.point(side.top < top + 120 ? Math.ceil(innerWidth - side.left + 8) : 10, 80);
   };
@@ -2183,7 +2183,8 @@ function focusMark(layer) {
   if (!el) return;
   const p = finds?.type === 'place' ? finds.place : null;
   const at = layer.getLatLng();
-  const on = !!p && p.dim === state.dim && Math.abs(at.lng - (p.x + 0.5)) <= 1 && Math.abs(-at.lat - (p.z + 0.5)) <= 1;
+  // Only the marks in that very block: a pet or villager standing next to it is not picked with it.
+  const on = !!p && p.dim === state.dim && Math.floor(at.lng) === Math.floor(p.x) && Math.floor(-at.lat) === Math.floor(p.z);
   el.classList.toggle('keep', on);
   // Chests and villagers: the larger drawing (same as a search hit); other marks grow through CSS.
   const fi = el.querySelector('.find-icon');
