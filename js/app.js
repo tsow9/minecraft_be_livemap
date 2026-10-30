@@ -52,6 +52,10 @@ const state = {
 
 let map;
 const annGroup = L.layerGroup();
+// The text written in shapes: the same size on screen at any zoom, gone once the shape is too small to hold it.
+const annLabels = L.layerGroup();
+const labelLayers = new Map();
+const LABEL_MIN_PX = 36;
 
 // ---------- storage ----------
 const store = {
@@ -441,11 +445,13 @@ function sanitize(a) {
     }
   } else if (a.type === 'circle') {
     out.x = num(a.x); out.z = num(a.z); out.r = num(a.r);
+    if (a.text) out.text = String(a.text).slice(0, 200);
     if (out.x === null || out.z === null || !(out.r > 0)) return null;
   } else {
     if (!Array.isArray(a.pts)) return null;
     out.pts = a.pts.map((p) => [num(p?.[0]), num(p?.[1])]).filter((p) => p[0] !== null && p[1] !== null).slice(0, 5000);
     if (out.pts.length < 2) return null;
+    if (a.text && a.type !== 'draw') out.text = String(a.text).slice(0, 200);  // written inside the shape
   }
   return out;
 }
@@ -916,15 +922,46 @@ function renderAnn(a) {
   layer.on('pm:edit pm:dragend', () => updateGeometry(a.id, layer));
   annGroup.addLayer(layer);
   state.layers.set(a.id, layer);
+  const text = a.type !== 'waypoint' && a.type !== 'text' && a.type !== 'draw' ? (a.text || a.name || '') : '';
+  if (text) {
+    const label = L.marker(shapeMiddle(a, layer), { interactive: false, pmIgnore: true, keyboard: false,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+        html: `<div class="shape-label" style="--c:${a.color}">${esc(text)}</div>` }) });
+    label._shape = layer;
+    annLabels.addLayer(label);
+    labelLayers.set(a.id, label);
+    fitLabel(label);
+  }
+}
+
+// Where a shape's text goes: the middle of its outline (a line: halfway along it).
+function shapeMiddle(a, layer) {
+  if (a.type === 'circle') return layer.getLatLng();
+  if (a.type === 'line') {
+    const ls = layer.getLatLngs(), i = Math.floor((ls.length - 1) / 2);
+    return ls.length % 2 ? ls[i] : L.latLngBounds([ls[i], ls[i + 1]]).getCenter();
+  }
+  return layer.getBounds().getCenter();
+}
+// Shown only while the shape is big enough on screen for its text.
+function fitLabel(label) {
+  const el = label.getElement();
+  if (!el || !map) return;
+  const b = label._shape.getBounds();
+  const size = map.latLngToContainerPoint(b.getSouthEast()).subtract(map.latLngToContainerPoint(b.getNorthWest()));
+  el.style.visibility = Math.max(size.x, size.y) >= LABEL_MIN_PX ? '' : 'hidden';
 }
 
 function removeAnnLayer(id) {
   const l = state.layers.get(id);
   if (l) { annGroup.removeLayer(l); state.layers.delete(id); }
+  const t = labelLayers.get(id);
+  if (t) { annLabels.removeLayer(t); labelLayers.delete(id); }
 }
 
 function renderAll() {
   annGroup.clearLayers(); state.layers.clear();
+  annLabels.clearLayers(); labelLayers.clear();
   state.annotations.forEach(renderAnn);
 }
 
@@ -942,6 +979,7 @@ function updateGeometry(id, layer) {
   } else {
     a.pts = L.LineUtil.isFlat(layer.getLatLngs()) ? layer.getLatLngs().map(toPt) : layer.getLatLngs()[0].map(toPt);
   }
+  if (a.type !== 'draw') snapShape(a);
   a.updatedAt = Date.now();
   store.save();
 }
@@ -999,7 +1037,7 @@ function openAnnPopup(id, at) {
   const head = document.createElement('h4');
   if (a.type === 'waypoint') head.textContent = a.name || tl('ピン');
   else if (a.type === 'text') head.textContent = a.text;
-  else head.textContent = a.name || { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
+  else head.textContent = a.text || a.name || { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
   const isPoint = a.type === 'waypoint' || a.type === 'text';
   el.append(head);
   if (isPoint) el.append(coordBlock(c.x, c.z, a.y, a.dim));
@@ -1034,9 +1072,10 @@ function fillSwatches(container, current, onPick) {
   }
 }
 
+const isShapeWithText = (a) => ['line', 'polygon', 'rect', 'circle'].includes(a.type);
 function openEditor(a, isNew) {
   editing = { a, isNew, color: a.color };
-  const isWp = a.type === 'waypoint', isText = a.type === 'text';
+  const isWp = a.type === 'waypoint', isText = a.type === 'text' || isShapeWithText(a);
   $('#ed-title').textContent = isWp ? (isNew ? tl('新しいピン') : tl('ピンの編集')) : (isNew ? tl('新しく追加') : tl('編集'));
   $('#ed-name').placeholder = isWp ? nextPinName() : '';
   $('#ed-name-row').hidden = isText;
@@ -1044,7 +1083,7 @@ function openEditor(a, isNew) {
   $('#ed-error').textContent = '';
   $('#ed-delete').hidden = isNew;
   $('#ed-name').value = a.name || '';
-  $('#ed-text').value = a.text || '';
+  $('#ed-text').value = a.text || (isShapeWithText(a) ? a.name : '') || '';
   fillSwatches($('#ed-colors'), a.color, (c) => { editing.color = c; });
   editor.showModal();
   setTimeout(() => (isText ? $('#ed-text') : $('#ed-name')).focus(), 50);
@@ -1061,6 +1100,9 @@ editor.addEventListener('close', () => {
   if (a.type === 'text') {
     next.text = $('#ed-text').value.trim();
     if (!next.text) { if (!isNew) deleteAnn(a.id); return; }
+  } else if (isShapeWithText(a)) {
+    next.text = $('#ed-text').value.trim();
+    next.name = '';
   } else {
     next.name = $('#ed-name').value.trim();
   }
@@ -1115,46 +1157,61 @@ const HINTS = {
   none: tl('地図をタップすると座標が出ます'),
   waypoint: tl('印をつけたい場所をタップ'),
   text: tl('文字を置きたい場所をタップ'),
-  freehand: tl('1本指(マウス)でなぞって描く・2本指で拡大縮小'),
   Line: tl('タップで点を足す → 最後の点をもう一度タップで完成'),
   Polygon: tl('タップで点を足す → 最初の点をタップで完成'),
   Rectangle: tl('角を1か所タップ → 反対の角をタップ'),
   Circle: tl('中心をタップ → 円の端をタップ'),
   edit: tl('図形の白い点をドラッグして形を直す'),
   drag: tl('動かしたいものをドラッグ'),
-  erase: tl('なぞった所の手書きを消す・2本指で拡大縮小'),
 };
 const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
+// Shapes snap to whole blocks: the corners of squares and polygons to block edges, lines and circles to block
+// middles (a circle's radius to whole blocks).
+const toEdge = (v) => Math.round(v);
+const toMiddle = (v) => Math.floor(v) + 0.5;
+function snapShape(a) {
+  if (a.type === 'rect' || a.type === 'polygon') a.pts = a.pts.map(([x, z]) => [toEdge(x), toEdge(z)]);
+  else if (a.type === 'line') a.pts = a.pts.map(([x, z]) => [toMiddle(x), toMiddle(z)]);
+  else if (a.type === 'circle') { a.x = toMiddle(a.x); a.z = toMiddle(a.z); a.r = Math.max(1, Math.round(a.r)); }
+  return a;
+}
+// While a shape is drawn, the pointer itself snaps, so what is drawn is what is kept.
+function snapPointer() {
+  const plain = map.mouseEventToLatLng.bind(map);
+  map.mouseEventToLatLng = (e) => {
+    const p = plain(e), type = GEOMAN_SHAPES[state.mode];
+    if (type === 'rect' || type === 'polygon') return L.latLng(toEdge(p.lat), toEdge(p.lng));
+    if (type === 'line' || type === 'circle') return L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
+    return p;
+  };
+}
+
 function setMode(mode) {
+  // Leaving 形を直す / 動かす: shapes are redrawn as kept (snapped to blocks).
+  const wasEditing = state.mode === 'edit' || state.mode === 'drag';
   // Set first: disableDraw() fires pm:drawend, which re-arms the drawing tool for whatever mode is current.
   state.mode = mode;
   map.pm.disableDraw();
   if (map.pm.globalEditModeEnabled()) map.pm.disableGlobalEditMode();
   if (map.pm.globalDragModeEnabled()) map.pm.disableGlobalDragMode();
   if (map.pm.globalRemovalModeEnabled()) map.pm.disableGlobalRemovalMode();
+  if (wasEditing && mode !== 'edit' && mode !== 'drag') renderAll();
   map.dragging.enable();
-  const hand = mode === 'freehand' || mode === 'erase';
-  document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === (mode === 'erase' ? 'freehand' : mode)));
-  $('#pen-toggle').hidden = !hand;
-  document.querySelectorAll('#pen-toggle button').forEach((b) => b.classList.toggle('on', b.dataset.pen === mode));
+  document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   const canCancel = mode !== 'none' && window.matchMedia('(pointer: fine)').matches;
   $('#mode-hint').textContent = (HINTS[mode] || '') + (canCancel ? tl('(Esc・右クリックでやめる)') : '');
   $('#map').classList.toggle('mode-draw', mode !== 'none');
-  $('#map').classList.toggle('mode-freehand', hand);
-  $('#map').classList.toggle('mode-erase', mode === 'erase');
   map.closePopup();
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
   if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') map.pm.enableGlobalEditMode();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
-  else if (hand) map.dragging.disable();
 }
 
 function setupTools() {
   document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
-  document.querySelectorAll('#pen-toggle button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.pen)));
   fillSwatches($('#colors'), state.color, (c) => { state.color = c; if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   $('#width').addEventListener('input', (e) => { state.width = Number(e.target.value); if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   $('#btn-tools').addEventListener('click', async () => {
@@ -1176,7 +1233,7 @@ function setupTools() {
     if (type === 'circle') { const c = layer.getLatLng(); a.x = round1(c.lng); a.z = round1(-c.lat); a.r = round1(layer.getRadius()); }
     else if (type === 'rect') { const b = layer.getBounds(); a.pts = [toPt(b.getNorthWest()), toPt(b.getSouthEast())]; }
     else { const ls = layer.getLatLngs(); a.pts = (L.LineUtil.isFlat(ls) ? ls : ls[0]).map(toPt); }
-    addAnn(a);
+    addAnn(snapShape(a));
   });
   map.on('pm:drawend', () => { if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   map.on('pm:remove', (e) => { if (e.layer._annId) deleteAnn(e.layer._annId); });
@@ -1199,7 +1256,6 @@ function setupTools() {
     else if (state.mode === 'text') createText(x, z);
   });
 
-  setupFreehand();
   setupCancel();
 }
 
@@ -1219,116 +1275,6 @@ function setupCancel() {
     e.preventDefault();
     cancel();
   });
-}
-
-function setupFreehand() {
-  const el = map.getContainer();
-  const pointers = new Set();
-  let pts = null, temp = null;
-  const finish = (keep) => {
-    if (temp) { map.removeLayer(temp); temp = null; }
-    if (keep && pts && pts.length >= 2) {
-      // Only drop points that change nothing visible, so the line stays exactly where it was drawn.
-      const z = map.getZoom();
-      const simplified = L.LineUtil.simplify(pts.map((p) => map.project(p, z)), 0.35).map((p) => map.unproject(p, z));
-      if (simplified.length >= 2) {
-        addAnn({ id: uid(), type: 'draw', dim: state.dim, color: state.color, weight: state.width, name: '', note: '',
-          pts: simplified.map((p) => [round2(p.lng), round2(-p.lat)]) });
-      }
-    }
-    pts = null;
-  };
-  let eraser = null, erased = false, last = null, smooth = null;
-  const stopErase = () => {
-    if (eraser) { map.removeLayer(eraser); eraser = null; }
-    if (erased) store.save();
-    erased = false; last = null;
-  };
-  el.addEventListener('pointerdown', (e) => {
-    if (state.mode !== 'freehand' && state.mode !== 'erase') return;
-    pointers.add(e.pointerId);
-    if (pointers.size > 1) { finish(false); stopErase(); return; }
-    if (e.target.closest('.leaflet-control, .leaflet-popup')) return;
-    if (state.mode === 'erase') {
-      last = map.mouseEventToContainerPoint(e);
-      eraser = L.circleMarker(map.containerPointToLatLng(last), { radius: ERASER_PX, color: '#fff', weight: 1.5, dashArray: '3,3',
-        fillColor: '#fff', fillOpacity: 0.15, pmIgnore: true, interactive: false }).addTo(map);
-      erased = eraseAlong(last, last) || erased;
-      return;
-    }
-    smooth = map.mouseEventToContainerPoint(e);
-    pts = [map.containerPointToLatLng(smooth)];
-    temp = L.polyline(pts, { color: state.color, weight: state.width, opacity: 0.95, lineCap: 'round', lineJoin: 'round',
-      smoothFactor: 0.3, pmIgnore: true, interactive: false }).addTo(map);
-  });
-  el.addEventListener('pointermove', (e) => {
-    if (last && state.mode === 'erase' && pointers.size === 1) {
-      const p = map.mouseEventToContainerPoint(e);
-      eraser.setLatLng(map.containerPointToLatLng(p));
-      erased = eraseAlong(last, p) || erased;
-      last = p;
-      return;
-    }
-    if (!pts || state.mode !== 'freehand' || pointers.size > 1) return;
-    // A light steadying of the pen (like drawing apps) takes out the small shakes of a finger or mouse.
-    const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
-    for (const ev of events.length ? events : [e]) {
-      const raw = map.mouseEventToContainerPoint(ev);
-      smooth = smooth.add(raw.subtract(smooth).multiplyBy(0.45));
-      if (smooth.distanceTo(map.latLngToContainerPoint(pts[pts.length - 1])) >= 1) pts.push(map.containerPointToLatLng(smooth));
-    }
-    temp.setLatLngs(pts);
-  });
-  const up = (e) => {
-    const wasSingle = pointers.size === 1;
-    pointers.delete(e.pointerId);
-    if (pts) finish(wasSingle && e.type === 'pointerup');
-    if (last) stopErase();
-  };
-  el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', up);
-}
-
-// Cuts away the parts of hand drawings that the eraser passed over (screen points p0 → p1).
-const ERASER_PX = 12;
-function eraseAlong(p0, p1) {
-  let changed = false;
-  for (const a of [...state.annotations]) {
-    if (a.type !== 'draw' || a.dim !== state.dim) continue;
-    const r = ERASER_PX + (a.weight || 4) / 2;
-    const pts = a.pts.map(([x, z]) => map.latLngToContainerPoint(ll(x, z)));
-    const box = L.bounds([p0, p1]);
-    if (!L.bounds(pts).intersects(L.bounds([box.min.subtract(L.point(r, r)), box.max.add(L.point(r, r))]))) continue;
-    // Fill in points every few pixels so even long straight parts can be cut in the middle.
-    const dense = [];
-    pts.forEach((p, i) => {
-      if (i) {
-        const s = pts[i - 1], n = Math.ceil(s.distanceTo(p) / 3);
-        for (let k = 1; k < n; k++) dense.push(s.add(p.subtract(s).multiplyBy(k / n)));
-      }
-      dense.push(p);
-    });
-    const keep = dense.map((p) => L.LineUtil.pointToSegmentDistance(p, p0, p1) > r);
-    if (keep.every(Boolean)) continue;
-    changed = true;
-    const runs = [];
-    let cur = [];
-    dense.forEach((p, i) => {
-      if (keep[i]) cur.push(p);
-      else { if (cur.length >= 2) runs.push(cur); cur = []; }
-    });
-    if (cur.length >= 2) runs.push(cur);
-    state.annotations = state.annotations.filter((v) => v.id !== a.id);
-    removeAnnLayer(a.id);
-    for (const run of runs) {
-      const simple = L.LineUtil.simplify(run, 0.35);
-      if (simple.length < 2) continue;
-      const piece = sanitize({ ...a, id: uid(), updatedAt: Date.now(),
-        pts: simple.map((p) => { const q = map.containerPointToLatLng(p); return [round2(q.lng), round2(-q.lat)]; }) });
-      if (piece) { state.annotations.push(piece); renderAnn(piece); }
-    }
-  }
-  return changed;
 }
 
 // ---------- coordinates readout ----------
@@ -3309,13 +3255,17 @@ async function main() {
 
   map = L.map('map', {
     crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: MAX_ZOOM,
-    zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false,
+    // No fading of map pictures (it made zooming heavy on large screens) and no Shift-drag box zoom.
+    zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false, fadeAnimation: false, boxZoom: false,
   });
   map.attributionControl.setPrefix(false);  // only the map's date shows in the corner
   L.control.zoom({ position: 'bottomright', zoomInTitle: tl('拡大'), zoomOutTitle: tl('縮小') }).addTo(map);
   map.pm.setLang('ja');
   map.pm.setGlobalOptions({ snappable: false, continueDrawing: false, tooltips: false });
   annGroup.addTo(map);
+  annLabels.addTo(map);
+  map.on('zoomend', () => annLabels.eachLayer(fitLabel));
+  snapPointer();
 
   await loadBlockNames();
   refreshBase();

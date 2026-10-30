@@ -33,7 +33,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .leaflet-container { background: var(--bg-page); font: inherit; }
 .leaflet-tile { image-rendering: crisp-edges; image-rendering: pixelated; }
 #map.mode-draw { cursor: crosshair; }
-#map.mode-freehand { touch-action: none; }
 
 #crosshair { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
   pointer-events: none; z-index: 500; }
@@ -152,8 +151,6 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 .seg.small { height: 34px; }
 .seg.small button { display: inline-flex; align-items: center; gap: 5px; padding: 0 12px; font-size: 13px; }
 .seg.small .ic { width: 16px; height: 16px; }
-#pen-toggle[hidden] { display: none; }
-#map.mode-erase { cursor: cell; }
 .mini.danger { color: #ff8a86; }
 .mini.danger:hover { background: rgba(229, 72, 77, .18); }
 #mode-hint { text-align: center; color: var(--sub); font-size: 12px; margin-top: 6px; min-height: 1em; }
@@ -521,3 +518,15 @@ body.finding .pl-icon.off { opacity: .4; }
 }
 .mini.on { background: var(--accent); border-color: var(--accent); color: #06130d; }
 #me-line .mini { margin-left: 6px; }
+
+/* Text written in a shape: centred on it, the same size on screen at any zoom. */
+.shape-label { position: absolute; transform: translate(-50%, -50%); max-width: 220px; width: max-content; text-align: center;
+  white-space: pre-line; overflow-wrap: anywhere; font-weight: 700; font-size: 13px; line-height: 1.35; color: #fff; pointer-events: none;
+  text-shadow: 0 0 3px var(--c), 0 0 2px #000, 0 1px 2px #000; }
+
+/* Marks answer only where they are drawn: not their transparent corners, nor the shadow under them. */
+.leaflet-marker-icon:has(.gm) { pointer-events: none; }
+.gm svg { pointer-events: none; }
+.gm svg * { pointer-events: visiblePainted; }
+.gm .gm-shadow, .gm .gm-shadow * { pointer-events: none; }
+.gm .nm { pointer-events: auto; }

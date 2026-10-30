@@ -36,7 +36,6 @@
     <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4"/><path d="M6 4.5h11.5l-2.5 4 2.5 4H6"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
     <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6V4.5h14V6M12 4.5v15M9 19.5h6"/></symbol>
-    <symbol id="i-freehand" viewBox="0 0 24 24"><path d="M3 17c2.5-5.5 4.6-9 6.6-9 2.6 0 .9 8 4 8 2.3 0 3.7-4.6 7.4-8"/></symbol>
     <symbol id="i-line" viewBox="0 0 24 24"><path d="M5 19L19 5"/><circle cx="5" cy="19" r="1.6"/><circle cx="19" cy="5" r="1.6"/></symbol>
     <symbol id="i-polygon" viewBox="0 0 24 24"><path d="M12 3l9 6.8-3.5 10.7h-11L3 9.8z"/></symbol>
     <symbol id="i-rect" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="1.5"/></symbol>
@@ -44,7 +43,6 @@
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M5 18l5-11 9 5"/><rect x="3" y="16" width="4" height="4" rx=".8"/><rect x="8" y="5" width="4" height="4" rx=".8"/><rect x="17" y="10" width="4" height="4" rx=".8"/></symbol>
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
-    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M9 20h11"/><path d="M5.6 14.4l8.3-8.3a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L13 19.1a3 3 0 0 1-2.1.9H9.4a3 3 0 0 1-2.1-.9l-1.7-1.7a2 2 0 0 1 0-3z"/><path d="M10 10l6 6"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
     <symbol id="i-steps" viewBox="0 0 24 24"><path d="M7.5 4c1.6 0 2.5 1.6 2.5 3.6S9 11.5 7.5 11.5 5 9.6 5 7.6 5.9 4 7.5 4zM5.5 13.5h4l-.3 2.2a1.9 1.9 0 0 1-3.4 0z"/><path d="M16.5 8.5c1.6 0 2.5 1.6 2.5 3.6s-1 3.9-2.5 3.9-2.5-1.9-2.5-3.9.9-3.6 2.5-3.6zM14.5 18h4l-.3 2.2a1.9 1.9 0 0 1-3.4 0z"/></symbol>
@@ -118,7 +116,6 @@
     <button data-mode="none" class="on" title="通常"><svg class="ic"><use href="#i-pointer"/></svg></button>
     <button data-mode="waypoint" title="ピン"><svg class="ic"><use href="#i-pin"/></svg></button>
     <button data-mode="text" title="テキスト"><svg class="ic"><use href="#i-text"/></svg></button>
-    <button data-mode="freehand" title="手書き"><svg class="ic"><use href="#i-freehand"/></svg></button>
     <button data-mode="Line" title="線"><svg class="ic"><use href="#i-line"/></svg></button>
     <button data-mode="Polygon" title="多角形"><svg class="ic"><use href="#i-polygon"/></svg></button>
     <button data-mode="Rectangle" title="四角"><svg class="ic"><use href="#i-rect"/></svg></button>
@@ -127,10 +124,6 @@
     <button data-mode="drag" title="動かす"><svg class="ic"><use href="#i-move"/></svg></button>
   </div>
   <div class="row style">
-    <div id="pen-toggle" class="seg small" hidden>
-      <button data-pen="freehand"><svg class="ic"><use href="#i-freehand"/></svg>ペン</button>
-      <button data-pen="erase"><svg class="ic"><use href="#i-eraser"/></svg>消しゴム</button>
-    </div>
     <div id="colors"></div>
     <label class="width">太さ <input id="width" type="range" min="1" max="12" value="4"></label>
   </div>
