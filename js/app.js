@@ -3233,8 +3233,10 @@ async function loadConfig() {
 
 async function main() {
   translatePage();
-  $('#lang-select').value = LANG;
-  $('#lang-select').addEventListener('change', (e) => setLang(e.target.value));
+  document.querySelectorAll('#lang-switch button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.lang === LANG);
+    b.addEventListener('click', () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang); });
+  });
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',

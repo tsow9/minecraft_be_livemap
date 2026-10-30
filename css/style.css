@@ -416,8 +416,15 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info > .help:last-child { margin: 10px 0 0; }
 #panel-realm .share-row { margin: 12px 0 0; }
 #panel-site .share-row { margin: 10px 0 0; }
-.lang-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--sub); font-size: 13px; }
-.lang-row select { background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+/* Language: a small switch in the corner (PC: top right; phones: bottom left). */
+#lang-switch { position: absolute; z-index: 1050; top: 12px; right: 12px; display: flex; padding: 2px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); }
+#lang-switch button { border: 0; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px; cursor: pointer; }
+#lang-switch button.on { background: var(--accent-soft); color: var(--accent); }
+@media (max-width: 700px) {
+  #lang-switch { top: auto; right: auto; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 900; }
+}
 #writers, #privacy { margin-top: 14px; }
 .switch-list .grow { min-width: 6em; font-weight: 600; }
 .switch-list li { gap: 10px; padding: 5px 4px; }
