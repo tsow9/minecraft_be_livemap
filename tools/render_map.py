@@ -496,20 +496,21 @@ def world_name(d):
         return os.path.basename(d)
 
 
-def _official_lang():
-    """The game's own Japanese language file, or None if it can't be fetched."""
+def _official_lang(locale='ja_JP'):
+    """The game's own language file (Japanese, or en_US for English), or None if it can't be fetched."""
     import official_names
     try:
-        return official_names.download()
+        return official_names.download(locale)
     except OSError as e:
-        print(f'公式の日本語名を取得できませんでした(前回の名前を使います): {e}')
+        print(f'公式の名前({locale})を取得できませんでした(前回の名前を使います): {e}')
         return None
 
 
-def _official_japanese(lang):
-    """Lookup for the game's own Japanese block names, or None without the language file."""
+def _official_japanese(lang, english=False):
+    """Lookup for the game's own block names (Japanese, or English), or None without the language file."""
     import official_names
-    return (lambda key: official_names.japanese(key, lang)) if lang else None
+    overrides = official_names.OVERRIDES_EN if english else official_names.OVERRIDES
+    return (lambda key: official_names.japanese(key, lang, overrides)) if lang else None
 
 
 def _load_json(path):
@@ -595,12 +596,12 @@ def main():
     block_ids.load(args.site)
     print(f'ワールド「{world_name(world)}」を読み込みます。大きいワールドだと数分かかります。')
     started = time.time()
-    lang = _official_lang()
+    lang, lang_en = _official_lang(), _official_lang('en_US')
     try:
         surfaces = read_surfaces(db_dir, dims)
         try:
             import world_items
-            n_box, n_vil, n_trade, n_sign, n_pet, n_owned = world_items.write(args.site, db_dir, lang, os.environ.get('CACHE_KEY') or '')
+            n_box, n_vil, n_trade, n_sign, n_pet, n_owned = world_items.write(args.site, db_dir, lang, os.environ.get('CACHE_KEY') or '', lang_en)
             print(f'中身のある入れ物: {n_box} 個、村人: {n_vil} 人(取引あり {n_trade} 人)、文字のある看板: {n_sign} 枚、'
                   f'ペット・名前のある動物: {n_pet} 匹(飼い主が分かった {n_owned} 匹)')
         except Exception as e:  # the map itself matters more than the search data
@@ -635,7 +636,7 @@ def main():
             print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
         if total == 0:
             sys.exit('地図にできるデータがありませんでした。')
-        block_ids.save(args.site, _official_japanese(lang))
+        block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
         print(f'ネザーゲート: {write_portals(args.site)} か所')
         update_config(args.site, snap_id, staging, world_saved)
     finally:

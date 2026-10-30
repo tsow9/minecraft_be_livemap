@@ -20,3 +20,24 @@ const BIOME_JA = {
   188: '鍾乳洞', 189: '石だらけの山頂', 190: 'ディープダーク', 191: 'マングローブの沼地', 192: 'サクラの林',
   193: 'ペールガーデン', 194: '硫黄の洞窟', 195: 'まだらな森',
 };
+// The same biomes by their English names (the game's current wording).
+const BIOME_EN = {
+  0: 'Ocean', 1: 'Plains', 2: 'Desert', 3: 'Windswept Hills', 4: 'Forest', 5: 'Taiga', 6: 'Swamp', 7: 'River',
+  8: 'Nether Wastes', 9: 'The End', 10: 'Frozen Ocean', 11: 'Frozen River', 12: 'Snowy Plains',
+  13: 'Snowy Mountains', 14: 'Mushroom Fields', 15: 'Mushroom Field Shore', 16: 'Beach', 17: 'Desert Hills',
+  18: 'Wooded Hills', 19: 'Taiga Hills', 20: 'Windswept Hills Edge', 21: 'Jungle', 22: 'Jungle Hills',
+  23: 'Sparse Jungle', 24: 'Deep Ocean', 25: 'Stony Shore', 26: 'Snowy Beach', 27: 'Birch Forest',
+  28: 'Birch Forest Hills', 29: 'Dark Forest', 30: 'Snowy Taiga', 31: 'Snowy Taiga Hills',
+  32: 'Old Growth Pine Taiga', 33: 'Old Growth Pine Taiga Hills', 34: 'Windswept Forest', 35: 'Savanna',
+  36: 'Savanna Plateau', 37: 'Badlands', 38: 'Wooded Badlands', 39: 'Badlands Plateau', 40: 'Warm Ocean',
+  41: 'Deep Warm Ocean', 42: 'Lukewarm Ocean', 43: 'Deep Lukewarm Ocean', 44: 'Cold Ocean', 45: 'Deep Cold Ocean',
+  46: 'Frozen Ocean', 47: 'Deep Frozen Ocean', 48: 'Bamboo Jungle', 49: 'Bamboo Jungle Hills',
+  129: 'Sunflower Plains', 130: 'Desert', 131: 'Windswept Gravelly Hills', 132: 'Flower Forest', 133: 'Taiga',
+  134: 'Swamp', 140: 'Ice Spikes', 149: 'Jungle', 151: 'Sparse Jungle', 155: 'Old Growth Birch Forest',
+  156: 'Old Growth Birch Forest', 157: 'Dark Forest', 158: 'Snowy Taiga', 160: 'Old Growth Spruce Taiga',
+  161: 'Old Growth Spruce Taiga', 162: 'Windswept Forest', 163: 'Windswept Savanna', 164: 'Savanna Plateau',
+  165: 'Eroded Badlands', 166: 'Wooded Badlands', 167: 'Badlands', 178: 'Soul Sand Valley', 179: 'Crimson Forest',
+  180: 'Warped Forest', 181: 'Basalt Deltas', 182: 'Jagged Peaks', 183: 'Frozen Peaks', 184: 'Snowy Slopes',
+  185: 'Grove', 186: 'Meadow', 187: 'Lush Caves', 188: 'Dripstone Caves', 189: 'Stony Peaks', 190: 'Deep Dark',
+  191: 'Mangrove Swamp', 192: 'Cherry Grove', 193: 'Pale Garden', 194: 'Sulfur Caves', 195: 'Dappled Forest',
+};

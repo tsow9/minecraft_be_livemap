@@ -1,4 +1,5 @@
-"""Official Japanese block names from Mojang's published language file (Mojang/bedrock-samples, ja_JP.lang).
+"""Official Japanese block names from Mojang's published language file (Mojang/bedrock-samples, ja_JP.lang;
+en_US.lang gives the English ones the same way).
 
 Many blocks are listed there under older internal names (oak log = "log.oak"), so we try
 the modern ID first and then the older spellings.
@@ -6,7 +7,7 @@ the modern ID first and then the older spellings.
 import re
 import urllib.request
 
-LANG_URL = 'https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/texts/ja_JP.lang'
+LANG_URL = 'https://raw.githubusercontent.com/Mojang/bedrock-samples/main/resource_pack/texts/{}.lang'
 
 COLORS = ['white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray', 'light_gray', 'silver',
           'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black']
@@ -65,6 +66,7 @@ ALIASES = {
 
 # Where the official block name alone is unclear on a map (planted wheat is just "作物").
 OVERRIDES = {'wheat': '小麦'}
+OVERRIDES_EN = {'wheat': 'Wheat'}
 
 
 def parse_lang(text):
@@ -77,8 +79,9 @@ def parse_lang(text):
     return out
 
 
-def download():
-    with urllib.request.urlopen(LANG_URL, timeout=30) as res:
+def download(locale='ja_JP'):
+    """The game's language file: ja_JP (Japanese) or en_US (English)."""
+    with urllib.request.urlopen(LANG_URL.format(locale), timeout=30) as res:
         return parse_lang(res.read().decode('utf-8-sig'))
 
 
@@ -120,10 +123,11 @@ def _bases(bid, state):
     return out
 
 
-def japanese(key, lang):
+def japanese(key, lang, overrides=OVERRIDES):
+    """The block's name in that language file (despite the name, also used with the English file)."""
     bid, _, state = key.partition(':')
-    if bid in OVERRIDES:
-        return OVERRIDES[bid]
+    if bid in overrides:
+        return overrides[bid]
     for base in _bases(bid, state):
         for k in (f'tile.{base}.name', f'item.{base}.name'):
             if k in lang:

@@ -32,29 +32,43 @@
   <button id="go" hidden>続ける</button>
 </div>
 <script>
+  // Japanese or English by the browser's language (this page is on another site, so the map's choice is not known here).
+  const ja = /^ja\b/i.test(navigator.language || '');
+  document.documentElement.lang = ja ? 'ja' : 'en';
+  const T = ja ? {
+    checking: '確認しています…', open: 'このページは、Blockmap の「Microsoft でログイン」から開いてください。',
+    failed: 'ログインできませんでした。もう一度ためしてください。', back: 'サイトに戻る', ok: 'ログインできました。この地図サイトに戻ります:',
+    unknown: '覚えのないサイトなら、ここで閉じてください。', next: '続ける', missing: 'ログインの結果を受け取れませんでした。もう一度ためしてください。',
+  } : {
+    checking: 'Checking…', open: 'Open this page from "Sign in with Microsoft" on a Blockmap site.',
+    failed: 'Could not sign in. Please try again.', back: 'Back to the site', ok: 'Signed in. Going back to this map site:',
+    unknown: 'If you do not know this site, close this page.', next: 'Continue', missing: 'The sign-in result did not arrive. Please try again.',
+  };
   const q = new URLSearchParams(location.search);
   const msg = document.getElementById('msg'), go = document.getElementById('go');
   // state = "<site host>~<site's session id>~<page>", made by the site that started the sign-in.
   const [host, session, page] = String(q.get('state') || '').split('~');
   const pages = { t: '/ms-test', a: '/' };
+  msg.textContent = T.checking;
   history.replaceState(null, '', location.pathname);
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host || '') || !/^[0-9a-f]{32}$/.test(session || '') || !pages[page]) {
-    msg.textContent = 'このページは、Blockmap の「Microsoft でログイン」から開いてください。';
+    msg.textContent = T.open;
   } else if (q.get('error')) {
-    msg.textContent = `ログインできませんでした。もう一度ためしてください。(${q.get('error')}: ${String(q.get('error_description') || '').slice(0, 200)})`;
-    go.textContent = 'サイトに戻る';
+    msg.textContent = `${T.failed} (${q.get('error')}: ${String(q.get('error_description') || '').slice(0, 200)})`;
+    go.textContent = T.back;
     go.hidden = false;
     go.onclick = () => location.replace(`https://${host}${pages[page]}`);
   } else if ((q.get('code') || '').length >= 10 && (q.get('code') || '').length <= 4000) {
     const code = q.get('code');
     msg.innerHTML = '';
-    msg.append('ログインできました。この地図サイトに戻ります:', document.createElement('br'));
+    msg.append(T.ok, document.createElement('br'));
     const b = document.createElement('b'); b.textContent = host; msg.append(b);
-    msg.append(document.createElement('br'), '覚えのないサイトなら、ここで閉じてください。');
+    msg.append(document.createElement('br'), T.unknown);
+    go.textContent = T.next;
     go.hidden = false;
     go.onclick = () => location.replace(`https://${host}${pages[page]}#mscode=${encodeURIComponent(code)}&ms=${session}`);
   } else {
-    msg.textContent = 'ログインの結果を受け取れませんでした。もう一度ためしてください。';
+    msg.textContent = T.missing;
   }
 </script>
 </body>

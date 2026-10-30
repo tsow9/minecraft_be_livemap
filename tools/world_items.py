@@ -31,6 +31,7 @@ JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographe
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
 JOB_LANG = {'armorer': 'armor', 'leatherworker': 'leather', 'toolsmith': 'tool', 'weaponsmith': 'weapon'}
 JOB_JA = {'nitwit': 'ニトウィット', 'unemployed': '村人(無職)', 'wandering_trader': '行商人'}
+JOB_EN = {'nitwit': 'Nitwit', 'unemployed': 'Villager (unemployed)', 'wandering_trader': 'Wandering Trader'}
 # Bedrock enchantment numbers and their language-file names.
 ENCH_KEYS = ['protect.all', 'protect.fire', 'protect.fall', 'protect.explosion', 'protect.projectile', 'thorns', 'oxygen',
              'waterWalker', 'waterWorker', 'damage.all', 'damage.undead', 'damage.arthropods', 'knockback', 'fire',
@@ -283,30 +284,55 @@ def _faces(site, animals):
             return {}
 
 
-def write(site, db_dir, lang, secret=''):
-    containers, villagers, signs, animals = scan(db_dir, secret)
-    ids = {it[0] for c in containers for it in c['items']}
-    ids |= {it[0] for v in villagers for t in v['trades'] for it in t[0] + [t[1]]}
-    ids |= set(CONTAINERS.values()) | {'large_chest'}
-    names = _names(lang, sorted(ids))
+def _tables(lang, ids, kinds, english=False):
+    """Names of items, enchantments, animals and villager jobs from one of the game's language files."""
+    names = _names(lang, ids) if not english else _names_en(lang, ids)
     if 'chest' in names:
-        names.setdefault('large_chest', 'ラージチェスト')
+        names.setdefault('large_chest', 'Large Chest' if english else 'ラージチェスト')
     ench = {}
     for n, key in enumerate(ENCH_KEYS):
         v = (lang or {}).get(f'enchantment.{key}')
         if v:
             ench[n] = v
-    ench.update({k: v for k, v in ENCH_EXTRA.items() if k not in ench})
+    if not english:
+        ench.update({k: v for k, v in ENCH_EXTRA.items() if k not in ench})
     mobs = {}
-    for k in sorted({a['kind'] for a in animals}):
+    for k in kinds:
         v = (lang or {}).get(f'entity.{k}.name')
         if v:
             mobs[k] = v
     jobs = {}
     for j in JOBS:
-        v = JOB_JA.get(j) or (lang or {}).get(f'entity.villager.{JOB_LANG.get(j, j)}')
+        v = (JOB_EN if english else JOB_JA).get(j) or (lang or {}).get(f'entity.villager.{JOB_LANG.get(j, j)}')
         if v:
             jobs[j] = v
+    return {'names': names, 'ench': ench, 'mobs': mobs, 'jobs': jobs}
+
+
+def _names_en(lang, ids):
+    if not lang:
+        return {}
+    import official_names
+    out = {}
+    for i in ids:
+        key = ITEM_KEYS.get(i)
+        v = (lang.get(f'{key}.name') if key else None) or official_names.japanese(i, lang, official_names.OVERRIDES_EN)
+        if not v and i.startswith('music_disc_'):
+            v = 'Music Disc'
+        if v:
+            out[i] = v
+    return out
+
+
+def write(site, db_dir, lang, secret='', lang_en=None):
+    """lang / lang_en: the game's Japanese and English language files (names on the site in either language)."""
+    containers, villagers, signs, animals = scan(db_dir, secret)
+    ids = {it[0] for c in containers for it in c['items']}
+    ids |= {it[0] for v in villagers for t in v['trades'] for it in t[0] + [t[1]]}
+    ids |= set(CONTAINERS.values()) | {'large_chest'}
+    kinds = sorted({a['kind'] for a in animals})
+    ja = _tables(lang, sorted(ids), kinds)
+    en = _tables(lang_en, sorted(ids), kinds, english=True) if lang_en else None
     dims = {}
     def of(dim):
         return dims.setdefault(DIM_NAMES.get(dim, str(dim)), {'containers': [], 'villagers': [], 'signs': [], 'animals': []})
@@ -318,7 +344,9 @@ def write(site, db_dir, lang, secret=''):
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     for a in animals:
         of(a['dim'])['animals'].append([a['x'], a['y'], a['z'], a['kind'], a['name'], int(a['tamed']), a['owner'], a['variant']])
-    out = {'dims': dims, 'names': names, 'ench': ench, 'jobs': jobs, 'mobs': mobs, 'faces': _faces(site, animals)}
+    out = {'dims': dims, **ja, 'faces': _faces(site, animals)}
+    if en:
+        out['en'] = en
     with open(os.path.join(site, 'items.json'), 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
     traded = sum(1 for v in villagers if v['trades'])

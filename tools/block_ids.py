@@ -8,27 +8,30 @@ DETAIL_STATES = ('color', 'wood_type', 'old_log_type', 'new_log_type', 'old_leaf
 _names = ['']
 _ids = {'': 0}
 _ja = ['']
+_en = ['']
 
 
 def load(site):
-    global _names, _ids, _ja
+    global _names, _ids, _ja, _en
     try:
         with open(os.path.join(site, 'blocks.json'), encoding='utf-8') as f:
             data = json.load(f)
         names = data['names']
-        ja = data.get('ja') or []
+        ja, en = data.get('ja') or [], data.get('en') or []
     except (OSError, ValueError, KeyError):
-        names, ja = [''], []
+        names, ja, en = [''], [], []
     _names = list(names)
     _ids = {n: i for i, n in enumerate(_names)}
     _ja = list(ja) + [None] * (len(_names) - len(ja))
+    _en = list(en) + [None] * (len(_names) - len(en))
 
 
-def save(site, japanese=None):
-    """japanese(key) -> official Japanese name or None; when unavailable, earlier names are kept."""
-    ja = [(japanese(n) if japanese and n else None) or (_ja[i] if i < len(_ja) else None) for i, n in enumerate(_names)]
+def save(site, japanese=None, english=None):
+    """japanese(key) / english(key) -> the official name or None; when unavailable, earlier names are kept."""
+    def names(lookup, before):
+        return [(lookup(n) if lookup and n else None) or (before[i] if i < len(before) else None) for i, n in enumerate(_names)]
     with open(os.path.join(site, 'blocks.json'), 'w', encoding='utf-8') as f:
-        json.dump({'names': _names, 'ja': ja}, f, ensure_ascii=False, separators=(',', ':'))
+        json.dump({'names': _names, 'ja': names(japanese, _ja), 'en': names(english, _en)}, f, ensure_ascii=False, separators=(',', ':'))
 
 
 def key_of(name, states):

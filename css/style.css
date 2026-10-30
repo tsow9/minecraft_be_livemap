@@ -416,6 +416,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info > .help:last-child { margin: 10px 0 0; }
 #panel-realm .share-row { margin: 12px 0 0; }
 #panel-site .share-row { margin: 10px 0 0; }
+.lang-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--sub); font-size: 13px; }
+.lang-row select { background: var(--field); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
 #writers, #privacy { margin-top: 14px; }
 .switch-list .grow { min-width: 6em; font-weight: 600; }
 .switch-list li { gap: 10px; padding: 5px 4px; }

@@ -364,15 +364,37 @@ h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6
 #ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}
 #msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
 </style></head><body><div class="box"><h1>Blockmap</h1>
-<div id="start"><p>Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。</p>
-<button id="ms">Microsoft でログイン</button></div><p id="msg"></p>
+<div id="start"><p id="intro"></p>
+<button id="ms"></button></div><p id="msg"></p>
 </div>
 <script>
+// Japanese or English, the same choice as the map (js/i18n.js): the viewer's pick, else the browser's language.
+let saved = null;
+try { saved = localStorage.getItem('blockmap.lang'); } catch { /* private mode */ }
+const ja = saved ? saved === 'ja' : /^ja\b/i.test(navigator.language || '');
+document.documentElement.lang = ja ? 'ja' : 'en';
+const T = ja ? {
+  intro: 'Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。',
+  button: 'Microsoft でログイン', cantStart: 'ログインを始められませんでした。もう一度ためしてください',
+  checking: 'ゲーマータグを確かめています…', done: 'ログインできました。地図を開いています…',
+  notMember: (g) => 'このアカウント(' + g + ')は、この Realm のメンバーではありません',
+  expired: '時間がたちすぎました。もう一度ログインしてください', failed: 'ログインを確かめられませんでした',
+  offline: '通信できませんでした。もう一度ためしてください',
+} : {
+  intro: 'Only members of the Realm can see this map. Sign in with the Microsoft account you play Minecraft with.',
+  button: 'Sign in with Microsoft', cantStart: 'Could not start signing in. Please try again',
+  checking: 'Checking your gamertag…', done: 'Signed in. Opening the map…',
+  notMember: (g) => 'This account (' + g + ') is not a member of this Realm',
+  expired: 'That took too long. Please sign in again', failed: 'Could not check the sign-in',
+  offline: 'No connection. Please try again',
+};
+document.getElementById('intro').textContent = T.intro;
+document.getElementById('ms').textContent = T.button;
 const msg = document.getElementById('msg');
 document.getElementById('ms').onclick = async () => {
   msg.textContent = '';
   const r = await fetch('/api/ms/start', { method: 'POST' }).then((x) => x.json()).catch(() => null);
-  if (r && r.url) location.href = r.url; else msg.textContent = 'ログインを始められませんでした。もう一度ためしてください';
+  if (r && r.url) location.href = r.url; else msg.textContent = T.cantStart;
 };
 // While a sign-in is being checked, only that is shown; the buttons come back if it does not work out.
 function busy(on) {
@@ -381,17 +403,17 @@ function busy(on) {
 async function finish(code, ms) {
   busy(true);
   msg.style.color = '#a7abb3';
-  msg.textContent = 'ゲーマータグを確かめています…';
+  msg.textContent = T.checking;
   try {
     const res = await fetch('/api/ms/finish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, ms }) });
     const d = await res.json().catch(() => ({}));
-    if (res.ok) { msg.textContent = 'ログインできました。地図を開いています…'; location.reload(); return; }
+    if (res.ok) { msg.textContent = T.done; location.reload(); return; }
     busy(false);
     msg.style.color = '';
-    msg.textContent = d.error === 'not member' ? 'このアカウント(' + d.gamertag + ')は、この Realm のメンバーではありません'
-      : d.error === 'expired' ? '時間がたちすぎました。もう一度ログインしてください'
-      : 'ログインを確かめられませんでした(' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
-  } catch { busy(false); msg.style.color = ''; msg.textContent = '通信できませんでした。もう一度ためしてください'; }
+    msg.textContent = d.error === 'not member' ? T.notMember(d.gamertag)
+      : d.error === 'expired' ? T.expired
+      : T.failed + ' (' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
+  } catch { busy(false); msg.style.color = ''; msg.textContent = T.offline; }
 }
 function fromAddress() {
   const h = new URLSearchParams(location.hash.slice(1));

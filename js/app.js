@@ -1,21 +1,21 @@
 'use strict';
 
 const DIMS = {
-  overworld: { name: '地上' },
-  nether: { name: 'ネザー' },
-  end: { name: 'エンド' },
+  overworld: { name: tl('地上') },
+  nether: { name: tl('ネザー') },
+  end: { name: tl('エンド') },
 };
 const TYPES = ['waypoint', 'text', 'line', 'draw', 'polygon', 'rect', 'circle'];
 const ICONS = {
-  pin: ['📍', 'ピン'], home: ['🏠', '拠点'], death: ['🪦', '死んだ場所'], portal: ['🌀', 'ポータル'],
-  mine: ['⛏️', '鉱山'], farm: ['🌾', '畑・トラップ'], village: ['🏘️', '村'], star: ['⭐', 'お気に入り'],
+  pin: ['📍', tl('ピン')], home: ['🏠', tl('拠点')], death: ['🪦', tl('死んだ場所')], portal: ['🌀', tl('ポータル')],
+  mine: ['⛏️', tl('鉱山')], farm: ['🌾', tl('畑・トラップ')], village: ['🏘️', tl('村')], star: ['⭐', tl('お気に入り')],
 };
 const COLORS = ['#ffffff', '#ff5252', '#ffb300', '#ffee58', '#66bb6a', '#29b6f6', '#5c6bc0', '#ab47bc', '#222222'];
 const STORE_KEY = 'mcmap.annotations.v1';
 const DEMO_SNAPSHOTS = [
-  { id: 'demo-1', label: 'デモ 1週目' },
-  { id: 'demo-2', label: 'デモ 2週目' },
-  { id: 'demo-3', label: 'デモ 3週目' },
+  { id: 'demo-1', label: tl('デモ 1週目') },
+  { id: 'demo-2', label: tl('デモ 2週目') },
+  { id: 'demo-3', label: tl('デモ 3週目') },
 ];
 
 // Minecraft X → lng, Z → -lat, so north (-Z) is up and 1 block = 1px at zoom 0.
@@ -65,7 +65,7 @@ const store = {
   },
   saveLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state.annotations)); }
-    catch { toast('この端末に保存できませんでした'); }
+    catch { toast(tl('この端末に保存できませんでした')); }
   },
 };
 
@@ -102,9 +102,9 @@ function renderMe() {
   const body = (id) => $(`#${id} .panel-body`) || $(`#${id}`);  // the body is made once the panels are set up
   if (share.me.role === 'admin') body('panel-site').prepend(line);
   else body('panel-realm').append(line);
-  const what = { admin: '管理者', writer: '書き込みOK', viewer: '見るだけ' }[share.me.role] || '';
-  line.textContent = `${share.me.name || ''} としてログイン中(${what}) `;
-  line.append(button('ログアウト', async () => {
+  const what = { admin: tl('管理者'), writer: tl('書き込みOK'), viewer: tl('見るだけ') }[share.me.role] || '';
+  line.textContent = `${tl('{name} としてログイン中({role})', { name: share.me.name || '', role: what })} `;
+  line.append(button(tl('ログアウト'), async () => {
     await fetch(`${share.url}/logout`, { method: 'POST' }).catch(() => {});
     location.reload();
   }));
@@ -117,14 +117,14 @@ async function loadAccess() {
     const res = await fetch(`${share.url}/access`, { cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const { members } = await res.json();
-    list.innerHTML = members.length ? '' : '<li class="sub">メンバーの情報がまだありません</li>';
+    list.innerHTML = members.length ? '' : tl('<li class="sub">メンバーの情報がまだありません</li>');
     for (const m of members) {
-      list.append(switchRow(m.name || '(名前なし)', ['見るだけ', '書き込みOK'], m.write, `${m.name || 'このメンバー'}さんの書き込み`, async (on) => {
+      list.append(switchRow(m.name || tl('(名前なし)'), [tl('見るだけ'), tl('書き込みOK')], m.write, tl('{name}さんの書き込み', { name: m.name || '' }), async (on) => {
         const r = await fetch(`${share.url}/access`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xid: m.xid, write: on }) }).catch(() => null);
         return !!r?.ok;
       }));
     }
-  } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
+  } catch { list.innerHTML = tl('<li class="sub">一覧を読み込めませんでした</li>'); }
 }
 
 // A row with an on/off switch. save(on) answers whether the change went through; if not, the switch goes back.
@@ -145,7 +145,7 @@ function switchRow(label, words, on, aria, save) {
     const ok = await save(want);
     box.disabled = false;
     if (ok) on = want;
-    else { show(on); toast('変えられませんでした。もう一度ためしてください'); }
+    else { show(on); toast(tl('変えられませんでした。もう一度ためしてください')); }
   });
   return li;
 }
@@ -157,16 +157,16 @@ async function loadPrivacy() {
     const res = await fetch(`${share.url}/privacy`, { cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const hide = await res.json();
-    const rows = [['chests', 'チェスト'], ['pets', 'ほかの人のペット']];
+    const rows = [['chests', tl('チェスト')], ['pets', tl('ほかの人のペット')]];
     list.innerHTML = '';
     for (const [key, what] of rows) {
-      list.append(switchRow(what, ['見せる', '隠す'], hide[key], `${what}を隠す`, async (on) => {
+      list.append(switchRow(what, [tl('見せる'), tl('隠す')], hide[key], tl('{what}を隠す', { what }), async (on) => {
         const r = await fetch(`${share.url}/privacy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: on }) }).catch(() => null);
         if (r?.ok) loadItems();
         return !!r?.ok;
       }));
     }
-  } catch { list.innerHTML = '<li class="sub">設定を読み込めませんでした</li>'; }
+  } catch { list.innerHTML = tl('<li class="sub">設定を読み込めませんでした</li>'); }
 }
 const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
 
@@ -234,11 +234,11 @@ async function pushChanges() {
     if (res.status === 401 && signedIn() && !pass) {
       retry = 0;
       share.me.role = 'viewer';
-      toast('書き込みの許可がなくなりました(管理者に頼んでください)');
+      toast(tl('書き込みの許可がなくなりました(管理者に頼んでください)'));
     } else if (res.status === 401) {
       setPass('');
       retry = 0;
-      toast('書き込みの許可が切れました。新しい招待リンクを開いてください');
+      toast(tl('書き込みの許可が切れました。新しい招待リンクを開いてください'));
       askPass();
     } else if (res.ok) {
       retry = 0;
@@ -319,20 +319,20 @@ function askPass() {
       e.preventDefault();
       const pass = passFromText($('#pass-input').value);
       if (!pass) return;
-      $('#pass-error').textContent = '確認中…';
+      $('#pass-error').textContent = tl('確認中…');
       try {
         const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
         if (res.ok) {
           setPass(pass);
           dlg.close();
-          toast('書き込めるようになりました');
+          toast(tl('書き込めるようになりました'));
       showInvites(await roleFrom(res));
           pushChanges();
           return;
         }
-        $('#pass-error').textContent = res.status === 401 ? 'このリンクは使えません。新しい招待リンクをもらってください' : 'うまく確認できませんでした';
+        $('#pass-error').textContent = res.status === 401 ? tl('このリンクは使えません。新しい招待リンクをもらってください') : tl('うまく確認できませんでした');
       } catch {
-        $('#pass-error').textContent = '通信できませんでした。電波のよいところでもう一度';
+        $('#pass-error').textContent = tl('通信できませんでした。電波のよいところでもう一度');
       }
     };
     dlg.addEventListener('close', onClose);
@@ -361,21 +361,21 @@ async function joinFromLink() {
   history.replaceState(null, '', location.pathname + location.search);
   let pass;
   try { pass = decodeURIComponent(m[1]); } catch { pass = m[1]; }
-  if (!sharing()) { setPass(pass); toast('招待リンクを受け取りました(共有の準備ができると書き込めます)'); return; }
+  if (!sharing()) { setPass(pass); toast(tl('招待リンクを受け取りました(共有の準備ができると書き込めます)')); return; }
   try {
     const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
     if (res.ok) {
       setPass(pass);
-      toast('招待リンクを確認しました。ピンや図形を書き込めます');
+      toast(tl('招待リンクを確認しました。ピンや図形を書き込めます'));
       showInvites(await roleFrom(res));
       pushChanges();
     } else if (res.status === 401) {
-      toast('この招待リンクは使えません。合言葉が合っているか確かめてください');
+      toast(tl('この招待リンクは使えません。合言葉が合っているか確かめてください'));
     } else {
-      toast(`共有サーバーがうまく答えませんでした(${res.status})`);
+      toast(tl('共有サーバーがうまく答えませんでした({status})', { status: res.status }));
     }
   } catch {
-    toast('通信できませんでした。もう一度リンクを開いてください');
+    toast(tl('通信できませんでした。もう一度リンクを開いてください'));
   }
 }
 
@@ -384,7 +384,7 @@ async function ensureWriter() {
   if (!sharing() || getPass()) return true;
   if (signedIn()) {
     if (mayWrite()) return true;
-    toast('書き込みは、管理者が許可したメンバーだけです');
+    toast(tl('書き込みは、管理者が許可したメンバーだけです'));
     return false;
   }
   return askPass();
@@ -406,8 +406,8 @@ function setupShare() {
       if (share.pending.size && mayWrite()) pushChanges();
     }).catch(() => {});
   }
-  $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, 'サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)'));
-  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
+  $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, tl('サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)')));
+  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), tl('書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください')));
   loadSyncState();
   renderAll();
   joinFromLink();
@@ -471,7 +471,7 @@ async function copyText(text, message) {
     ta.value = text; document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); } finally { ta.remove(); }
   }
-  toast(message || `コピーしました: ${text}`);
+  toast(message || tl('コピーしました: {text}', { text }));
 }
 
 // "~" lets the copied text work directly in /tp when Y is unknown.
@@ -481,14 +481,14 @@ const coordText = (x, z, y) => `${x} ${y ?? '~'} ${z}`;
 function showOtherDim(x, z) {
   const el = $('#c-center-other');
   const part = (k, v) => `<span><i>${k}</i>${v}</span>`;
-  if (state.dim === 'overworld') el.innerHTML = `<b>ネザー</b>${part('X', Math.floor(x / 8))}${part('Z', Math.floor(z / 8))}`;
-  else if (state.dim === 'nether') el.innerHTML = `<b>地上</b>${part('X', x * 8)}${part('Z', z * 8)}`;
+  if (state.dim === 'overworld') el.innerHTML = `<b>${tl('ネザー')}</b>${part('X', Math.floor(x / 8))}${part('Z', Math.floor(z / 8))}`;
+  else if (state.dim === 'nether') el.innerHTML = `<b>${tl('地上')}</b>${part('X', x * 8)}${part('Z', z * 8)}`;
   else el.innerHTML = '';
 }
 
 function otherDimLine(x, z, dim = state.dim) {
-  if (dim === 'overworld') return `ネザー X ${Math.floor(x / 8)} / Z ${Math.floor(z / 8)}`;
-  if (dim === 'nether') return `地上 X ${x * 8} / Z ${z * 8}`;
+  if (dim === 'overworld') return `${tl('ネザー')} X ${Math.floor(x / 8)} / Z ${Math.floor(z / 8)}`;
+  if (dim === 'nether') return `${tl('地上')} X ${x * 8} / Z ${z * 8}`;
   return '';
 }
 
@@ -658,7 +658,7 @@ function makeBaseLayer() {
   // Load tiles once the zoom settles (not at every step on the way), and keep a few extra around for panning.
   const opts = { minZoom: -6, maxZoom: MAX_ZOOM, noWrap: true, pmIgnore: true, updateWhenZooming: false, keepBuffer: 3 };
   if (state.demo) {
-    return new DemoLayer({ ...opts, dim: state.dim, week: state.snapshotIndex, maxNativeZoom: 2, attribution: 'デモ地形(本物の地図はまだ未設定)' });
+    return new DemoLayer({ ...opts, dim: state.dim, week: state.snapshotIndex, maxNativeZoom: 2, attribution: tl('デモ地形(本物の地図はまだ未設定)') });
   }
   const snap = snapshots()[state.snapshotIndex];
   const url = state.config.tileUrl.replace('{snapshot}', encodeURIComponent(snap.id)).replace('{dim}', state.dim);
@@ -819,11 +819,24 @@ const HistoryTileLayer = L.TileLayer.extend({
   },
 });
 
+// Separators: Japanese runs words together with ・ and （）; English needs spaces.
+const DOT = LANG === 'en' ? ' · ' : '・';
+const paren = (s) => (LANG === 'en' ? ` (${s})` : `(${s})`);
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// 10月30日 / Oct 30
+const dayText = (d) => (LANG === 'en' ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}` : `${d.getMonth() + 1}月${d.getDate()}日`);
+// A saved map's day (its id is the date; the label the map maker wrote is Japanese).
+const snapDay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s.id) ? dayText(new Date(`${s.id}T00:00`)) : (s.label || s.id));
+// Game words in the page's language: items.json and blocks.json carry the game's own Japanese and English names.
+const gameNames = (kind) => (LANG === 'en' && state.items?.en?.[kind]) || state.items?.[kind] || {};
+// oak_log → Oak Log, for a block or item the language files do not name.
+const readableId = (id) => String(id).split(':')[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 // The corner: the day of the map, and when its world was saved (maps drawn before this was kept show the day only).
 function snapText(snap) {
   const t = new Date(snap.savedAt);
-  if (!snap.savedAt || Number.isNaN(t.getTime())) return snap.label || snap.id;
-  return `${t.getMonth() + 1}月${t.getDate()}日 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+  if (!snap.savedAt || Number.isNaN(t.getTime())) return snapDay(snap);
+  return `${dayText(t)} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
 }
 
 async function loadManifest(id) {
@@ -970,8 +983,8 @@ function openCoordPopup(latlng) {
   el.append(coordBlock(x, z, null, state.dim));
   const acts = document.createElement('div'); acts.className = 'acts';
   acts.append(
-    button('コピー', () => copyText(coordText(x, z)), 'copy'),
-    button('ピン', async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
+    button(tl('コピー'), () => copyText(coordText(x, z)), 'copy'),
+    button(tl('ピン'), async () => { map.closePopup(); if (await ensureWriter()) createWaypoint(x, z); }, 'flag'),
     routeButton({ id: `point:${x}:${z}`, name: `X ${x} / Z ${z}`, x, z, dim: state.dim }),
   );
   el.append(acts);
@@ -984,21 +997,21 @@ function openAnnPopup(id, at) {
   const c = annCenter(a);
   const el = document.createElement('div'); el.className = 'pop';
   const head = document.createElement('h4');
-  if (a.type === 'waypoint') head.textContent = a.name || 'ピン';
+  if (a.type === 'waypoint') head.textContent = a.name || tl('ピン');
   else if (a.type === 'text') head.textContent = a.text;
-  else head.textContent = a.name || { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
+  else head.textContent = a.name || { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
   const isPoint = a.type === 'waypoint' || a.type === 'text';
   el.append(head);
   if (isPoint) el.append(coordBlock(c.x, c.z, a.y, a.dim));
-  if (a.type === 'circle') el.insertAdjacentHTML('beforeend', `<div class="sub">半径 ${Math.round(a.r)} ブロック</div>`);
+  if (a.type === 'circle') el.insertAdjacentHTML('beforeend', `<div class="sub">${tl('半径 {r} ブロック', { r: Math.round(a.r) })}</div>`);
   if (a.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = a.note; el.append(n); }
-  if (a.by) { const b = document.createElement('div'); b.className = 'sub'; b.textContent = `作った人: ${a.by}`; el.append(b); }
+  if (a.by) { const b = document.createElement('div'); b.className = 'sub'; b.textContent = tl('作った人: {name}', { name: a.by }); el.append(b); }
   const acts = document.createElement('div'); acts.className = 'acts';
-  if (isPoint) acts.append(button('コピー', () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
-  if (a.type === 'waypoint') acts.append(routeButton({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim }));
-  const del = button('削除', async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast('削除しました'); }, 'trash');
+  if (isPoint) acts.append(button(tl('コピー'), () => copyText(coordText(c.x, c.z, a.y)), 'copy'));
+  if (a.type === 'waypoint') acts.append(routeButton({ id: a.id, name: a.name || tl('ピン'), x: a.x, z: a.z, dim: a.dim }));
+  const del = button(tl('削除'), async () => { if (!(await ensureWriter())) return; deleteAnn(a.id); toast(tl('削除しました')); }, 'trash');
   del.classList.add('danger');
-  acts.append(button('編集', async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
+  acts.append(button(tl('編集'), async () => { map.closePopup(); if (await ensureWriter()) openEditor(a, false); }, 'pencil'), del);
   el.append(acts);
   const pos = isPoint ? ll(a.x + 0.5, a.z + 0.5) : (at || ll(c.x, c.z));
   L.popup({ offset: a.type === 'waypoint' ? [0, -8] : [0, 0] }).setLatLng(pos).setContent(el).openOn(map);
@@ -1024,7 +1037,7 @@ function fillSwatches(container, current, onPick) {
 function openEditor(a, isNew) {
   editing = { a, isNew, color: a.color };
   const isWp = a.type === 'waypoint', isText = a.type === 'text';
-  $('#ed-title').textContent = isWp ? (isNew ? '新しいピン' : 'ピンの編集') : (isNew ? '新しく追加' : '編集');
+  $('#ed-title').textContent = isWp ? (isNew ? tl('新しいピン') : tl('ピンの編集')) : (isNew ? tl('新しく追加') : tl('編集'));
   $('#ed-name').placeholder = isWp ? nextPinName() : '';
   $('#ed-name-row').hidden = isText;
   $('#ed-text-row').hidden = !isText;
@@ -1042,7 +1055,7 @@ editor.addEventListener('close', () => {
   const { a, isNew, color } = editing;
   editing = null;
   const action = editor.returnValue;
-  if (action === 'delete') { deleteAnn(a.id); toast('削除しました'); return; }
+  if (action === 'delete') { deleteAnn(a.id); toast(tl('削除しました')); return; }
   if (action !== 'save') return;
   const next = { ...a, color, updatedAt: Date.now() };
   if (a.type === 'text') {
@@ -1068,8 +1081,8 @@ function pinNameTaken(name, exceptId) {
 }
 function nextPinName() {
   let n = 1;
-  while (pinNameTaken(`ピン${n}`)) n++;
-  return `ピン${n}`;
+  while (pinNameTaken(`${tl('ピン')}${n}`)) n++;
+  return `${tl('ピン')}${n}`;
 }
 
 // Enter in a one-line box saves (instead of pressing the first button in the form, which is 削除).
@@ -1085,7 +1098,7 @@ $('#editor-form').addEventListener('submit', (e) => {
   const name = $('#ed-name').value.trim();
   if (name && pinNameTaken(name, editing.a.id)) {
     e.preventDefault();
-    $('#ed-error').textContent = `「${name}」はもう使われています。別の名前にしてください`;
+    $('#ed-error').textContent = tl('「{name}」はもう使われています。別の名前にしてください', { name });
     $('#ed-name').focus();
   }
 });
@@ -1099,17 +1112,17 @@ function createText(x, z) {
 
 // ---------- tools / modes ----------
 const HINTS = {
-  none: '地図をタップすると座標が出ます',
-  waypoint: '印をつけたい場所をタップ',
-  text: '文字を置きたい場所をタップ',
-  freehand: '1本指(マウス)でなぞって描く・2本指で拡大縮小',
-  Line: 'タップで点を足す → 最後の点をもう一度タップで完成',
-  Polygon: 'タップで点を足す → 最初の点をタップで完成',
-  Rectangle: '角を1か所タップ → 反対の角をタップ',
-  Circle: '中心をタップ → 円の端をタップ',
-  edit: '図形の白い点をドラッグして形を直す',
-  drag: '動かしたいものをドラッグ',
-  erase: 'なぞった所の手書きを消す・2本指で拡大縮小',
+  none: tl('地図をタップすると座標が出ます'),
+  waypoint: tl('印をつけたい場所をタップ'),
+  text: tl('文字を置きたい場所をタップ'),
+  freehand: tl('1本指(マウス)でなぞって描く・2本指で拡大縮小'),
+  Line: tl('タップで点を足す → 最後の点をもう一度タップで完成'),
+  Polygon: tl('タップで点を足す → 最初の点をタップで完成'),
+  Rectangle: tl('角を1か所タップ → 反対の角をタップ'),
+  Circle: tl('中心をタップ → 円の端をタップ'),
+  edit: tl('図形の白い点をドラッグして形を直す'),
+  drag: tl('動かしたいものをドラッグ'),
+  erase: tl('なぞった所の手書きを消す・2本指で拡大縮小'),
 };
 const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
@@ -1126,7 +1139,7 @@ function setMode(mode) {
   $('#pen-toggle').hidden = !hand;
   document.querySelectorAll('#pen-toggle button').forEach((b) => b.classList.toggle('on', b.dataset.pen === mode));
   const canCancel = mode !== 'none' && window.matchMedia('(pointer: fine)').matches;
-  $('#mode-hint').textContent = (HINTS[mode] || '') + (canCancel ? '(Esc・右クリックでやめる)' : '');
+  $('#mode-hint').textContent = (HINTS[mode] || '') + (canCancel ? tl('(Esc・右クリックでやめる)') : '');
   $('#map').classList.toggle('mode-draw', mode !== 'none');
   $('#map').classList.toggle('mode-freehand', hand);
   $('#map').classList.toggle('mode-erase', mode === 'erase');
@@ -1323,13 +1336,14 @@ function eraseAlong(p0, p1) {
 // Info tiles store, per block, the top block's ID and height (RGB = 12-bit ID << 9 | Y+64).
 const infoCache = new Map();
 let blockNames = [];
-let blockNamesJa = [];
+let blockNamesJa = [], blockNamesEn = [];
 let centerInfo = null;
 
 async function loadBlockNames() {
   const data = await fetchJson(`${DATA}blocks.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   blockNames = Array.isArray(data?.names) ? data.names : [];
   blockNamesJa = Array.isArray(data?.ja) ? data.ja : [];
+  blockNamesEn = Array.isArray(data?.en) ? data.en : [];
 }
 
 const infoData = new Map();
@@ -1380,7 +1394,7 @@ function blockAtNow(x, z) {
   const id = v >> 9;
   if (!id) return { info: null };
   const y = (v & 511) - 64;
-  return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', y }, raw: { id, y } };
+  return { info: { name: blockNames[id] || '', ja: blockNamesJa[id] || '', en: blockNamesEn[id] || '', y }, raw: { id, y } };
 }
 
 // Biome tiles store, per block, the biome at the surface (value = biome ID + 1, 0 = unknown).
@@ -1392,7 +1406,7 @@ function biomeAtNow(x, z) {
   if (!infoData.has(url)) return { pending: loadInfoTile(url) };
   const data = infoData.get(url);
   const v = data ? data.data[((z - tz * 256) * data.width + (x - tx * 256)) * 4] : 0;
-  return { name: v ? BIOME_JA[v - 1] || '' : '' };
+  return { name: v ? (LANG === 'en' ? BIOME_EN : BIOME_JA)[v - 1] || '' : '' };
 }
 
 // ---------- contour lines (drawn from the ground heights stored in the ground tiles) ----------
@@ -1533,7 +1547,7 @@ function showCenterInfo(x, z, info, biome) {
   const blk = $('#c-block');
   blk.textContent = '';
   if (info) {
-    blk.textContent = info.ja || BLOCK_JA(info.name);
+    blk.textContent = LANG === 'en' ? info.en || readableId(info.name) : info.ja || BLOCK_JA(info.name);
   }
 }
 
@@ -1577,7 +1591,7 @@ function setupCoords() {
   const show = (visible) => { box.hidden = !visible; open.hidden = visible; save(); };
   const fold = (only) => {
     box.classList.toggle('only', only);
-    $('#coords-mode').title = only ? 'ブロック名やバイオームも表示する' : '座標だけの表示にする';
+    $('#coords-mode').title = only ? tl('ブロック名やバイオームも表示する') : tl('座標だけの表示にする');
     save();
   };
   $('#coords-mode').addEventListener('click', (e) => { e.stopPropagation(); fold(!box.classList.contains('only')); });
@@ -1643,7 +1657,7 @@ function updatePastBanner() {
   const snaps = snapshots();
   const past = !state.demo && state.snapshotIndex < snaps.length - 1;
   $('#past-banner').hidden = !past;
-  if (past) $('#past-text').textContent = `📅 ${snapText(snaps[state.snapshotIndex])}の地図を表示中`;
+  if (past) $('#past-text').textContent = `📅 ${tl('{when}の地図を表示中', { when: snapText(snaps[state.snapshotIndex]) })}`;
 }
 
 let setSnapshotIndex = () => {};
@@ -1651,7 +1665,7 @@ const isDateId = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
 
 function labelTimeline() {
   const s = snapshots()[state.snapshotIndex];
-  $('#time-label').textContent = s ? snapText(s) : 'なし';
+  $('#time-label').textContent = s ? snapText(s) : tl('なし');
   if (s && isDateId(s.id)) $('#time-date').value = s.id;
   $('#time-chips').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
 }
@@ -1668,11 +1682,11 @@ function renderTimeline() {
   let month = '';
   for (let i = snaps.length - 1; i >= 0; i--) {
     const s = snaps[i];
-    const m = isDateId(s.id) ? `${Number(s.id.slice(0, 4))}年${Number(s.id.slice(5, 7))}月` : '';
+    const m = isDateId(s.id) ? tl('{y}年{m}月', { y: Number(s.id.slice(0, 4)), m: LANG === 'en' ? MONTHS_EN[Number(s.id.slice(5, 7)) - 1] : Number(s.id.slice(5, 7)) }) : '';
     if (m && m !== month) { month = m; chips.insertAdjacentHTML('beforeend', `<div class="month">${m}</div>`); }
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = i === snaps.length - 1 ? `${s.label || s.id}(最新)` : (s.label || s.id);
+    b.textContent = i === snaps.length - 1 ? tl('{day}(最新)', { day: snapDay(s) }) : snapDay(s);
     b.dataset.index = i;
     b.addEventListener('click', () => setSnapshotIndex(i));
     chips.append(b);
@@ -1725,7 +1739,7 @@ function setupPanels() {
     $('#btn-contour').classList.toggle('on', on);
     refreshContours();
     // The menu shows what is on; a message only when nothing would show yet.
-    if (on && map.getZoom() < -2) toast('等高線はもう少し拡大すると表示されます');
+    if (on && map.getZoom() < -2) toast(tl('等高線はもう少し拡大すると表示されます'));
   });
 
   $('#btn-slime').addEventListener('click', () => {
@@ -1733,8 +1747,8 @@ function setupPanels() {
     else state.slimeLayer = new SlimeLayer({ minZoom: -6, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
     $('#btn-slime').classList.toggle('on', !!state.slimeLayer);
     if (!state.slimeLayer) return;
-    if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
-    else if (map.getZoom() < SLIME_MIN_ZOOM) toast('スライムチャンクはもう少し拡大すると表示されます');
+    if (state.dim !== 'overworld') toast(tl('スライムチャンクは地上だけで表示されます'));
+    else if (map.getZoom() < SLIME_MIN_ZOOM) toast(tl('スライムチャンクはもう少し拡大すると表示されます'));
   });
 
   $('#btn-grid').addEventListener('click', () => {
@@ -1769,17 +1783,17 @@ function setupPanels() {
     if (!want || !snaps.length) return;
     const i = Math.max(0, snaps.map((s) => s.id).filter((id) => id <= want).length - 1);
     setSnap(i);
-    if (snaps[i].id !== want) toast(`その日の地図はないので、${snaps[i].label || snaps[i].id}の地図を表示しています`);
+    if (snaps[i].id !== want) toast(tl('その日の地図はないので、{day}の地図を表示しています', { day: snapDay(snaps[i]) }));
   });
   range.addEventListener('input', () => setSnap(Number(range.value)));
   let timer = null;
-  const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = '▶ 再生'; };
+  const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = tl('▶ 再生'); };
   $('#time-play').addEventListener('click', () => {
     const n = snapshots().length;
     if (timer) { stop(); return; }
-    if (n < 2) { toast('保存した地図が2つ以上になると再生できます'); return; }
+    if (n < 2) { toast(tl('保存した地図が2つ以上になると再生できます')); return; }
     if (state.snapshotIndex >= n - 1) setSnap(0);
-    $('#time-play').textContent = '■ 停止';
+    $('#time-play').textContent = tl('■ 停止');
     timer = setInterval(() => {
       if (state.snapshotIndex >= snapshots().length - 1) { stop(); return; }
       setSnap(state.snapshotIndex + 1);
@@ -1834,29 +1848,29 @@ function setupSearch() {
     for (const b of findIndex.beings) out.push({ ...b, kind: 'find', go: () => showFinds(b.type, b.key) });
     for (const a of state.annotations) {
       const c = annCenter(a);
-      const shape = { line: '線', draw: '手書き', polygon: '多角形', rect: '四角', circle: '円' }[a.type];
+      const shape = { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
       out.push({
         kind: 'pin', dim: a.dim, x: c.x, z: c.z,
-        title: a.name || a.text || shape || 'ピン',
+        title: a.name || a.text || shape || tl('ピン'),
         hay: `${a.name || ''} ${a.text || ''} ${a.note || ''}`,
         icon: a.type === 'waypoint' ? flagSvg(a.color) : `<span class="dot" style="background:${esc(a.color)}"></span>`,
-        meta: `${{ waypoint: 'ピン', text: '文字' }[a.type] || '図形'}  ${where(a.dim, c.x, c.z)}`,
+        meta: `${{ waypoint: tl('ピン'), text: tl('文字') }[a.type] || tl('図形')}  ${where(a.dim, c.x, c.z)}`,
         go: () => { goTo(c.x, c.z, a.dim, 0); openAnnPopup(a.id); },
       });
     }
     for (const p of state.players) {
       const color = playerColor(p.key);
       out.push({ kind: 'player', dim: p.dim, x: p.x, z: p.z, title: p.name, hay: p.name,
-        icon: playerSvg(color), meta: `プレイヤー  ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
-      if (p.bed) out.push({ kind: 'bed', dim: p.bed.dim, x: p.bed.x, z: p.bed.z, title: `${p.name}・ベッド`, hay: `${p.name} ベッド`,
-        icon: BED_SVG(color), meta: `ベッド  ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
-      if (p.death) out.push({ kind: 'death', dim: p.death.dim, x: p.death.x, z: p.death.z, title: `${p.name}・最終死亡地点`, hay: `${p.name} 死亡 最終死亡地点`,
-        icon: DEATH_SVG, meta: `死亡地点  ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
+        icon: playerSvg(color), meta: `${tl('プレイヤー')}  ${where(p.dim, p.x, p.z)}`, go: () => goTo(p.x, p.z, p.dim, 0) });
+      if (p.bed) out.push({ kind: 'bed', dim: p.bed.dim, x: p.bed.x, z: p.bed.z, title: `${p.name}${DOT}${tl('ベッド')}`, hay: `${p.name} ${tl('ベッド')}`,
+        icon: BED_SVG(color), meta: `${tl('ベッド')}  ${where(p.bed.dim, p.bed.x, p.bed.z)}`, go: () => goTo(p.bed.x, p.bed.z, p.bed.dim, 0) });
+      if (p.death) out.push({ kind: 'death', dim: p.death.dim, x: p.death.x, z: p.death.z, title: `${p.name}${DOT}${tl('最終死亡地点')}`, hay: `${p.name} ${tl('死亡')} ${tl('最終死亡地点')}`,
+        icon: DEATH_SVG, meta: `${tl('死亡地点')}  ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
-        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || 'ネザーゲート', hay: `${g.name || ''} ネザーゲート ゲート`,
-          icon: PORTAL_SVG, meta: `ネザーゲート  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || tl('ネザーゲート'), hay: `${g.name || ''} ${tl('ネザーゲート')} ${tl('ゲート')}`,
+          icon: PORTAL_SVG, meta: `${tl('ネザーゲート')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
     return out;
@@ -1874,7 +1888,7 @@ function setupSearch() {
     if (q) {
       // A whole kind first ("農民 すべて"), then each one with its place, then stored and sold items.
       const kinds = findIndex.groups.filter((g) => `${g.label} ${g.hay}`.toLowerCase().includes(q)).map((g) => ({
-        kind: 'find', title: `${g.label} すべて`, icon: g.icon, meta: `${g.villagers.size + g.pets.size}${g.unit}・地図にまとめて表示`,
+        kind: 'find', title: tl('{what} すべて', { what: g.label }), icon: g.icon, meta: tl(g.unit === 'pets' ? '{n}匹・地図にまとめて表示' : '{n}人・地図にまとめて表示', { n: g.villagers.size + g.pets.size }),
         go: () => showFinds('group', g.key) }));
       items = kinds.concat(items, findSuggestions(q));
     }
@@ -2143,26 +2157,26 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null)
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 function itemName(id) {
-  return state.items?.names?.[id] || BLOCK_JA(id) || id;
+  return gameNames('names')[id] || (LANG === 'en' ? readableId(id) : BLOCK_JA(id)) || id;
 }
 function enchText(ench) {
-  return (ench || []).map(([i, l]) => `${state.items?.ench?.[i] || `エンチャント${i}`}${ROMAN[l] || l}`).join('・');
+  return (ench || []).map(([i, l]) => `${gameNames('ench')[i] || `${tl('エンチャント')}${i}`}${LANG === 'en' ? ' ' : ''}${ROMAN[l] || l}`).join(DOT);
 }
 function itemLabel(it) {
-  return it[2]?.length ? `${itemName(it[0])}(${enchText(it[2])})` : itemName(it[0]);
+  return it[2]?.length ? `${itemName(it[0])}${paren(enchText(it[2]))}` : itemName(it[0]);
 }
 const itemKey = (it) => `${it[0]}|${(it[2] || []).map((e) => e.join(':')).sort().join(',')}`;
 function mobName(kind) {
-  return state.items?.mobs?.[kind] || kind;
+  return gameNames('mobs')[kind] || (LANG === 'en' ? readableId(kind) : kind);
 }
 // A villager with no job found (none yet, or a child) is shown like one without a job.
 function jobName(job) {
-  return (job && job !== 'unemployed' && state.items?.jobs?.[job]) || '村人(無職)';
+  return (job && job !== 'unemployed' && gameNames('jobs')[job]) || tl('村人(無職)');
 }
 // A villager's name with its job: ジョン(農民), ジョン(無職).
 function villagerTitle(v) {
   const job = jobName(v[3]);
-  return v[4] ? `${v[4]}(${job === '村人(無職)' ? '無職' : job})` : job;
+  return v[4] ? `${v[4]}${paren(job === tl('村人(無職)') ? tl('無職') : job)}` : job;
 }
 
 async function loadItems() {
@@ -2200,18 +2214,18 @@ function buildFindIndex() {
       const job = jobName(v[3]), trader = v[3] === 'wandering_trader';
       const title = villagerTitle(v);
       const place = `${dim}:${v[0]}:${v[1]}:${v[2]}`;
-      if (trader) group('trader', '行商人', '行商人', TRADER_SVG, '人', 'villagers', place);
+      if (trader) group('trader', tl('行商人'), tl('行商人'), TRADER_SVG, 'people', 'villagers', place);
       else {
-        group('villager', '村人', '村人', VILLAGER_SVG, '人', 'villagers', place);
-        group(`job:${v[3] && v[3] !== 'unemployed' ? v[3] : 'unemployed'}`, job, job, villagerIcon(v[3]), '人', 'villagers', place);
+        group('villager', tl('村人'), tl('村人'), VILLAGER_SVG, 'people', 'villagers', place);
+        group(`job:${v[3] && v[3] !== 'unemployed' ? v[3] : 'unemployed'}`, job, job, villagerIcon(v[3]), 'people', 'villagers', place);
         if (VILLAGER_LEVELS[v[6] - 1]) {
           const lv = VILLAGER_LEVELS[v[6] - 1];
-          group(`level:${v[6]}`, `${lv}の村人`, `${lv} レベル${v[6]}`, VILLAGER_SVG, '人', 'villagers', place);
+          group(`level:${v[6]}`, tl('{level}の村人', { level: lv }), `${lv} ${tl('レベル{n}', { n: v[6] })}`, VILLAGER_SVG, 'people', 'villagers', place);
         }
       }
       beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
-        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'} ${levelText(v)}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
-        meta: `${trader ? '行商人' : `村人${levelText(v) ? `・${levelText(v)}` : ''}`}  ${whereText(dim, v[0], v[2])}` });
+        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? tl('行商人') : tl('村人')} ${levelText(v)}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
+        meta: `${trader ? tl('行商人') : `${tl('村人')}${levelText(v) ? `${DOT}${levelText(v)}` : ''}`}  ${whereText(dim, v[0], v[2])}` });
       // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
@@ -2223,7 +2237,7 @@ function buildFindIndex() {
     for (const g of d.signs || []) {
       const k = signTitle(g[3]);
       // Full-width letters (ＦＲＥＥ) are also found by typing them half-width (free).
-      if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} ${k.normalize('NFKC')} 看板`, count: 0 });
+      if (!signs.has(k)) signs.set(k, { key: k, label: k, hay: `${k} ${k.normalize('NFKC')} ${tl('看板')}`, count: 0 });
       signs.get(k).count += 1;
     }
     // Pets and named animals: found by name, kind ("オオカミ") or owner ("〇〇").
@@ -2231,13 +2245,13 @@ function buildFindIndex() {
       const kind = mobName(a[3]);
       const owner = a[6] && state.players.some((p) => p.key === a[6]) ? playerName(a[6]) : '';
       const place = `${dim}:${a[0]}:${a[1]}:${a[2]}`, face = animalSvg(a[3], animalCollar(a), false, false, 1.6, a[7]);
-      group('pet', 'ペット', 'ペット', $('#chip-pet')?.innerHTML || face, '匹', 'pets', place);
-      group(`kind:${a[3]}`, kind, `${kind} ${a[3]}`, face, '匹', 'pets', place);
-      if (owner) group(`owner:${a[6]}`, `${owner}のペット`, `${owner}`, face, '匹', 'pets', place);
+      group('pet', tl('ペット'), tl('ペット'), $('#chip-pet')?.innerHTML || face, 'pets', 'pets', place);
+      group(`kind:${a[3]}`, kind, `${kind} ${a[3]}`, face, 'pets', 'pets', place);
+      if (owner) group(`owner:${a[6]}`, tl('{owner}のペット', { owner }), `${owner}`, face, 'pets', 'pets', place);
       beings.push({ type: 'pet', key: `${dim}:${a[0]}:${a[1]}:${a[2]}`, dim, x: a[0], z: a[2], title: a[4] || kind,
-        hay: `${a[4] ? `${a[4].normalize('NFKC')} 名札` : ''} ${kind} ${a[3]} ペット ${owner}`,
+        hay: `${a[4] ? `${a[4].normalize('NFKC')} ${tl('名札')}` : ''} ${kind} ${a[3]} ${tl('ペット')} ${owner}`,
         icon: animalSvg(a[3], animalCollar(a), !!a[4], false, 1.6, a[7]),
-        meta: `${a[4] ? kind : 'ペット'}${owner ? `(${owner})` : ''}  ${whereText(dim, a[0], a[2])}` });
+        meta: `${a[4] ? kind : tl('ペット')}${owner ? paren(owner) : ''}  ${whereText(dim, a[0], a[2])}` });
     }
   }
   findIndex = { items: [...items.values()], trades: [...trades.values()], signs: [...signs.values()], beings,
@@ -2249,13 +2263,13 @@ function findSuggestions(q) {
   const out = [];
   const hit = (e) => e.hay.toLowerCase().includes(q);
   for (const e of findIndex.signs.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: `看板・${e.count}枚`, go: () => showFinds('sign', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: tl('看板・{n}枚', { n: e.count }), go: () => showFinds('sign', e.key) });
   }
   for (const e of findIndex.trades.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: `${e.villagers.size}人`, go: () => showFinds('trade', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: tl('{n}人', { n: e.villagers.size }), go: () => showFinds('trade', e.key) });
   }
   for (const e of findIndex.items.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: `${e.places.size}件・全${e.total}個`, go: () => showFinds('item', e.key) });
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: tl('{n}件・全{total}個', { n: e.places.size, total: e.total }), go: () => showFinds('item', e.key) });
   }
   return out.slice(0, 60);
 }
@@ -2271,7 +2285,7 @@ function invHtml(items, matchKey) {
   return `<ul class="inv">${rows.map(([k, { it, n }]) => `<li${k === matchKey ? ' class="hit"' : ''}><span>${esc(itemLabel(it))}</span><b>${n}</b></li>`).join('')}</ul>`;
 }
 function tradesHtml(trades, matchKey) {
-  if (!trades.length) return '<div class="sub">取引の情報がありません</div>';
+  if (!trades.length) return tl('<div class="sub">取引の情報がありません</div>');
   const price = (buy) => buy.map((b) => `${esc(itemLabel(b))}×${b[1]}`).join(' + ');
   return `<ul class="inv trades">${trades.map(([buy, sell]) => `<li${itemKey(sell) === matchKey ? ' class="hit"' : ''}>`
     + `<span>${esc(itemLabel(sell))}${sell[1] > 1 ? `×${sell[1]}` : ''}</span><b>${price(buy)}</b></li>`).join('')}</ul>`;
@@ -2281,11 +2295,11 @@ function tradesHtml(trades, matchKey) {
 function containerMark(dim, c, key) {
   const kind = itemName(c[3]);
   return { dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, iconBig: CHEST_BIG, name: kind,
-    popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : '<div class="sub">空っぽ</div>'}` };
+    popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : `<div class="sub">${tl('空っぽ')}</div>`}` };
 }
 // The trading level on the villager's badge (v[6], 1–5; maps made before it was kept have none).
-const VILLAGER_LEVELS = ['新米', '見習い', '一人前', '熟練者', '達人'];
-const levelText = (v) => (VILLAGER_LEVELS[v[6] - 1] ? `レベル${v[6]}・${VILLAGER_LEVELS[v[6] - 1]}` : '');
+const VILLAGER_LEVELS = [tl('新米'), tl('見習い'), tl('一人前'), tl('熟練者'), tl('達人')];
+const levelText = (v) => (VILLAGER_LEVELS[v[6] - 1] ? `${tl('レベル{n}', { n: v[6] })}${DOT}${VILLAGER_LEVELS[v[6] - 1]}` : '');
 function villagerMark(dim, v, key) {
   const name = villagerTitle(v);
   const trader = v[3] === 'wandering_trader';
@@ -2296,17 +2310,17 @@ function villagerMark(dim, v, key) {
 function signMark(dim, g) {
   const lines = g[3].split('\n');
   return { dim, x: g[0], y: g[1], z: g[2], icon: SIGN_SVG, iconBig: SIGN_BIG, name: signTitle(g[3]),
-    popup: `<h4>${g[4] ? '吊り看板' : '看板'}</h4><div class="xyz">X ${g[0]} / Y ${g[1]} / Z ${g[2]}</div>`
+    popup: `<h4>${g[4] ? tl('吊り看板') : tl('看板')}</h4><div class="xyz">X ${g[0]} / Y ${g[1]} / Z ${g[2]}</div>`
       + `<div class="sign-text">${lines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` };
 }
 // The owner's colour for a tamed animal (grey when the owner is not known yet), brown leather otherwise.
 const animalCollar = (a) => (a[5] ? playerColor(a[6]) : LEATHER);
 function animalMark(dim, a) {
   const kind = mobName(a[3]);
-  const name = a[4] ? `${a[4]}(${kind})` : kind;
+  const name = a[4] ? `${a[4]}${paren(kind)}` : kind;
   const collar = animalCollar(a);
   const known = a[6] && state.players.some((p) => p.key === a[6]);
-  const owner = a[5] ? `<div class="sub">飼い主: ${known ? esc(playerName(a[6])) : 'わからない'}</div>` : '';
+  const owner = a[5] ? `<div class="sub">${tl('飼い主: {name}', { name: known ? esc(playerName(a[6])) : tl('わからない') })}</div>` : '';
   return { dim, x: a[0], y: a[1], z: a[2], icon: animalSvg(a[3], collar, !!a[4], false, 1.6, a[7]), iconBig: animalSvg(a[3], collar, !!a[4], true, 1.6, a[7]), name: a[4] || kind,
     popup: `<h4>${esc(name)}</h4><div class="xyz">X ${a[0]} / Y ${a[1]} / Z ${a[2]}</div>${owner}` };
 }
@@ -2333,12 +2347,12 @@ function markLayer(marks, group, zIndexOffset, hit = false) {
     const show = (m) => {
       el.innerHTML = m.popup;
       const acts = document.createElement('div'); acts.className = 'acts';
-      if (list.length > 1) acts.append(button('一覧に戻る', () => { showList(); refresh(); }));
+      if (list.length > 1) acts.append(button(tl('一覧に戻る'), () => { showList(); refresh(); }));
       acts.append(routeButton({ id: `find:${m.dim}:${m.x}:${m.y}:${m.z}`, name: m.name, x: m.x, z: m.z, dim: m.dim }));
       el.append(acts);
     };
     const showList = () => {
-      el.innerHTML = `<h4>複数の候補があります</h4><div class="xyz">X ${first.x} / Z ${first.z}</div>`;
+      el.innerHTML = `<h4>${tl('複数の候補があります')}</h4><div class="xyz">X ${first.x} / Z ${first.z}</div>`;
       const ul = document.createElement('ul'); ul.className = 'mark-list';
       for (const m of list) {
         const li = document.createElement('li');
@@ -2418,7 +2432,7 @@ function showFinds(type, key, move = true) {
     : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
     : type === 'group' ? findIndex.groups.find((e) => e.key === key)
     : findIndex.beings.find((e) => e.type === type && e.key === key);
-  if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
+  if (!matches.length) { clearFinds(); if (move) toast(tl('見つかりませんでした')); return; }
   finds = { type, key, label: entry?.label || entry?.title || '', matches };
   if (move) {
     const count = (dim) => matches.filter((m) => m.dim === dim).length;
@@ -2560,12 +2574,12 @@ function renderPortals() {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || 'ゲート')}</span></div>` }),
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || tl('ゲート'))}</span></div>` }),
     });
-    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim: state.dim };
+    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: g.name || tl('ネザーゲート'), x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>${esc(g.name || 'ネザーゲート')}</h4><div class="sub">ネザーゲート</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      el.innerHTML = `<h4>${esc(g.name || tl('ネザーゲート'))}</h4><div class="sub">${tl('ネザーゲート')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       acts.append(routeButton(place));
       const link = portalLink(g, state.dim);
@@ -2573,16 +2587,16 @@ function renderPortals() {
         const name = DIMS[link.other].name;
         const line = document.createElement('div'); line.className = 'sub';
         if (link.gate) {
-          line.textContent = `つながり先(推定): ${name}の「${link.gate.name || 'ゲート'}」 X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          line.textContent = `${tl('つながり先(推定): {dim}の「{gate}」', { dim: name, gate: link.gate.name || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
           el.append(line);
-          acts.append(button('つながり先を見る', () => goTo(link.gate.x, link.gate.z, link.other, 1)));
+          acts.append(button(tl('つながり先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
           // No gate on the other side yet: where the game will make one when someone goes through.
-          line.textContent = `${name}側のゲートはまだ見つかっていません`;
+          line.textContent = tl('{dim}側のゲートはまだ見つかっていません', { dim: name });
           const spot = document.createElement('div'); spot.className = 'sub';
-          spot.textContent = `${name}のゲート生成目安 X ${link.tx} Z ${link.tz}`;
+          spot.textContent = `${tl('{dim}のゲート生成目安', { dim: name })} X ${link.tx} Z ${link.tz}`;
           el.append(line, spot);
-          acts.append(button('その場所を見る', () => goTo(link.tx, link.tz, link.other, 1)));
+          acts.append(button(tl('その場所を見る'), () => goTo(link.tx, link.tz, link.other, 1)));
         }
       }
       el.append(acts);
@@ -2608,12 +2622,12 @@ function renderClock() {
   if (t === null) { el.hidden = true; return; }
   const minutes = Math.floor(((t / 1000 + 6) % 24) * 60);
   const hh = Math.floor(minutes / 60), mm = minutes % 60;
-  const phase = t < 12000 ? '昼' : t < 13000 ? '夕方' : t < 23000 ? '夜' : '朝';
+  const phase = t < 12000 ? tl('昼') : t < 13000 ? tl('夕方') : t < 23000 ? tl('夜') : tl('朝');
   const w = state.world;
-  const weather = w.thunder ? '雷雨' : w.rain ? '雨' : '晴れ';
+  const weather = w.thunder ? tl('雷雨') : w.rain ? tl('雨') : tl('晴れ');
   const night = t >= 12000 && t < 23500;
   el.innerHTML = `<svg class="ic"><use href="#i-${night ? 'moon' : 'sun'}"/></svg><b>${phase} ${hh}:${String(mm).padStart(2, '0')}</b><span>${weather}</span>`;
-  el.title = state.anyoneOnline ? 'ゲーム内の時刻と天気(だいたい)' : 'ゲーム内の時刻と天気(最後に遊んだとき)';
+  el.title = state.anyoneOnline ? tl('ゲーム内の時刻と天気(だいたい)') : tl('ゲーム内の時刻と天気(最後に遊んだとき)');
   el.classList.toggle('frozen', !state.anyoneOnline);
   el.hidden = false;
 }
@@ -2657,24 +2671,25 @@ async function travelEstimate(f, t) {
     }
     if (h !== NO_GROUND) prev = h;
   }
-  const time = sec < 60 ? `${Math.max(1, Math.round(sec))}秒` : `${Math.floor(sec / 60)}分${Math.round(sec % 60) ? `${Math.round(sec % 60)}秒` : ''}`;
-  return `走って約${time}${hot ? '・途中に溶岩あり' : ''}`;
+  const time = sec < 60 ? tl('{s}秒', { s: Math.max(1, Math.round(sec)) })
+    : `${tl('{m}分', { m: Math.floor(sec / 60) })}${Math.round(sec % 60) ? tl('{s}秒', { s: Math.round(sec % 60) }) : ''}`;
+  return `${tl('走って約{time}', { time })}${hot ? tl('・途中に溶岩あり') : ''}`;
 }
 
 // Everything on the map that a route can start from or go to, in one dimension.
 function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
+    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || tl('ピン'), x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
   }
   for (const p of state.players) {
     const c = playerColor(p.key);
     if (p.dim === dim) out.push({ id: `player:${p.key}`, name: p.name, x: p.x, z: p.z, dim, icon: playerSvg(c) });
-    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}・ベッド`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c) });
-    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
+    if (p.bed?.dim === dim) out.push({ id: `bed:${p.key}`, name: `${p.name}${DOT}${tl('ベッド')}`, x: p.bed.x, z: p.bed.z, dim, icon: BED_SVG(c) });
+    if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}${DOT}${tl('最終死亡地点')}`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || 'ネザーゲート', x: g.x, z: g.z, dim, icon: PORTAL_SVG });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || tl('ネザーゲート'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }
@@ -2712,19 +2727,19 @@ function popupWithRoute(html, place) {
 }
 
 function routeButton(place) {
-  return button('行き先を選ぶ', () => startRoute(place), 'route');
+  return button(tl('行き先を選ぶ'), () => startRoute(place), 'route');
 }
 
 function startRoute(a) {
   stopRoute();
-  route.from = { id: a.id, name: a.name || 'ピン', x: a.x, z: a.z, dim: a.dim };
+  route.from = { id: a.id, name: a.name || tl('ピン'), x: a.x, z: a.z, dim: a.dim };
   map.closePopup();
   $('#route-from').textContent = route.from.name;
   showRouteChoice(null);
   $('#route-result').hidden = true;
   $('#route').hidden = false;
   showRoutePoints();
-  toast('行き先を一覧から選ぶか、地図でタップしてください');
+  toast(tl('行き先を一覧から選ぶか、地図でタップしてください'));
 }
 
 function setRouteTarget(id, point) {
@@ -2738,9 +2753,9 @@ function setRouteTarget(id, point) {
   if (route.line) map.removeLayer(route.line);
   route.line = L.polyline([ll(f.x + 0.5, f.z + 0.5), ll(t.x + 0.5, t.z + 0.5)],
     { color: '#fff', weight: 3, opacity: 0.95, dashArray: '6 6', pmIgnore: true, interactive: false }).addTo(map);
-  $('#route-dist').textContent = `${Math.round(t.dist)}ブロック`;
-  const nether = f.dim === 'overworld' && t.dist >= 200 ? `ネザー経由なら約${Math.round(t.dist / 8)}ブロック` : '';
-  $('#route-time').textContent = '走って…計算中';
+  $('#route-dist').textContent = tl('{n}ブロック', { n: Math.round(t.dist) });
+  const nether = f.dim === 'overworld' && t.dist >= 200 ? tl('ネザー経由なら約{n}ブロック', { n: Math.round(t.dist / 8) }) : '';
+  $('#route-time').textContent = tl('走って…計算中');
   $('#route-nether').textContent = nether;
   const job = ++route.job;
   travelEstimate(f, t).then((est) => { if (job === route.job) $('#route-time').textContent = est; });
@@ -2779,7 +2794,7 @@ function showRoutePoints() {
 function showRouteChoice(t) {
   const btn = $('#route-to');
   btn.querySelector('.s-icon').innerHTML = t?.icon || '';
-  btn.querySelector('.pick-name').textContent = t ? t.name : '行き先を選んでください';
+  btn.querySelector('.pick-name').textContent = t ? t.name : tl('行き先を選んでください');
   btn.classList.toggle('placeholder', !t);
   $('#route-list').hidden = true;
 }
@@ -2806,7 +2821,7 @@ function setupRoute() {
       li.addEventListener('click', () => { list.hidden = true; setRouteTarget(t.id); });
       list.append(li);
     }
-    if (!targets.length) list.innerHTML = '<li class="empty">選べる行き先がありません。地図をタップして選べます</li>';
+    if (!targets.length) list.innerHTML = tl('<li class="empty">選べる行き先がありません。地図をタップして選べます</li>');
     list.hidden = false;
   });
   document.addEventListener('pointerdown', (e) => { if (!e.target.closest?.('#route-pick')) list.hidden = true; }, true);
@@ -2842,9 +2857,9 @@ function playerColor(key) {
   return colorCache.get(key);
 }
 function playerName(key) {
-  if (key === '_') return '記録を始める前';
-  if (key === '?') return 'わからない';
-  return state.players.find((p) => p.key === key)?.name || '(不明)';
+  if (key === '_') return tl('記録を始める前');
+  if (key === '?') return tl('わからない');
+  return state.players.find((p) => p.key === key)?.name || tl('(不明)');
 }
 function timeText(ms) {
   if (!ms) return '';
@@ -2853,11 +2868,11 @@ function timeText(ms) {
   return `${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 }
 function agoText(ms) {
-  if (!ms) return '未ログイン';
+  if (!ms) return tl('未ログイン');
   const min = Math.round((Date.now() - ms) / 60000);
-  if (min < 60) return `${Math.max(1, min)}分前`;
-  if (min < 60 * 24) return `${Math.round(min / 60)}時間前`;
-  return `${Math.round(min / 1440)}日前`;
+  if (min < 60) return tl('{n}分前', { n: Math.max(1, min) });
+  if (min < 60 * 24) return tl('{n}時間前', { n: Math.round(min / 60) });
+  return tl('{n}日前', { n: Math.round(min / 1440) });
 }
 
 async function fetchJson(url) {
@@ -2868,9 +2883,9 @@ async function fetchJson(url) {
 }
 
 function placeText(p) {
-  if (p.online === true) return `プレイ中 ・ 現在地(${timeText(state.worldAt)} の記録)`;
-  if (p.online === false) return `最終ログアウト位置${p.lastSeenOnline ? `(${timeText(p.lastSeenOnline)} ごろ)` : ''}`;
-  return '最後に記録された位置(誰の記録かまだ分かりません)';
+  if (p.online === true) return tl('プレイ中 ・ 現在地({time} の記録)', { time: timeText(state.worldAt) });
+  if (p.online === false) return `${tl('最終ログアウト位置')}${p.lastSeenOnline ? tl('({time} ごろ)', { time: timeText(p.lastSeenOnline) }) : ''}`;
+  return tl('最後に記録された位置(誰の記録かまだ分かりません)');
 }
 
 const TRAIL_HOURS = 24;
@@ -2922,14 +2937,14 @@ function renderPlayers() {
       beds.get(k).who.push(p);
     }
     for (const b of beds.values()) {
-      const names = b.who.map((p) => p.name).join('・');
+      const names = b.who.map((p) => p.name).join(DOT);
       const m = L.marker(ll(b.x + 0.5, b.z + 0.5), {
         pmIgnore: true, zIndexOffset: 500,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
           html: `<div class="bed-icon gm" style="transform:translate(-50%,-17px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
       });
-      const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}・ベッド`, x: b.x, z: b.z, dim: b.dim };
-      m.bindPopup(popupWithRoute(`<h4>${esc(names)}のベッド</h4><div class="sub">リスポーン地点</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div>`, place));
+      const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}${DOT}${tl('ベッド')}`, x: b.x, z: b.z, dim: b.dim };
+      m.bindPopup(popupWithRoute(`<h4>${tl('{names}のベッド', { names: esc(names) })}</h4><div class="sub">${tl('リスポーン地点')}</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
   }
@@ -2953,8 +2968,8 @@ function renderPlayers() {
         pmIgnore: true,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0], html: `<div class="death-icon gm" style="transform:translate(-50%,-25px)">${DEATH_SVG}<span class="nm">${esc(p.name)}</span></div>` }),
       });
-      const place = { id: `death:${p.key}`, name: `${p.name}・最終死亡地点`, x: d.x, z: d.z, dim: d.dim };
-      m.bindPopup(popupWithRoute(`<h4 class="death-h">${DEATH_SVG} ${esc(p.name)}が最後に死んだ場所</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div>`, place));
+      const place = { id: `death:${p.key}`, name: `${p.name}${DOT}${tl('最終死亡地点')}`, x: d.x, z: d.z, dim: d.dim };
+      m.bindPopup(popupWithRoute(`<h4 class="death-h">${DEATH_SVG} ${tl('{name}が最後に死んだ場所', { name: esc(p.name) })}</h4><div class="xyz">X ${d.x} / Y ${d.y} / Z ${d.z}</div>`, place));
       playerGroup.addLayer(routeAware(m, place.id));
     }
   }
@@ -2963,12 +2978,12 @@ function renderPlayers() {
   for (const p of state.players) {
     const li = document.createElement('li');
     li.className = 'click';
-    const status = p.online === true ? '現在地' : p.online === false ? 'ログアウト位置' : '記録';
+    const status = p.online === true ? tl('現在地') : p.online === false ? tl('ログアウト位置') : tl('記録');
     li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)};opacity:${p.online === true ? 1 : 0.5}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${status} ${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}</span>`;
     li.addEventListener('click', () => { goTo(p.x, p.z, p.dim, 0); });
     list.append(li);
   }
-  if (!state.players.length) list.innerHTML = '<li class="sub">まだ記録がありません</li>';
+  if (!state.players.length) list.innerHTML = tl('<li class="sub">まだ記録がありません</li>');
 }
 
 const ExploreLayer = L.GridLayer.extend({
@@ -3001,10 +3016,10 @@ function renderExploreLegend() {
   for (const [key, n] of rows) {
     const li = document.createElement('li');
     const color = key === '_' ? 'transparent' : key === '?' ? '#000' : playerColor(key);
-    li.innerHTML = `<span class="dot" style="background:${color};border:1px solid #fff5"></span><span class="grow">${esc(playerName(key))}</span><span class="sub">${n} チャンク</span>`;
+    li.innerHTML = `<span class="dot" style="background:${color};border:1px solid #fff5"></span><span class="grow">${esc(playerName(key))}</span><span class="sub">${tl('{n} チャンク', { n })}</span>`;
     list.append(li);
   }
-  if (!rows.length) list.innerHTML = '<li class="sub">まだ記録がありません</li>';
+  if (!rows.length) list.innerHTML = tl('<li class="sub">まだ記録がありません</li>');
 }
 
 function refreshExplore() {
@@ -3068,22 +3083,22 @@ async function refreshLive() {
   const badge = $('#online-badge');
   const list = $('#live-list');
   if (!state.config.liveUrl && !share.url) {
-    $('#live-title').textContent = '参加中の人(まだ設定されていません)';
+    $('#live-title').textContent = tl('参加中の人(まだ設定されていません)');
     return;
   }
   const data = await fetchLive();
-  if (!data) { list.innerHTML = '<li class="sub">まだ情報がありません</li>'; badge.hidden = true; return; }
+  if (!data) { list.innerHTML = tl('<li class="sub">まだ情報がありません</li>'); badge.hidden = true; return; }
   const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
     .sort((a, b) => (b.online - a.online) || ((b.lastLogin || 0) - (a.lastLogin || 0)));
   const online = members.filter((m) => m.online);
   badge.textContent = online.length;
   badge.hidden = online.length === 0;
   const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.parse(data.updatedAt);
-  $('#live-title').innerHTML = `参加中の人 <span class="sub">${online.length}人がプレイ中 ・ ${esc(timeText(at))} 時点</span>`;
+  $('#live-title').innerHTML = `${tl('参加中の人')} <span class="sub">${tl('{n}人がプレイ中 ・ {time} 時点', { n: online.length, time: esc(timeText(at)) })}</span>`;
   list.innerHTML = '';
   for (const m of members) {
     const li = document.createElement('li');
-    const when = m.online ? 'プレイ中' : '最終ログイン ' + esc(agoText(Math.max(m.lastSeenOnline || 0, m.lastLogin || 0)));
+    const when = m.online ? tl('プレイ中') : tl('最終ログイン ') + esc(agoText(Math.max(m.lastSeenOnline || 0, m.lastLogin || 0)));
     li.innerHTML = `<span class="dot" style="background:${m.online ? 'var(--accent)' : '#555'}"></span><span class="grow">${esc(m.name)}</span><span class="sub">${when}</span>`;
     list.append(li);
   }
@@ -3096,7 +3111,7 @@ async function refreshLive() {
   state.world = data.world && typeof data.world.time === 'number' ? data.world : null;
   state.anyoneOnline = online.length > 0;
   renderClock();
-  $('#players-updated').textContent = data.worldAt ? `${timeText(data.worldAt)} の記録` : '';
+  $('#players-updated').textContent = data.worldAt ? tl('{time} の記録', { time: timeText(data.worldAt) }) : '';
   if (json !== lastPlayersJson) {
     lastPlayersJson = json;
     state.players = players;
@@ -3108,13 +3123,13 @@ async function refreshLive() {
 }
 
 // ---------- Realm information (settings read from Realms by the frequent check) ----------
-const DIFFICULTY = ['ピース', 'イージー', 'ノーマル', 'ハード'];
-const GAME_MODE = ['サバイバル', 'クリエイティブ', 'アドベンチャー'];
+const DIFFICULTY = [tl('ピース'), tl('イージー'), tl('ノーマル'), tl('ハード')];
+const GAME_MODE = [tl('サバイバル'), tl('クリエイティブ'), tl('アドベンチャー')];
 const RULE_NAMES = [
-  ['keepInventory', '死んでも持ち物を失わない'], ['pvp', 'プレイヤー同士の攻撃'], ['showCoordinates', '座標を表示'],
-  ['mobGriefing', 'モブがブロックを壊す'], ['doImmediateRespawn', 'すぐにリスポーン'], ['playersSleepingPercentage', '朝にするのに寝る人の割合'],
-  ['doFireTick', '火が燃え広がる'], ['tntExplodes', 'TNTが爆発する'], ['naturalRegeneration', '体力の自然回復'],
-  ['showDeathMessages', '死亡メッセージ'], ['doDayLightCycle', '昼と夜が進む'], ['doWeatherCycle', '天気が変わる'],
+  ['keepInventory', tl('死んでも持ち物を失わない')], ['pvp', tl('プレイヤー同士の攻撃')], ['showCoordinates', tl('座標を表示')],
+  ['mobGriefing', tl('モブがブロックを壊す')], ['doImmediateRespawn', tl('すぐにリスポーン')], ['playersSleepingPercentage', tl('朝にするのに寝る人の割合')],
+  ['doFireTick', tl('火が燃え広がる')], ['tntExplodes', tl('TNTが爆発する')], ['naturalRegeneration', tl('体力の自然回復')],
+  ['showDeathMessages', tl('死亡メッセージ')], ['doDayLightCycle', tl('昼と夜が進む')], ['doWeatherCycle', tl('天気が変わる')],
 ];
 
 // The next payment day on or after today; months shorter than the day pay on their last day.
@@ -3129,35 +3144,35 @@ function renderRealm(r, online, memberCount) {
   const box = $('#realm-info');
   if (!r || typeof r !== 'object') return;
   const row = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
-  const onOff = (v) => (v === true ? 'オン' : v === false ? 'オフ' : esc(v));
+  const onOff = (v) => (v === true ? tl('オン') : v === false ? tl('オフ') : esc(v));
   let html = r.motd ? `<p class="help">${esc(r.motd)}</p>` : '';
-  html += '<h3>状態</h3>';
-  if (r.owner) html += row('所有者', esc(r.owner));
-  html += row('サーバー', r.open ? '<i class="dot on"></i>開いている' : '<i class="dot"></i>閉じている');
-  html += row('参加中', `${online}人・メンバー ${memberCount}人${Number.isFinite(r.maxPlayers) ? `・最大 ${r.maxPlayers}人` : ''}`);
-  if (r.expired) html += row('期限', '<span class="warn">切れています</span>');
+  html += tl('<h3>状態</h3>');
+  if (r.owner) html += row(tl('所有者'), esc(r.owner));
+  html += row(tl('サーバー'), r.open ? tl('<i class="dot on"></i>開いている') : tl('<i class="dot"></i>閉じている'));
+  html += row(tl('参加中'), `${tl('{n}人・メンバー {m}人', { n: online, m: memberCount })}${Number.isFinite(r.maxPlayers) ? tl('・最大 {n}人', { n: r.maxPlayers }) : ''}`);
+  if (r.expired) html += row(tl('期限'), tl('<span class="warn">切れています</span>'));
   const day = state.config.realmBillingDay;
   if (day) {
     const d = nextBillingDate(day);
-    html += row('次の支払い', `${d.getMonth() + 1}月${d.getDate()}日${state.config.realmPrice ? `・${state.config.realmPrice.toLocaleString('ja-JP')}円` : ''}`);
+    html += row(tl('次の支払い'), `${dayText(d)}${state.config.realmPrice ? `${DOT}${tl('{n}円', { n: state.config.realmPrice.toLocaleString(LANG === 'en' ? 'en-US' : 'ja-JP') })}` : ''}`);
   } else if (state.config.realmPrice) {
-    html += row('料金', `月${state.config.realmPrice.toLocaleString('ja-JP')}円`);
+    html += row(tl('料金'), tl('月{n}円', { n: state.config.realmPrice.toLocaleString(LANG === 'en' ? 'en-US' : 'ja-JP') }));
   }
   if (r.backups && Number.isFinite(r.backups.count)) {
-    html += row('バックアップ', `${r.backups.count}個${r.backups.latest ? `・最新 ${esc(timeText(r.backups.latest))}` : ''}`);
+    html += row(tl('バックアップ'), `${tl('{n}個', { n: r.backups.count })}${r.backups.latest ? tl('・最新 {time}', { time: esc(timeText(r.backups.latest)) }) : ''}`);
   }
-  html += '<h3>ワールド</h3>';
-  if (r.slotName) html += row('名前', esc(r.slotName) + (r.slot ? ` <span class="sub">スロット${r.slot}</span>` : ''));
-  if (DIFFICULTY[r.difficulty]) html += row('難易度', DIFFICULTY[r.difficulty] + (r.hardcore ? '・ハードコア' : ''));
-  if (GAME_MODE[r.gameMode]) html += row('ゲームモード', GAME_MODE[r.gameMode]);
-  html += row('チート', r.cheats ? 'オン' : 'オフ');
+  html += tl('<h3>ワールド</h3>');
+  if (r.slotName) html += row(tl('名前'), esc(r.slotName) + (r.slot ? ` <span class="sub">${tl('スロット{n}', { n: r.slot })}</span>` : ''));
+  if (DIFFICULTY[r.difficulty]) html += row(tl('難易度'), DIFFICULTY[r.difficulty] + (r.hardcore ? tl('・ハードコア') : ''));
+  if (GAME_MODE[r.gameMode]) html += row(tl('ゲームモード'), GAME_MODE[r.gameMode]);
+  html += row(tl('チート'), r.cheats ? tl('オン') : tl('オフ'));
   const rules = r.rules && typeof r.rules === 'object' ? r.rules : {};
   const known = RULE_NAMES.filter(([k]) => k in rules);
   if (known.length) {
-    html += '<h3>ルール</h3>';
+    html += tl('<h3>ルール</h3>');
     for (const [k, label] of known) html += row(label, k === 'playersSleepingPercentage' ? `${Number(rules[k])}%` : onOff(rules[k]));
   }
-  if (r.at) html += `<p class="help">${esc(timeText(r.at))} 時点</p>`;
+  if (r.at) html += `<p class="help">${tl('{time} 時点', { time: esc(timeText(r.at)) })}</p>`;
   box.innerHTML = html;
 }
 
@@ -3175,7 +3190,7 @@ async function setupPlayers() {
     const on = !$('#btn-trails').classList.contains('on');
     $('#btn-trails').classList.toggle('on', on);
     renderPlayers();
-    toast(on ? `足あとを表示(${TRAIL_HOURS}時間)` : '足あとを非表示');
+    toast(on ? tl('足あとを表示({n}時間)', { n: TRAIL_HOURS }) : tl('足あとを非表示'));
   });
   $('#show-beds').addEventListener('change', renderPlayers);
   $('#show-portals').addEventListener('change', renderPortals);
@@ -3257,7 +3272,7 @@ function setupUpdates() {
     if (DIMS[view.dim]) setDim(view.dim);
     map.setView(ll(view.x + 0.5, view.z + 0.5), Number.isFinite(view.zoom) ? view.zoom : map.getZoom(), { animate: false });
   }
-  if (updated) toast('最新版に更新しました');
+  if (updated) toast(tl('最新版に更新しました'));
 }
 
 // ---------- boot ----------
@@ -3270,6 +3285,9 @@ async function loadConfig() {
 }
 
 async function main() {
+  translatePage();
+  $('#lang-select').value = LANG;
+  $('#lang-select').addEventListener('change', (e) => setLang(e.target.value));
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',
@@ -3294,7 +3312,7 @@ async function main() {
     zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false,
   });
   map.attributionControl.setPrefix(false);  // only the map's date shows in the corner
-  L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
+  L.control.zoom({ position: 'bottomright', zoomInTitle: tl('拡大'), zoomOutTitle: tl('縮小') }).addTo(map);
   map.pm.setLang('ja');
   map.pm.setGlobalOptions({ snappable: false, continueDrawing: false, tooltips: false });
   annGroup.addTo(map);

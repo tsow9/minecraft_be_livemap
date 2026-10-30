@@ -9,6 +9,7 @@
 ## 構成
 - `js/app.js`(Leaflet。地図・検索・マーク)、`css/style.css`、`index.html`
 - `tools/*.py`(ワールド → タイル・items.json)、`tools/realms/*.js`(Realms から取得)
+- 英語対応:`js/i18n.js`(言語の判定・`tl()`・ページの固定文字の置き換え)と `js/i18n-en.js`(日本語の文 → 英語の辞書)。言語はブラウザの設定で決まり、Realms情報の「言語 / Language」で切り替えられる。ゲームの言葉(アイテム・ブロック・動物・職業・エンチャント・ゲームルール・難易度など)は公式の en_US.lang の訳を使う(items.json の `en`、blocks.json の `en`)。バイオームは js/biomes.js の BIOME_EN。
 - `tools/pet_faces.py`:ペットの顔は地図を更新するたびに公式の bedrock-samples から作り、items.json の `faces` に入れる。公式の絵はリポジトリに入れない。見た目は「少し明るく・色6段階・目鼻口の黒は残す」、ウマ系は首の傾きを半分(15度)
 - `.github/workflows/map.yml`(地図の更新)、`live.yml`(10分おきの位置確認)、`share/`(Cloudflare Worker:ピン共有)
 - 今のデータの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)
