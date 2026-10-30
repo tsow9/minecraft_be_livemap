@@ -31,6 +31,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 #map { position: absolute; inset: 0; background: var(--bg-page); }
 .leaflet-container { background: var(--bg-page); font: inherit; }
+/* Map pictures stretched while zooming (and the rough one underneath) stay blocky instead of blurring, so the
+   edges of unexplored (black) ground keep their place. */
+.leaflet-tile-container img.leaflet-tile { image-rendering: pixelated; }
 .leaflet-tile { image-rendering: crisp-edges; image-rendering: pixelated; }
 #map.mode-draw { cursor: crosshair; }
 

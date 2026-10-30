@@ -1176,15 +1176,16 @@ function snapShape(a) {
   else if (a.type === 'circle') { a.x = toMiddle(a.x); a.z = toMiddle(a.z); a.r = Math.max(1, Math.round(a.r)); }
   return a;
 }
-// While a shape is drawn, the pointer itself snaps, so what is drawn is what is kept.
+// While a shape is drawn the pointer itself snaps, so the outline follows whole blocks from the first point on.
+// Registered before the drawing tool's own handlers, so it changes the map's pointer events before they see them.
 function snapPointer() {
-  const plain = map.mouseEventToLatLng.bind(map);
-  map.mouseEventToLatLng = (e) => {
-    const p = plain(e), type = GEOMAN_SHAPES[state.mode];
-    if (type === 'rect' || type === 'polygon') return L.latLng(toEdge(p.lat), toEdge(p.lng));
-    if (type === 'line' || type === 'circle') return L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
-    return p;
-  };
+  map.on('mousemove mousedown mouseup click dblclick', (e) => {
+    const type = GEOMAN_SHAPES[state.mode], p = e.latlng;
+    if (!type || !p) return;
+    e.latlng = type === 'rect' || type === 'polygon' ? L.latLng(toEdge(p.lat), toEdge(p.lng)) : L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
+    e.layerPoint = map.latLngToLayerPoint(e.latlng);
+    e.containerPoint = map.layerPointToContainerPoint(e.layerPoint);
+  });
 }
 
 function setMode(mode) {

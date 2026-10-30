@@ -479,6 +479,10 @@ def write_tiles(surfaces, out_dir, info_dir, ground_dir, biome_dir):
             for (tx, tz), img in kids:
                 canvas.paste(img, ((tx - px * 2) * 256, (tz - pz * 2) * 256))
             small = canvas.resize((256, 256), Image.BOX)
+            # A pixel is either ground or not: half or more of the blocks under it explored. Otherwise the edges of
+            # unexplored (black) ground turn see-through on zooming out, and look smaller at every step.
+            alpha = small.getchannel('A').point(lambda a: 255 if a >= 128 else 0)
+            small.putalpha(alpha)
             path = os.path.join(out_dir, str(z), str(px), f'{pz}.png')
             os.makedirs(os.path.dirname(path), exist_ok=True)
             small.save(path, compress_level=6)
