@@ -197,7 +197,7 @@ jobs:
           if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
       - name: 公開するファイルをまとめる
         if: steps.check.outputs.ready == 'true'
-        run: python3 tools/build_site.py data _site --data-folder "$(cat "$RUNNER_TEMP/data_dir")"
+        run: python3 tools/build_site.py data _site --data-folder "$(cat "$RUNNER_TEMP/data_dir")" --items-folder "$(cat "$RUNNER_TEMP/items_dir")"
       - uses: actions/setup-node@v4
         if: steps.check.outputs.ready == 'true'
         with:

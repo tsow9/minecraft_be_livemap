@@ -86,9 +86,10 @@ function showInvites(role) {
   $('#share-invite').hidden = !role || !!DATA;
   $('#site-invite').hidden = !DATA || role !== 'admin';
   $('#writers').hidden = !DATA || role !== 'admin';
+  $('#privacy').hidden = !DATA || role !== 'admin';
   // On Cloudflare, the sign-in and (for the owner) the members' switches have their own panel, apart from the Realm's.
   $('#btn-site').hidden = !DATA;
-  if (DATA && role === 'admin') loadAccess();
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); }
   renderMe();
 }
 function renderMe() {
@@ -112,27 +113,55 @@ async function loadAccess() {
     const { members } = await res.json();
     list.innerHTML = members.length ? '' : '<li class="sub">メンバーの情報がまだありません</li>';
     for (const m of members) {
-      const li = document.createElement('li');
-      li.innerHTML = '<span class="grow"></span><span class="state"></span>'
-        + '<label class="switch"><input type="checkbox" role="switch"><span class="knob"></span></label>';
-      li.querySelector('.grow').textContent = m.name || '(名前なし)';
-      const state = li.querySelector('.state'), box = li.querySelector('input');
-      const show = (on) => { box.checked = on; state.textContent = on ? '書き込みOK' : '見るだけ'; li.classList.toggle('on', on); };
-      box.setAttribute('aria-label', `${m.name || 'このメンバー'}さんの書き込み`);
-      show(m.write);
-      // Changes only this row, so the list stays in place; goes back if the change did not go through.
-      box.addEventListener('change', async () => {
-        const on = box.checked;
-        show(on);
-        box.disabled = true;
+      list.append(switchRow(m.name || '(名前なし)', ['見るだけ', '書き込みOK'], m.write, `${m.name || 'このメンバー'}さんの書き込み`, async (on) => {
         const r = await fetch(`${share.url}/access`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xid: m.xid, write: on }) }).catch(() => null);
-        box.disabled = false;
-        if (r?.ok) { m.write = on; toast(`${m.name}さんを「${on ? '書き込みOK' : '見るだけ'}」にしました`); }
-        else { show(m.write); toast('変えられませんでした。もう一度ためしてください'); }
-      });
-      list.append(li);
+        if (r?.ok) toast(`${m.name}さんを「${on ? '書き込みOK' : '見るだけ'}」にしました`);
+        return !!r?.ok;
+      }));
     }
   } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
+}
+
+// A row with an on/off switch. save(on) answers whether the change went through; if not, the switch goes back.
+// Only this row changes, so a list stays in place.
+function switchRow(label, words, on, aria, save) {
+  const li = document.createElement('li');
+  li.innerHTML = '<span class="grow"></span><span class="state"></span>'
+    + '<label class="switch"><input type="checkbox" role="switch"><span class="knob"></span></label>';
+  li.querySelector('.grow').textContent = label;
+  const state = li.querySelector('.state'), box = li.querySelector('input');
+  const show = (v) => { box.checked = v; state.textContent = words[v ? 1 : 0]; li.classList.toggle('on', v); };
+  box.setAttribute('aria-label', aria);
+  show(on);
+  box.addEventListener('change', async () => {
+    const want = box.checked;
+    show(want);
+    box.disabled = true;
+    const ok = await save(want);
+    box.disabled = false;
+    if (ok) on = want;
+    else { show(on); toast('変えられませんでした。もう一度ためしてください'); }
+  });
+  return li;
+}
+
+// What the owner keeps from the members (the worker takes it out of what they are sent; the owner still sees all).
+async function loadPrivacy() {
+  const list = $('#privacy-list');
+  try {
+    const res = await fetch(`${share.url}/privacy`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    const hide = await res.json();
+    const rows = [['chests', 'チェスト'], ['pets', 'ほかの人のペット']];
+    list.innerHTML = '';
+    for (const [key, what] of rows) {
+      list.append(switchRow(what, ['見せる', '隠す'], hide[key], `${what}を隠す`, async (on) => {
+        const r = await fetch(`${share.url}/privacy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: on }) }).catch(() => null);
+        if (r?.ok) toast(`${what}をメンバーに${on ? '見せないようにしました' : '見せるようにしました'}`);
+        return !!r?.ok;
+      }));
+    }
+  } catch { list.innerHTML = '<li class="sub">設定を読み込めませんでした</li>'; }
 }
 const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
 
@@ -2016,7 +2045,11 @@ function jobName(job) {
 }
 
 async function loadItems() {
-  state.items = await fetchJson(`${DATA}items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  // On Cloudflare it comes through the worker, without what the owner hides from members.
+  state.items = await fetchJson(DATA ? `${location.origin}/api/world` : `items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  const hidden = new Set(state.items?.hidden || []);
+  if (hidden.has('chests')) thingsOn.chests = false;
+  document.querySelector('#chips [data-layer="chests"]').hidden = hidden.has('chests');
   $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
   buildFindIndex();
   if (finds) showFinds(finds.type, finds.key, false);

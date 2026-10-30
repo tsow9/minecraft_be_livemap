@@ -1,9 +1,10 @@
 """Assemble the published site: site files from this repo plus tiles and snapshot list from the map data folder.
 
-Usage: python build_site.py DATA_DIR OUT_DIR [--data-folder NAME]
+Usage: python build_site.py DATA_DIR OUT_DIR [--data-folder NAME [--items-folder NAME]]
 
 With --data-folder (the Cloudflare site), the map data goes into OUT_DIR/d/NAME/ and the site's own config.json
-keeps nothing about the map: only invited visitors are told NAME (see worker/worker.js).
+keeps nothing about the map: only invited visitors are told NAME (see worker/worker.js). With --items-folder too,
+items.json goes into OUT_DIR/x/NAME/ instead, which only the worker reads (it hides what the owner chose to hide).
 """
 import json
 import os
@@ -20,8 +21,10 @@ MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 def main():
     data, out = sys.argv[1], sys.argv[2]
     folder = sys.argv[sys.argv.index('--data-folder') + 1] if '--data-folder' in sys.argv else ''
-    if folder and not re.fullmatch(r'[0-9a-f]{16,64}', folder):
-        sys.exit('--data-folder は16文字以上の16進数にしてください')
+    items_folder = sys.argv[sys.argv.index('--items-folder') + 1] if '--items-folder' in sys.argv else ''
+    for name in (folder, items_folder):
+        if name and not re.fullmatch(r'[0-9a-f]{16,64}', name):
+            sys.exit('--data-folder と --items-folder は16文字以上の16進数にしてください')
     put = os.path.join(out, 'd', folder) if folder else out
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out)
@@ -44,7 +47,9 @@ def main():
     os.makedirs(put, exist_ok=True)
     for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json'):
         if os.path.exists(os.path.join(data, name)):
-            shutil.copy2(os.path.join(data, name), put)
+            to = os.path.join(out, 'x', items_folder) if name == 'items.json' and items_folder else put
+            os.makedirs(to, exist_ok=True)
+            shutil.copy2(os.path.join(data, name), to)
     repo = os.environ.get('GITHUB_REPOSITORY')
     if folder:
         cfg.pop('shareUrl', None)  # the worker answers the api on the same site

@@ -6,7 +6,10 @@
 // unlimited) without checking each one.
 // The owner's passphrase (PASSPHRASE) is what the live check uses to put in player data.
 //
-// Secrets: DATA_DIR, PASSPHRASE, MEMBER_KEY (checks a sign-in against the members' ids).
+// What is stored in chests and who owns which pet (items.json) sits in another hidden folder (ITEMS_DIR) that pages are
+// never told: it goes out through /api/world, where the owner's privacy switches take out what a member may not see.
+//
+// Secrets: DATA_DIR, ITEMS_DIR, PASSPHRASE, MEMBER_KEY (checks a sign-in against the members' ids).
 const MAX_ITEM_BYTES = 64 * 1024;
 const MAX_ITEMS = 10000;
 const MAX_BATCH = 300;
@@ -61,6 +64,26 @@ export default {
           .bind(since).all();
         const items = results.map((r) => ({ id: r.id, data: JSON.parse(r.data), deleted: !!r.deleted, rev: r.rev }));
         return json({ items, rev: items.length ? items[items.length - 1].rev : since, now: Date.now() });
+      }
+
+      // What is in the world's chests, its villagers, signs and pets (items.json), less what the owner hides from members.
+      if (req.method === 'GET' && path === '/world') {
+        if (!env.ITEMS_DIR) return json({ error: 'none' }, 404);
+        const file = await env.ASSETS.fetch(new Request(new URL(`/x/${env.ITEMS_DIR}/items.json`, url)));
+        if (!file.ok) return json({ error: 'none' }, 404);
+        const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
+        const hide = await privacy(env);
+        if (admin || (!hide.chests && !hide.pets)) return new Response(file.body, { headers });
+        return new Response(JSON.stringify(await hideFrom(env, await file.json(), hide, me.xid)), { headers });
+      }
+      if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
+      if (path === '/privacy' && admin && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        const hide = { ...(await privacy(env)) };
+        for (const k of ['chests', 'pets']) if (typeof body?.[k] === 'boolean') hide[k] = body[k];
+        await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
+          .bind('privacy', JSON.stringify(hide), Date.now()).run();
+        return json(hide);
       }
 
       // Latest player data, put here by the live check so pages can look every few seconds.
@@ -249,13 +272,41 @@ async function liveInfo(env) {
   return { members, ownerXid: live.realm?.ownerXid || null, ownerName: live.realm?.owner || null };
 }
 
-// { role: 'admin' | 'writer' | 'viewer', name, via } for whoever is asking, or null.
+// The owner's privacy switches: chests hides every chest from members; pets hides the pets other players own.
+async function privacy(env) {
+  const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('privacy').first();
+  let v = {};
+  try { v = JSON.parse(row?.v || '{}'); } catch { /* not set */ }
+  return { chests: v.chests === true, pets: v.pets === true };
+}
+
+// items.json as a member may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the
+// live check linked to this member).
+async function hideFrom(env, items, hide, xid) {
+  let mine = new Set();
+  if (hide.pets) {
+    const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
+    let live = {};
+    try { live = JSON.parse(row?.v || '{}'); } catch { /* none yet */ }
+    const id = (live.members || []).find((m) => m && m.xid === xid)?.id;
+    if (id) mine = new Set((live.players || []).filter((p) => p && p.member === id).map((p) => p.key));
+  }
+  for (const d of Object.values(items.dims || {})) {
+    if (hide.chests) d.containers = [];
+    // [x, y, z, kind, name, tamed, owner, variant]
+    if (hide.pets) d.animals = (d.animals || []).filter((a) => !a[6] || mine.has(a[6]));
+  }
+  items.hidden = Object.keys(hide).filter((k) => hide[k]);
+  return items;
+}
+
+// { role: 'admin' | 'writer' | 'viewer', name, xid, via } for whoever is asking, or null.
 // Signed in with Microsoft: the site's owner is the admin; members the owner allowed may write; other members look.
 // Someone no longer in the Realm is let in no more.
 async function whoIs(req, env, ip) {
   // The live check puts in player data with the owner's passphrase.
   const pass = req.headers.get('X-Passphrase') || '';
-  if (pass && (await keyOk(env, ip, pass, [env.PASSPHRASE]))) return { role: 'admin', name: null, via: 'key' };
+  if (pass && (await keyOk(env, ip, pass, [env.PASSPHRASE]))) return { role: 'admin', name: null, xid: null, via: 'key' };
   const jar = cookies(req);
   if (jar[SESSION] && /^[0-9a-f]{64}$/.test(jar[SESSION])) {
     const id = await sha(jar[SESSION]);
@@ -267,7 +318,7 @@ async function whoIs(req, env, ip) {
       if (owner || member) {
         if (!row.seen || Date.now() - row.seen > USED_EVERY_MS) await env.DB.prepare('UPDATE sessions SET seen = ? WHERE token = ?').bind(Date.now(), id).run();
         const may = owner ? null : await env.DB.prepare('SELECT write FROM access WHERE xid = ?').bind(row.xid).first();
-        return { role: owner ? 'admin' : may?.write ? 'writer' : 'viewer', name: (owner ? live.ownerName : member.name) || row.name, via: 'microsoft' };
+        return { role: owner ? 'admin' : may?.write ? 'writer' : 'viewer', name: (owner ? live.ownerName : member.name) || row.name, xid: row.xid, via: 'microsoft' };
       }
     }
   }
