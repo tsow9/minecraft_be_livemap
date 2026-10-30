@@ -145,7 +145,7 @@ function switchRow(label, words, on, aria, save) {
   return li;
 }
 
-// What the owner keeps from the members (the worker takes it out of what they are sent; the owner still sees all).
+// What the owner keeps off the map, for everyone including the owner (the worker takes it out of what is sent).
 async function loadPrivacy() {
   const list = $('#privacy-list');
   try {
@@ -157,7 +157,8 @@ async function loadPrivacy() {
     for (const [key, what] of rows) {
       list.append(switchRow(what, ['見せる', '隠す'], hide[key], `${what}を隠す`, async (on) => {
         const r = await fetch(`${share.url}/privacy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: on }) }).catch(() => null);
-        if (r?.ok) toast(`${what}をメンバーに${on ? '見せないようにしました' : '見せるようにしました'}`);
+        if (r?.ok) toast(`${what}を${on ? '隠しました' : '見せるようにしました'}`);
+        if (r?.ok) loadItems();
         return !!r?.ok;
       }));
     }

@@ -7,7 +7,7 @@
 // The owner's passphrase (PASSPHRASE) is what the live check uses to put in player data.
 //
 // What is stored in chests and who owns which pet (items.json) sits in another hidden folder (ITEMS_DIR) that pages are
-// never told: it goes out through /api/world, where the owner's privacy switches take out what a member may not see.
+// never told: it goes out through /api/world, where the owner's privacy switches take out what nobody may see.
 //
 // Secrets: DATA_DIR, ITEMS_DIR, PASSPHRASE, MEMBER_KEY (checks a sign-in against the members' ids).
 const MAX_ITEM_BYTES = 64 * 1024;
@@ -66,14 +66,15 @@ export default {
         return json({ items, rev: items.length ? items[items.length - 1].rev : since, now: Date.now() });
       }
 
-      // What is in the world's chests, its villagers, signs and pets (items.json), less what the owner hides from members.
+      // What is in the world's chests, its villagers, signs and pets (items.json), less what the owner hides (from everyone,
+      // the owner too).
       if (req.method === 'GET' && path === '/world') {
         if (!env.ITEMS_DIR) return json({ error: 'none' }, 404);
         const file = await env.ASSETS.fetch(new Request(new URL(`/x/${env.ITEMS_DIR}/items.json`, url)));
         if (!file.ok) return json({ error: 'none' }, 404);
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
         const hide = await privacy(env);
-        if (admin || (!hide.chests && !hide.pets)) return new Response(file.body, { headers });
+        if (!hide.chests && !hide.pets) return new Response(file.body, { headers });
         return new Response(JSON.stringify(await hideFrom(env, await file.json(), hide, me.xid)), { headers });
       }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
@@ -272,7 +273,7 @@ async function liveInfo(env) {
   return { members, ownerXid: live.realm?.ownerXid || null, ownerName: live.realm?.owner || null };
 }
 
-// The owner's privacy switches: chests hides every chest from members; pets hides the pets other players own.
+// The owner's privacy switches: chests hides every chest; pets hides the pets other players own. They hold for everyone.
 async function privacy(env) {
   const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('privacy').first();
   let v = {};
@@ -280,7 +281,7 @@ async function privacy(env) {
   return { chests: v.chests === true, pets: v.pets === true };
 }
 
-// items.json as a member may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the
+// items.json as this person may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the
 // live check linked to this member).
 async function hideFrom(env, items, hide, xid) {
   let mine = new Set();
