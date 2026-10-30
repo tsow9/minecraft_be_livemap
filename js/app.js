@@ -667,6 +667,7 @@ function makeBaseLayer() {
   return new HistoryTileLayer(url, {
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
+    backdropZoom: Math.min(state.config.maxNativeZoom, Math.max(state.config.minNativeZoom, BACKDROP_ZOOM)),
     attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
   });
 }
@@ -675,7 +676,28 @@ function makeBaseLayer() {
 const EMPTY_TILE = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 const manifests = new Map();
 const enlargeCache = new Map();
+// A rough picture of the whole area (16 blocks a pixel) stays loaded under the map, so that zooming out shows it,
+// a little blurred, where the sharp pictures are still on their way, instead of the bare background.
+const BACKDROP_ZOOM = -4;
 const HistoryTileLayer = L.TileLayer.extend({
+  onAdd(map) {
+    L.TileLayer.prototype.onAdd.call(this, map);
+    const z = this.options.backdropZoom;
+    if (z == null) return;
+    if (!map.getPane('backdrop')) map.createPane('backdrop').style.zIndex = 150;  // under the map's own pictures
+    this._backdrop = new HistoryTileLayer(this._url, {
+      pane: 'backdrop', manifest: this.options.manifest, dim: this.options.dim, noWrap: true, pmIgnore: true,
+      minZoom: this.options.minZoom, maxZoom: this.options.maxZoom, minNativeZoom: z, maxNativeZoom: z,
+      updateWhenZooming: false, keepBuffer: 4,
+    }).addTo(map);
+  },
+
+  onRemove(map) {
+    if (this._backdrop) map.removeLayer(this._backdrop);
+    this._backdrop = null;
+    L.TileLayer.prototype.onRemove.call(this, map);
+  },
+
   getTileUrl(coords) {
     return this.urlAt(coords.x, coords.y, this._getZoomForUrl()) || EMPTY_TILE;
   },
