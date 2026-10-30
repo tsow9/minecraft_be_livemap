@@ -227,6 +227,15 @@ jobs:
           [ -n "$url" ] || { echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"; exit 1; }
           echo "招待制のサイト: $url" >> "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/secrets.json"
+      - name: ログインの記録(件数だけ)
+        if: steps.check.outputs.ready == 'true'
+        working-directory: worker
+        continue-on-error: true
+        run: |
+          # How many sign-ins were made each day, and how many devices stay signed in. Counts only, nobody's name or id.
+          npx wrangler d1 execute blockmap-share --remote --json --command \
+            "SELECT date(created / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM sessions GROUP BY day ORDER BY day DESC LIMIT 14" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s)[0].results;console.log("ログインした回数(日ごと):");for(const x of r)console.log(`  ${x.day}: ${x.n}回`)})'
 
   deploy:
     needs: [update]

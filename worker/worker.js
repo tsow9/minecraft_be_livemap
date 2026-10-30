@@ -196,7 +196,8 @@ async function msStart(env, url) {
   const q = new URLSearchParams({
     client_id: env.MS_CLIENT_ID, response_type: 'code', redirect_uri: env.MS_RELAY, scope: 'XboxLive.signin',
     code_challenge: b64url(await crypto.subtle.digest('SHA-256', enc.encode(verifier))), code_challenge_method: 'S256',
-    state: `${url.host}~${session}~${page}`, prompt: 'select_account',
+    // No prompt: someone Microsoft already knows on this device goes straight through, without picking an account.
+    state: `${url.host}~${session}~${page}`,
   });
   return { url: `${MS}/authorize?${q}` };
 }

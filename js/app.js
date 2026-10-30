@@ -130,11 +130,12 @@ async function loadAccess() {
 
 // A row with an on/off switch. save(on) answers whether the change went through; if not, the switch goes back.
 // Only this row changes, so a list stays in place.
-function switchRow(label, words, on, aria, save) {
+function switchRow(label, words, on, aria, save, note = '') {
   const li = document.createElement('li');
-  li.innerHTML = '<span class="grow"></span><span class="state"></span>'
+  li.innerHTML = '<span class="grow"><span class="name"></span><small class="note"></small></span><span class="state"></span>'
     + '<label class="switch"><input type="checkbox" role="switch"><span class="knob"></span></label>';
-  li.querySelector('.grow').textContent = label;
+  li.querySelector('.name').textContent = label;
+  li.querySelector('.note').textContent = note;
   const state = li.querySelector('.state'), box = li.querySelector('input');
   const show = (v) => { box.checked = v; state.textContent = words[v ? 1 : 0]; li.classList.toggle('on', v); };
   box.setAttribute('aria-label', aria);
@@ -158,15 +159,15 @@ async function loadPrivacy() {
     const res = await fetch(`${share.url}/privacy`, { cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const hide = await res.json();
-    const rows = [['chests', 'チェスト'], ['pets', 'ほかの人のペット']];
+    const rows = [['chests', 'チェスト'], ['pets', 'ほかの人のペット', '持ち主のいないペット(野良)は見えます']];
     list.innerHTML = '';
-    for (const [key, what] of rows) {
+    for (const [key, what, note] of rows) {
       list.append(switchRow(what, ['見せる', '隠す'], hide[key], `${what}を隠す`, async (on) => {
         const r = await fetch(`${share.url}/privacy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [key]: on }) }).catch(() => null);
         if (r?.ok) toast(`${what}を${on ? '隠しました' : '見せるようにしました'}`);
         if (r?.ok) loadItems();
         return !!r?.ok;
-      }));
+      }, note));
     }
   } catch { list.innerHTML = '<li class="sub">設定を読み込めませんでした</li>'; }
 }
