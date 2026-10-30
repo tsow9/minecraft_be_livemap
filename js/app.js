@@ -86,6 +86,8 @@ function showInvites(role) {
   $('#share-invite').hidden = !role || !!DATA;
   $('#site-invite').hidden = !DATA || role !== 'admin';
   $('#writers').hidden = !DATA || role !== 'admin';
+  // On Cloudflare, the sign-in and (for the owner) the members' switches have their own panel, apart from the Realm's.
+  $('#btn-site').hidden = !DATA;
   if (DATA && role === 'admin') loadAccess();
   renderMe();
 }
@@ -1565,7 +1567,7 @@ function setupPanels() {
     panel.append(body);
   });
   $('#past-back').addEventListener('click', () => setSnapshotIndex(snapshots().length - 1));
-  const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-realm': 'panel-realm' };
+  const panels = { 'btn-players': 'panel-players', 'btn-explore': 'panel-explore', 'btn-nether': 'panel-nether', 'btn-time': 'panel-time', 'btn-realm': 'panel-realm', 'btn-site': 'panel-site' };
   const close = () => Object.entries(panels).forEach(([b, p]) => { $('#' + p).hidden = true; $('#' + b).classList.remove('on'); });
   for (const [b, p] of Object.entries(panels)) {
     $('#' + b).addEventListener('click', () => {

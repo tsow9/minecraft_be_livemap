@@ -408,6 +408,7 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info .warn { color: var(--danger); }
 #realm-info > .help:last-child { margin: 10px 0 0; }
 #panel-realm .share-row { margin: 12px 0 0; }
+#panel-site .share-row { margin: 10px 0 0; }
 #writers { margin-top: 14px; }
 #writer-list .grow { min-width: 6em; font-weight: 600; }
 #writer-list li { gap: 10px; padding: 5px 4px; }
