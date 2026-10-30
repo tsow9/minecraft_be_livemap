@@ -673,6 +673,7 @@ function makeBaseLayer() {
   // Closer than the most detailed picture, tiles are enlarged on a canvas here (see createTile) rather than by the browser,
   // which on some phones smooths enlarged pictures into a blur.
   return new HistoryTileLayer(url, {
+    className: 'base-tiles',
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
     backdropZoom: Math.min(state.config.maxNativeZoom, Math.max(state.config.minNativeZoom, BACKDROP_ZOOM)),
@@ -3233,10 +3234,11 @@ async function loadConfig() {
 
 async function main() {
   translatePage();
-  document.querySelectorAll('#lang-switch button').forEach((b) => {
-    b.classList.toggle('on', b.dataset.lang === LANG);
-    b.addEventListener('click', () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang); });
-  });
+  // One button, naming the other language (in that language): 日本語 → English, English → 日本語.
+  const other = LANG === 'en' ? 'ja' : 'en';
+  $('#lang-switch').textContent = other === 'en' ? 'English' : '日本語';
+  $('#lang-switch').lang = other;
+  $('#lang-switch').addEventListener('click', () => setLang(other));
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',

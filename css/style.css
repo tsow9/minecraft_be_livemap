@@ -33,8 +33,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .leaflet-container { background: var(--bg-page); font: inherit; }
 /* Map pictures stretched while zooming (and the rough one underneath) stay blocky instead of blurring, so the
    edges of unexplored (black) ground keep their place. */
-.leaflet-tile-container img.leaflet-tile { image-rendering: pixelated; }
-.leaflet-tile { image-rendering: crisp-edges; image-rendering: pixelated; }
+.leaflet-tile { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: pixelated; }
+/* The map's own pictures are solid: unexplored ground is painted black rather than left see-through, so the rough
+   picture kept underneath (for the gaps while zooming) never shows through it and makes the black look smaller. */
+.base-tiles .leaflet-tile-loaded { background: var(--bg-page); }
 #map.mode-draw { cursor: crosshair; }
 
 #crosshair { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
@@ -417,11 +419,10 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #panel-realm .share-row { margin: 12px 0 0; }
 #panel-site .share-row { margin: 10px 0 0; }
 /* Language: a small switch in the corner (PC: top right; phones: bottom left). */
-#lang-switch { position: absolute; z-index: 1050; top: 12px; right: 12px; display: flex; padding: 2px; border-radius: 999px;
-  background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); }
-#lang-switch button { border: 0; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 700;
-  padding: 3px 9px; border-radius: 999px; cursor: pointer; }
-#lang-switch button.on { background: var(--accent-soft); color: var(--accent); }
+#lang-switch { position: absolute; z-index: 1050; top: 12px; right: 12px; padding: 4px 11px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); font: inherit;
+  font-size: 11px; font-weight: 700; cursor: pointer; }
+#lang-switch:hover { background: var(--hover); }
 @media (max-width: 700px) {
   #lang-switch { top: auto; right: auto; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 900; }
 }
