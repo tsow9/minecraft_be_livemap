@@ -30,7 +30,7 @@ VILLAGERS = {'minecraft:villager_v2', 'minecraft:villager', 'minecraft:wandering
 JOBS = ['farmer', 'fisherman', 'shepherd', 'fletcher', 'librarian', 'cartographer', 'cleric', 'armorer', 'weaponsmith',
         'toolsmith', 'butcher', 'leatherworker', 'mason', 'nitwit', 'unemployed', 'wandering_trader']
 JOB_LANG = {'armorer': 'armor', 'leatherworker': 'leather', 'toolsmith': 'tool', 'weaponsmith': 'weapon'}
-JOB_JA = {'nitwit': 'ニトウィット', 'unemployed': '無職の村人', 'wandering_trader': '行商人'}
+JOB_JA = {'nitwit': 'ニトウィット', 'unemployed': '村人(無職)', 'wandering_trader': '行商人'}
 # Bedrock enchantment numbers and their language-file names.
 ENCH_KEYS = ['protect.all', 'protect.fire', 'protect.fall', 'protect.explosion', 'protect.projectile', 'thorns', 'oxygen',
              'waterWalker', 'waterWorker', 'damage.all', 'damage.undead', 'damage.arthropods', 'knockback', 'fire',

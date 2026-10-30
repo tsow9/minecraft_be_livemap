@@ -2155,8 +2155,14 @@ const itemKey = (it) => `${it[0]}|${(it[2] || []).map((e) => e.join(':')).sort()
 function mobName(kind) {
   return state.items?.mobs?.[kind] || kind;
 }
+// A villager with no job found (none yet, or a child) is shown like one without a job.
 function jobName(job) {
-  return (job && state.items?.jobs?.[job]) || '村人';
+  return (job && job !== 'unemployed' && state.items?.jobs?.[job]) || '村人(無職)';
+}
+// A villager's name with its job: ジョン(農民), ジョン(無職).
+function villagerTitle(v) {
+  const job = jobName(v[3]);
+  return v[4] ? `${v[4]}(${job === '村人(無職)' ? '無職' : job})` : job;
 }
 
 async function loadItems() {
@@ -2192,14 +2198,12 @@ function buildFindIndex() {
     // Each villager, wandering trader and pet is its own search hit, shown with its place like a pin.
     for (const v of d.villagers || []) {
       const job = jobName(v[3]), trader = v[3] === 'wandering_trader';
-      const title = v[4] ? `${v[4]}(${job})` : job;
+      const title = villagerTitle(v);
       const place = `${dim}:${v[0]}:${v[1]}:${v[2]}`;
       if (trader) group('trader', '行商人', '行商人', TRADER_SVG, '人', 'villagers', place);
       else {
         group('villager', '村人', '村人', VILLAGER_SVG, '人', 'villagers', place);
-        // Without a job the name is just 村人, which the whole-village entry already uses.
-        const label = job === '村人' ? '職業なしの村人' : job;
-        group(`job:${v[3]}`, label, label, villagerIcon(v[3]), '人', 'villagers', place);
+        group(`job:${v[3] && v[3] !== 'unemployed' ? v[3] : 'unemployed'}`, job, job, villagerIcon(v[3]), '人', 'villagers', place);
         if (VILLAGER_LEVELS[v[6] - 1]) {
           const lv = VILLAGER_LEVELS[v[6] - 1];
           group(`level:${v[6]}`, `${lv}の村人`, `${lv} レベル${v[6]}`, VILLAGER_SVG, '人', 'villagers', place);
@@ -2283,7 +2287,7 @@ function containerMark(dim, c, key) {
 const VILLAGER_LEVELS = ['新米', '見習い', '一人前', '熟練者', '達人'];
 const levelText = (v) => (VILLAGER_LEVELS[v[6] - 1] ? `レベル${v[6]}・${VILLAGER_LEVELS[v[6] - 1]}` : '');
 function villagerMark(dim, v, key) {
-  const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
+  const name = villagerTitle(v);
   const trader = v[3] === 'wandering_trader';
   return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : villagerIcon(v[3]), iconBig: trader ? TRADER_BIG : villagerIcon(v[3], true), name,
     popup: `<h4>${esc(name)}</h4>${levelText(v) ? `<div class="sub">${levelText(v)}</div>` : ''}`
