@@ -66,6 +66,11 @@ def main():
     cfg['version'] = version  # open pages compare this with their own and switch to the new site
     with open(os.path.join(put, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
+    if folder:
+        # Map pictures never change at an address (a new picture gets a new ?v=), so browsers may keep them; otherwise
+        # Cloudflare has them asked for again at every zoom.
+        with open(os.path.join(out, '_headers'), 'w', encoding='utf-8') as f:
+            f.write('/d/:dir/tiles/*\n  Cache-Control: public, max-age=31536000, immutable\n')
     if folder:  # the open part of the site says nothing about the map
         with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
             json.dump({k: v for k, v in cfg.items() if k not in MAP_KEYS}, f, ensure_ascii=False, indent=2)

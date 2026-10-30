@@ -676,6 +676,20 @@ function makeBaseLayer() {
 const EMPTY_TILE = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 const manifests = new Map();
 const enlargeCache = new Map();
+const warmed = new Map();
+// The detailed picture a closer zoom enlarges, loaded once.
+function sourceImage(url) {
+  if (!enlargeCache.has(url)) {
+    enlargeCache.set(url, new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    }));
+    if (enlargeCache.size > 60) enlargeCache.delete(enlargeCache.keys().next().value);
+  }
+  return enlargeCache.get(url);
+}
 // A rough picture of the whole area (16 blocks a pixel) stays loaded under the map, so that zooming out shows it,
 // a little blurred, where the sharp pictures are still on their way, instead of the bare background.
 const BACKDROP_ZOOM = -4;
@@ -684,6 +698,8 @@ const HistoryTileLayer = L.TileLayer.extend({
     L.TileLayer.prototype.onAdd.call(this, map);
     const z = this.options.backdropZoom;
     if (z == null) return;
+    map.on('moveend', this._warmSoon, this);
+    this._warmSoon();
     if (!map.getPane('backdrop')) map.createPane('backdrop').style.zIndex = 150;  // under the map's own pictures
     this._backdrop = new HistoryTileLayer(this._url, {
       pane: 'backdrop', manifest: this.options.manifest, dim: this.options.dim, noWrap: true, pmIgnore: true,
@@ -693,6 +709,8 @@ const HistoryTileLayer = L.TileLayer.extend({
   },
 
   onRemove(map) {
+    map.off('moveend', this._warmSoon, this);
+    clearTimeout(this._warmTimer);
     if (this._backdrop) map.removeLayer(this._backdrop);
     this._backdrop = null;
     L.TileLayer.prototype.onRemove.call(this, map);
@@ -700,6 +718,42 @@ const HistoryTileLayer = L.TileLayer.extend({
 
   getTileUrl(coords) {
     return this.urlAt(coords.x, coords.y, this._getZoomForUrl()) || EMPTY_TILE;
+  },
+
+  // Once the map stands still, fetch what one or two steps out and one step in would show, so the next zoom finds
+  // its pictures already here (sharp at once, rather than the rough picture first).
+  _warmSoon() {
+    clearTimeout(this._warmTimer);
+    this._warmTimer = setTimeout(() => this._warm(), 400);
+  },
+
+  _warm() {
+    const map = this._map;
+    if (!map) return;
+    const now = Math.round(map.getZoom()), size = this.getTileSize().x, detail = this.options.detailZoom;
+    for (const z of [now - 1, now + 1, now - 2]) {
+      if (z < this.options.minNativeZoom || z > this.options.maxZoom) continue;
+      const b = map.getPixelBounds(map.getCenter(), z);
+      const lo = b.min.divideBy(size).floor(), hi = b.max.divideBy(size).floor();
+      if ((hi.x - lo.x + 1) * (hi.y - lo.y + 1) > 80) continue;
+      for (let x = lo.x; x <= hi.x; x++) {
+        for (let y = lo.y; y <= hi.y; y++) {
+          if (detail != null && z > detail) {
+            const f = 2 ** (z - detail);
+            const url = this.urlAt(Math.floor(x / f), Math.floor(y / f), detail + this.options.zoomOffset);
+            if (url) sourceImage(url);
+          } else {
+            const url = this.urlAt(x, y, z + this.options.zoomOffset);
+            if (url && !warmed.has(url)) {
+              const img = new Image();
+              img.src = url;
+              warmed.set(url, img);  // held on to, so the browser keeps the picture ready
+              if (warmed.size > 400) warmed.delete(warmed.keys().next().value);
+            }
+          }
+        }
+      }
+    }
   },
 
   urlAt(x, y, z) {
@@ -727,16 +781,7 @@ const HistoryTileLayer = L.TileLayer.extend({
     canvas.dataset.overlap = '1';
     const url = this.urlAt(Math.floor(coords.x / f), Math.floor(coords.y / f), detail + this.options.zoomOffset);
     if (!url) { setTimeout(() => done(null, canvas)); return canvas; }
-    if (!enlargeCache.has(url)) {
-      enlargeCache.set(url, new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
-      }));
-      if (enlargeCache.size > 60) enlargeCache.delete(enlargeCache.keys().next().value);
-    }
-    enlargeCache.get(url).then((img) => {
+    sourceImage(url).then((img) => {
       if (img) {
         const part = img.naturalWidth / f;
         const ctx = canvas.getContext('2d');
