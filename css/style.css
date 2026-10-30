@@ -411,8 +411,6 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #panel-site .share-row { margin: 10px 0 0; }
 #writers, #privacy { margin-top: 14px; }
 .switch-list .grow { min-width: 6em; font-weight: 600; }
-.switch-list .note { display: block; font-size: 12px; font-weight: normal; color: var(--sub); margin-top: 2px; }
-.switch-list .note:empty { display: none; }
 .switch-list li { gap: 10px; padding: 5px 4px; }
 .switch-list .state { font-size: 12px; color: var(--sub); }
 .switch-list li.on .state { color: var(--accent); font-weight: 600; }
