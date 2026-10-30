@@ -89,8 +89,8 @@ function showInvites(role) {
   $('#site-invite').hidden = !DATA || role !== 'admin';
   $('#writers').hidden = !DATA || role !== 'admin';
   $('#privacy').hidden = !DATA || role !== 'admin';
-  // On Cloudflare, the sign-in and (for the owner) the members' switches have their own panel, apart from the Realm's.
-  $('#btn-site').hidden = !DATA;
+  // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
+  $('#btn-site').hidden = !DATA || role !== 'admin';
   if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); }
   renderMe();
 }
@@ -98,6 +98,10 @@ function renderMe() {
   const line = $('#me-line');
   line.hidden = !signedIn();
   if (!signedIn()) return;
+  // The owner sees it at the top of the owner's menu; members at the end of the Realm's panel.
+  const body = (id) => $(`#${id} .panel-body`) || $(`#${id}`);  // the body is made once the panels are set up
+  if (share.me.role === 'admin') body('panel-site').prepend(line);
+  else body('panel-realm').append(line);
   const what = { admin: '管理者', writer: '書き込みOK', viewer: '見るだけ' }[share.me.role] || '';
   line.textContent = `${share.me.name || ''} としてログイン中(${what}) `;
   line.append(button('ログアウト', async () => {
@@ -704,12 +708,31 @@ const HistoryTileLayer = L.TileLayer.extend({
     this._backdrop = new HistoryTileLayer(this._url, {
       pane: 'backdrop', manifest: this.options.manifest, dim: this.options.dim, noWrap: true, pmIgnore: true,
       minZoom: this.options.minZoom, maxZoom: this.options.maxZoom, minNativeZoom: z, maxNativeZoom: z,
-      updateWhenZooming: false, keepBuffer: 4,
+      updateWhenZooming: false, keepBuffer: 4, opacity: 0,
     }).addTo(map);
+    // Shown only while sharp pictures are still coming: once they are in, it would peek out, blurred, along the edges
+    // of what has been explored.
+    map.on('zoomstart', this._showBackdrop, this);
+    this.on('loading', this._showBackdrop, this);
+    this.on('load', this._hideBackdrop, this);
+  },
+
+  _showBackdrop() {
+    clearTimeout(this._hideTimer);
+    this._backdrop?.setOpacity(1);
+  },
+  // A little after the last picture is in, so it has faded in fully.
+  _hideBackdrop() {
+    clearTimeout(this._hideTimer);
+    this._hideTimer = setTimeout(() => this._backdrop?.setOpacity(0), 400);
   },
 
   onRemove(map) {
     map.off('moveend', this._warmSoon, this);
+    map.off('zoomstart', this._showBackdrop, this);
+    this.off('loading', this._showBackdrop, this);
+    this.off('load', this._hideBackdrop, this);
+    clearTimeout(this._hideTimer);
     clearTimeout(this._warmTimer);
     if (this._backdrop) map.removeLayer(this._backdrop);
     this._backdrop = null;
@@ -779,6 +802,9 @@ const HistoryTileLayer = L.TileLayer.extend({
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = Math.round((size + 1) * (window.devicePixelRatio || 1));
     canvas.dataset.overlap = '1';
+    // Leaflet throws away pictures that are not "complete" when a zoom starts; a canvas has no such flag, so without
+    // this every picture on screen went at each zoom and the map flashed until the new ones came.
+    canvas.complete = true;
     const url = this.urlAt(Math.floor(coords.x / f), Math.floor(coords.y / f), detail + this.options.zoomOffset);
     if (!url) { setTimeout(() => done(null, canvas)); return canvas; }
     sourceImage(url).then((img) => {
