@@ -529,7 +529,18 @@ def snapshot_label(snap_id):
     return f'{d.month}月{d.day}日'
 
 
-def update_config(site, snap_id, staging):
+def saved_at(world):
+    """When the world was last saved (level.dat's LastPlayed, epoch milliseconds), or None."""
+    try:
+        with open(os.path.join(world, 'level.dat'), 'rb') as f:
+            root, _ = root_compound(f.read(), 8)  # 8-byte header, then little-endian NBT
+    except (OSError, ValueError, IndexError, KeyError, struct.error):
+        return None
+    t = root.get('LastPlayed')
+    return int(t) * 1000 if isinstance(t, int) and t > 0 else None
+
+
+def update_config(site, snap_id, staging, world_saved=None):
     """Save the rendered tiles as this day's map and thin out old days."""
     path = os.path.join(site, 'config.json')
     cfg = {}
@@ -541,7 +552,11 @@ def update_config(site, snap_id, staging):
     changed, total = history.store(site, snap_id, staging, ids)
     print(f'  保存: 地図画像 {total} 枚のうち、前回から変わった {changed} 枚')
     ids = history.prune(site, sorted(ids + [snap_id]), datetime.date.today())
-    cfg['snapshots'] = [{'id': i, 'label': snapshot_label(i)} for i in ids]
+    # Each day's map keeps when its world was saved, so the site can say which moment it shows.
+    saved = {s['id']: s['savedAt'] for s in cfg.get('snapshots', []) if s.get('id') and isinstance(s.get('savedAt'), int)}
+    if world_saved:
+        saved[snap_id] = world_saved
+    cfg['snapshots'] = [{'id': i, 'label': snapshot_label(i), **({'savedAt': saved[i]} if i in saved else {})} for i in ids]
     cfg['updatedAt'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
     cfg['minNativeZoom'] = MIN_ZOOM
     cfg['maxNativeZoom'] = 0
@@ -571,6 +586,7 @@ def main():
             z.extractall(tmp)
         world = next((os.path.dirname(p) for p in glob.glob(os.path.join(tmp, '**', 'db'), recursive=True)), tmp)
     db_dir = os.path.join(world, 'db')
+    world_saved = saved_at(world)
     if not os.path.isdir(db_dir):
         sys.exit(f'ワールドのデータ(db フォルダ)が見つかりません: {world}')
 
@@ -621,7 +637,7 @@ def main():
             sys.exit('地図にできるデータがありませんでした。')
         block_ids.save(args.site, _official_japanese(lang))
         print(f'ネザーゲート: {write_portals(args.site)} か所')
-        update_config(args.site, snap_id, staging)
+        update_config(args.site, snap_id, staging, world_saved)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
     print(f'完了しました({time.time() - started:.0f}秒)。保存名: {snap_id}')

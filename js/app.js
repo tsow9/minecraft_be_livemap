@@ -670,7 +670,7 @@ function makeBaseLayer() {
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
     backdropZoom: Math.min(state.config.maxNativeZoom, Math.max(state.config.minNativeZoom, BACKDROP_ZOOM)),
-    attribution: esc(snap.label || snap.id),
+    attribution: esc(snapText(snap)),
   });
 }
 
@@ -818,6 +818,13 @@ const HistoryTileLayer = L.TileLayer.extend({
     return canvas;
   },
 });
+
+// The corner: the day of the map, and when its world was saved (maps drawn before this was kept show the day only).
+function snapText(snap) {
+  const t = new Date(snap.savedAt);
+  if (!snap.savedAt || Number.isNaN(t.getTime())) return snap.label || snap.id;
+  return `${t.getMonth() + 1}月${t.getDate()}日 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+}
 
 async function loadManifest(id) {
   const v = encodeURIComponent(state.config.updatedAt || '');
@@ -1636,7 +1643,7 @@ function updatePastBanner() {
   const snaps = snapshots();
   const past = !state.demo && state.snapshotIndex < snaps.length - 1;
   $('#past-banner').hidden = !past;
-  if (past) $('#past-text').textContent = `📅 ${snaps[state.snapshotIndex].label || snaps[state.snapshotIndex].id}の地図を表示中`;
+  if (past) $('#past-text').textContent = `📅 ${snapText(snaps[state.snapshotIndex])}の地図を表示中`;
 }
 
 let setSnapshotIndex = () => {};
@@ -1644,7 +1651,7 @@ const isDateId = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
 
 function labelTimeline() {
   const s = snapshots()[state.snapshotIndex];
-  $('#time-label').textContent = s ? (s.label || s.id) : 'なし';
+  $('#time-label').textContent = s ? snapText(s) : 'なし';
   if (s && isDateId(s.id)) $('#time-date').value = s.id;
   $('#time-chips').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
 }
@@ -1864,7 +1871,13 @@ function setupSearch() {
     const near = (it) => (it.dim === state.dim ? 0 : 1e12) + Math.hypot(it.x - c.x, it.z - c.z);
     items = (q ? all().filter((it) => `${it.title} ${it.hay}`.toLowerCase().includes(q)) : all().filter(shownNow))
       .sort((p, r) => near(p) - near(r)).slice(0, 200);
-    if (q) items = items.concat(findSuggestions(q));
+    if (q) {
+      // A whole kind first ("農民 すべて"), then each one with its place, then stored and sold items.
+      const kinds = findIndex.groups.filter((g) => `${g.label} ${g.hay}`.toLowerCase().includes(q)).map((g) => ({
+        kind: 'find', title: `${g.label} すべて`, icon: g.icon, meta: `${g.villagers.size + g.pets.size}${g.unit}・地図にまとめて表示`,
+        go: () => showFinds('group', g.key) }));
+      items = kinds.concat(items, findSuggestions(q));
+    }
     active = 0;
     render();
   };
@@ -1949,7 +1962,7 @@ function setupSearch() {
 // items.json comes from the map maker; picking a search result marks every place it was found.
 const findGroup = L.layerGroup();
 let finds = null;          // what is marked now: { label, matches: [{ dim, x, y, z, popup }] }
-let findIndex = { items: [], trades: [], signs: [], beings: [] };
+let findIndex = { items: [], trades: [], signs: [], beings: [], groups: [] };
 const whereText = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
 // Pixel-art mark: each string is a row, each letter a colour from the palette ('.' = empty). Drawn above a shadow.
 // One drawing pixel is a whole number of screen pixels (near `size` page pixels), so every mark looks the same
@@ -2160,7 +2173,12 @@ async function loadItems() {
 
 // One search entry per kind of item stored, per kind of item sold, and per villager job.
 function buildFindIndex() {
-  const items = new Map(), trades = new Map(), signs = new Map(), beings = [];
+  const items = new Map(), trades = new Map(), signs = new Map(), beings = [], groups = new Map();
+  // "All farmers", "all cats", "all of 〇〇's pets"...: one entry that marks every one of a kind at once.
+  const group = (key, label, hay, icon, unit, type, place) => {
+    if (!groups.has(key)) groups.set(key, { key, label, hay, icon, unit, villagers: new Set(), pets: new Set() });
+    groups.get(key)[type].add(place);
+  };
   for (const [dim, d] of Object.entries(state.items?.dims || {})) {
     for (const c of d.containers || []) {
       for (const it of c[4]) {
@@ -2175,6 +2193,14 @@ function buildFindIndex() {
     for (const v of d.villagers || []) {
       const job = jobName(v[3]), trader = v[3] === 'wandering_trader';
       const title = v[4] ? `${v[4]}(${job})` : job;
+      const place = `${dim}:${v[0]}:${v[1]}:${v[2]}`;
+      if (trader) group('trader', '行商人', '行商人', TRADER_SVG, '人', 'villagers', place);
+      else {
+        group('villager', '村人', '村人', VILLAGER_SVG, '人', 'villagers', place);
+        // Without a job the name is just 村人, which the whole-village entry already uses.
+        const label = job === '村人' ? '職業なしの村人' : job;
+        group(`job:${v[3]}`, label, label, villagerIcon(v[3]), '人', 'villagers', place);
+      }
       beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
         hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
         meta: `${trader ? '行商人' : '村人'}  ${whereText(dim, v[0], v[2])}` });
@@ -2196,13 +2222,18 @@ function buildFindIndex() {
     for (const a of d.animals || []) {
       const kind = mobName(a[3]);
       const owner = a[6] && state.players.some((p) => p.key === a[6]) ? playerName(a[6]) : '';
+      const place = `${dim}:${a[0]}:${a[1]}:${a[2]}`, face = animalSvg(a[3], animalCollar(a), false, false, 1.6, a[7]);
+      group('pet', 'ペット', 'ペット', $('#chip-pet')?.innerHTML || face, '匹', 'pets', place);
+      group(`kind:${a[3]}`, kind, `${kind} ${a[3]}`, face, '匹', 'pets', place);
+      if (owner) group(`owner:${a[6]}`, `${owner}のペット`, `${owner}`, face, '匹', 'pets', place);
       beings.push({ type: 'pet', key: `${dim}:${a[0]}:${a[1]}:${a[2]}`, dim, x: a[0], z: a[2], title: a[4] || kind,
         hay: `${a[4] ? `${a[4].normalize('NFKC')} 名札` : ''} ${kind} ${a[3]} ペット ${owner}`,
         icon: animalSvg(a[3], animalCollar(a), !!a[4], false, 1.6, a[7]),
         meta: `${a[4] ? kind : 'ペット'}${owner ? `(${owner})` : ''}  ${whereText(dim, a[0], a[2])}` });
     }
   }
-  findIndex = { items: [...items.values()], trades: [...trades.values()], signs: [...signs.values()], beings };
+  findIndex = { items: [...items.values()], trades: [...trades.values()], signs: [...signs.values()], beings,
+    groups: [...groups.values()].filter((g) => g.villagers.size + g.pets.size >= 2) };
 }
 
 // Search suggestions for a typed word (sign writing, stored items, things villagers sell).
@@ -2361,6 +2392,10 @@ function showFinds(type, key, move = true) {
       for (const a of d.animals || []) if (`${dim}:${a[0]}:${a[1]}:${a[2]}` === key) matches.push(animalMark(dim, a));
     } else if (type === 'villager') {
       for (const v of d.villagers || []) if (`${dim}:${v[0]}:${v[1]}:${v[2]}` === key) matches.push(villagerMark(dim, v, null));
+    } else if (type === 'group') {
+      const g = findIndex.groups.find((e) => e.key === key);
+      for (const v of d.villagers || []) if (g?.villagers.has(`${dim}:${v[0]}:${v[1]}:${v[2]}`)) matches.push(villagerMark(dim, v, null));
+      for (const a of d.animals || []) if (g?.pets.has(`${dim}:${a[0]}:${a[1]}:${a[2]}`)) matches.push(animalMark(dim, a));
     } else if (type === 'sign') {
       for (const g of d.signs || []) if (signTitle(g[3]) === key) matches.push(signMark(dim, g));
     } else {
@@ -2369,6 +2404,7 @@ function showFinds(type, key, move = true) {
   }
   const entry = type === 'item' ? findIndex.items.find((e) => e.key === key) : type === 'sign' ? findIndex.signs.find((e) => e.key === key)
     : type === 'trade' ? findIndex.trades.find((e) => e.key === key)
+    : type === 'group' ? findIndex.groups.find((e) => e.key === key)
     : findIndex.beings.find((e) => e.type === type && e.key === key);
   if (!matches.length) { clearFinds(); if (move) toast('見つかりませんでした'); return; }
   finds = { type, key, label: entry?.label || entry?.title || '', matches };
