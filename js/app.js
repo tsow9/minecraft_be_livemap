@@ -19,6 +19,8 @@ const DEMO_SNAPSHOTS = [
 ];
 
 // Minecraft X → lng, Z → -lat, so north (-Z) is up and 1 block = 1px at zoom 0.
+// Closest zoom: 2^5 = 32 screen pixels per block (about 12 blocks across a phone).
+const MAX_ZOOM = 5;
 const ll = (x, z) => L.latLng(-z, x);
 // On Cloudflare the map data sits in a folder whose name only invited visitors are given (set by the page).
 const DATA = typeof window.BLOCKMAP_DATA === 'string' ? window.BLOCKMAP_DATA : '';
@@ -652,7 +654,7 @@ function snapshots() { return state.demo ? DEMO_SNAPSHOTS : state.config.snapsho
 
 function makeBaseLayer() {
   // Load tiles once the zoom settles (not at every step on the way), and keep a few extra around for panning.
-  const opts = { minZoom: -6, maxZoom: 4, noWrap: true, pmIgnore: true, updateWhenZooming: false, keepBuffer: 3 };
+  const opts = { minZoom: -6, maxZoom: MAX_ZOOM, noWrap: true, pmIgnore: true, updateWhenZooming: false, keepBuffer: 3 };
   if (state.demo) {
     return new DemoLayer({ ...opts, dim: state.dim, week: state.snapshotIndex, maxNativeZoom: 2, attribution: 'デモ地形(本物の地図はまだ未設定)' });
   }
@@ -1390,7 +1392,7 @@ const ContourLayer = L.GridLayer.extend({
 function refreshContours() {
   if (contourLayer) { map.removeLayer(contourLayer); contourLayer = null; }
   if ($('#btn-contour').classList.contains('on') && !state.demo) {
-    contourLayer = new ContourLayer({ minZoom: -2, maxZoom: 4, pmIgnore: true, zIndex: 3,
+    contourLayer = new ContourLayer({ minZoom: -2, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 3,
       updateWhenZooming: false, keepBuffer: 1 }).addTo(map);
     // Tiles that scroll away before they are drawn are dropped from the worker's queue.
     contourLayer.on('tileunload', (e) => {
@@ -1620,7 +1622,7 @@ function setupPanels() {
 
   $('#btn-slime').addEventListener('click', () => {
     if (state.slimeLayer) { map.removeLayer(state.slimeLayer); state.slimeLayer = null; }
-    else state.slimeLayer = new SlimeLayer({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
+    else state.slimeLayer = new SlimeLayer({ minZoom: -6, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
     $('#btn-slime').classList.toggle('on', !!state.slimeLayer);
     if (!state.slimeLayer) toast('スライムチャンクを非表示');
     else if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
@@ -1630,7 +1632,7 @@ function setupPanels() {
 
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }
-    else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: 4, pmIgnore: true, zIndex: 5, updateWhenZooming: false }).addTo(map);
+    else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 5, updateWhenZooming: false }).addTo(map);
     $('#btn-grid').classList.toggle('on', !!state.gridLayer);
     toast(state.gridLayer ? 'チャンク線(16ブロック)と原点の線を表示' : 'チャンク線を非表示');
   });
@@ -2861,7 +2863,7 @@ function renderExploreLegend() {
 function refreshExplore() {
   if (exploreLayer) { map.removeLayer(exploreLayer); exploreLayer = null; }
   if ($('#btn-explore').classList.contains('on')) {
-    exploreLayer = new ExploreLayer({ minZoom: -6, maxZoom: 4, opacity: 0.45, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
+    exploreLayer = new ExploreLayer({ minZoom: -6, maxZoom: MAX_ZOOM, opacity: 0.45, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
   }
   renderExploreLegend();
 }
@@ -3141,7 +3143,7 @@ async function main() {
   state.snapshotIndex = snapshots().length - 1;
 
   map = L.map('map', {
-    crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: 4,
+    crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: MAX_ZOOM,
     zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false,
   });
   L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
