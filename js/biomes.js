@@ -1,14 +1,17 @@
 'use strict';
 // Japanese biome names (the game's own wording) by Bedrock biome ID (IDs from Mojang's bedrock-samples, mojang-biomes.json).
+// The names are Minecraft's official ones (biome.minecraft.* in Java Edition's ja_jp / en_us; Bedrock's language files have
+// none). Old hill biomes that no longer exist keep the official names they last had (1.17). Sulfur Caves and Dappled
+// Forest are newer than any language file and are named after their IDs.
 // Old variants that new worlds no longer make share the name of the biome they became.
 const BIOME_JA = {
   0: '海洋', 1: '平原', 2: '砂漠', 3: '吹きさらしの丘', 4: '森林', 5: 'タイガ', 6: '沼地', 7: '河川',
   8: 'ネザーの荒地', 9: 'ジ・エンド', 10: '凍った海', 11: '凍った川', 12: '雪原', 13: '雪山',
-  14: 'キノコ島', 15: 'キノコ島の海岸', 16: '砂浜', 17: '砂漠の丘', 18: '森林の丘', 19: 'タイガの丘',
-  20: '吹きさらしの丘のふち', 21: 'ジャングル', 22: 'ジャングルの丘', 23: 'まばらなジャングル', 24: '深海',
-  25: '石だらけの海岸', 26: '雪の砂浜', 27: 'シラカバの森', 28: 'シラカバの森の丘', 29: '暗い森',
-  30: '雪のタイガ', 31: '雪のタイガの丘', 32: 'マツの原生林', 33: 'マツの原生林の丘', 34: '吹きさらしの森',
-  35: 'サバンナ', 36: 'サバンナの高原', 37: '荒野', 38: '森のある荒野', 39: '荒野の台地',
+  14: 'キノコ島', 15: 'キノコ島の海岸', 16: '砂浜', 17: '砂漠の丘陵', 18: '森のある丘陵', 19: 'タイガの丘陵',
+  20: '山麓', 21: 'ジャングル', 22: 'ジャングルの丘陵', 23: 'まばらなジャングル', 24: '深海',
+  25: '石だらけの海岸', 26: '雪の砂浜', 27: 'シラカバの森', 28: 'シラカバの森の丘陵', 29: '暗い森',
+  30: '雪のタイガ', 31: '雪のタイガの丘陵', 32: 'マツの原生林', 33: '巨大樹のタイガの丘陵', 34: '吹きさらしの森',
+  35: 'サバンナ', 36: 'サバンナの高原', 37: '荒野', 38: '森のある荒野', 39: '荒野の高原',
   40: '暖かい海', 41: '暖かい深海', 42: 'ぬるい海', 43: 'ぬるい深海', 44: '冷たい海', 45: '冷たい深海',
   46: '凍った海', 47: '凍った深海', 48: '竹林', 49: '竹林の丘',
   129: 'ヒマワリ平原', 130: '砂漠', 131: '吹きさらしの砂利の丘', 132: '花の森', 133: 'タイガ', 134: '沼地',
@@ -20,15 +23,15 @@ const BIOME_JA = {
   188: '鍾乳洞', 189: '石だらけの山頂', 190: 'ディープダーク', 191: 'マングローブの沼地', 192: 'サクラの林',
   193: 'ペールガーデン', 194: '硫黄の洞窟', 195: 'まだらな森',
 };
-// The same biomes by their English names (the game's current wording).
+// The same biomes by their official English names.
 const BIOME_EN = {
   0: 'Ocean', 1: 'Plains', 2: 'Desert', 3: 'Windswept Hills', 4: 'Forest', 5: 'Taiga', 6: 'Swamp', 7: 'River',
   8: 'Nether Wastes', 9: 'The End', 10: 'Frozen Ocean', 11: 'Frozen River', 12: 'Snowy Plains',
   13: 'Snowy Mountains', 14: 'Mushroom Fields', 15: 'Mushroom Field Shore', 16: 'Beach', 17: 'Desert Hills',
-  18: 'Wooded Hills', 19: 'Taiga Hills', 20: 'Windswept Hills Edge', 21: 'Jungle', 22: 'Jungle Hills',
+  18: 'Wooded Hills', 19: 'Taiga Hills', 20: 'Mountain Edge', 21: 'Jungle', 22: 'Jungle Hills',
   23: 'Sparse Jungle', 24: 'Deep Ocean', 25: 'Stony Shore', 26: 'Snowy Beach', 27: 'Birch Forest',
   28: 'Birch Forest Hills', 29: 'Dark Forest', 30: 'Snowy Taiga', 31: 'Snowy Taiga Hills',
-  32: 'Old Growth Pine Taiga', 33: 'Old Growth Pine Taiga Hills', 34: 'Windswept Forest', 35: 'Savanna',
+  32: 'Old Growth Pine Taiga', 33: 'Giant Tree Taiga Hills', 34: 'Windswept Forest', 35: 'Savanna',
   36: 'Savanna Plateau', 37: 'Badlands', 38: 'Wooded Badlands', 39: 'Badlands Plateau', 40: 'Warm Ocean',
   41: 'Deep Warm Ocean', 42: 'Lukewarm Ocean', 43: 'Deep Lukewarm Ocean', 44: 'Cold Ocean', 45: 'Deep Cold Ocean',
   46: 'Frozen Ocean', 47: 'Deep Frozen Ocean', 48: 'Bamboo Jungle', 49: 'Bamboo Jungle Hills',
