@@ -80,7 +80,9 @@ export default {
         const { results } = await env.DB.prepare('SELECT xid, write FROM access').all();
         const may = new Map(results.map((r) => [r.xid, !!r.write]));
         return json({ owner: live.ownerName, members: live.members.filter((m) => m.xid !== live.ownerXid)
-          .map((m) => ({ xid: m.xid, name: m.name, write: !!may.get(m.xid) })) });
+          .map((m) => ({ xid: m.xid, name: m.name, write: !!may.get(m.xid) }))
+          // Always by name, so the list does not move around when someone joins or leaves the game.
+          .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja', { sensitivity: 'base' }) || a.xid.localeCompare(b.xid)) });
       }
       if (path === '/access' && admin && req.method === 'POST') {
         const body = await req.json().catch(() => null);

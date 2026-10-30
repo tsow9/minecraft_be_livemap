@@ -111,17 +111,23 @@ async function loadAccess() {
     list.innerHTML = members.length ? '' : '<li class="sub">メンバーの情報がまだありません</li>';
     for (const m of members) {
       const li = document.createElement('li');
-      li.innerHTML = '<span class="grow"></span>';
+      li.innerHTML = '<span class="grow"></span><span class="state"></span>'
+        + '<label class="switch"><input type="checkbox" role="switch"><span class="knob"></span></label>';
       li.querySelector('.grow').textContent = m.name || '(名前なし)';
-      const b = button(m.write ? '書き込みOK' : '見るだけ', async () => {
-        b.disabled = true;
-        const r = await fetch(`${share.url}/access`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xid: m.xid, write: !m.write }) }).catch(() => null);
-        toast(r?.ok ? `${m.name}さんを「${m.write ? '見るだけ' : '書き込みOK'}」にしました` : '変えられませんでした。もう一度ためしてください');
-        loadAccess();
+      const state = li.querySelector('.state'), box = li.querySelector('input');
+      const show = (on) => { box.checked = on; state.textContent = on ? '書き込みOK' : '見るだけ'; li.classList.toggle('on', on); };
+      box.setAttribute('aria-label', `${m.name || 'このメンバー'}さんの書き込み`);
+      show(m.write);
+      // Changes only this row, so the list stays in place; goes back if the change did not go through.
+      box.addEventListener('change', async () => {
+        const on = box.checked;
+        show(on);
+        box.disabled = true;
+        const r = await fetch(`${share.url}/access`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xid: m.xid, write: on }) }).catch(() => null);
+        box.disabled = false;
+        if (r?.ok) { m.write = on; toast(`${m.name}さんを「${on ? '書き込みOK' : '見るだけ'}」にしました`); }
+        else { show(m.write); toast('変えられませんでした。もう一度ためしてください'); }
       });
-      b.classList.toggle('on', m.write);
-      b.title = '押すと切り替わります';
-      li.append(b);
       list.append(li);
     }
   } catch { list.innerHTML = '<li class="sub">一覧を読み込めませんでした</li>'; }
