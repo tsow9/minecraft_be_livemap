@@ -354,9 +354,11 @@ async function keyOk(env, ip, given, keys) {
 function gatePage() {
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>Blockmap</title><link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
-font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+font-family:"M PLUS Rounded 1c",system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+button{font:inherit}
 .box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:#1f2229;border:1px solid #2e323b}
 h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6;font-size:14px}
 #ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}

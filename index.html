@@ -12,6 +12,9 @@
 <link rel="manifest" href="manifest.webmanifest?v=2">
 <meta name="apple-mobile-web-app-title" content="Blockmap">
 <meta name="theme-color" content="#0e1013">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="vendor/geoman/leaflet-geoman.css">
 <link rel="stylesheet" href="css/style.css">
@@ -24,6 +27,7 @@
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
     <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21.5c3.9 0 7-2.8 7-6.8 0-3.9-2.6-6-4-9.7-1.6 1.8-2.3 3.6-2.2 5.5-1.6-.9-2.7-2.6-2.8-4.8C7.4 8.2 5 11.2 5 14.7c0 4 3.1 6.8 7 6.8z"/><path d="M12 21.5c-1.7 0-3-1.2-3-2.9 0-1.8 1.5-2.9 3-4.6 1.5 1.7 3 2.8 3 4.6 0 1.7-1.3 2.9-3 2.9z"/></symbol>
     <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 3.5v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l9 4.5-9 4.5-9-4.5z"/><path d="M3 12.5l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></symbol>
     <symbol id="i-mountain" viewBox="0 0 24 24"><path d="M2 20l7-12 4.5 7 2.5-3.5L22 20z"/><path d="M6.5 14.5c1.5.8 3 .8 4.5 0"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
@@ -95,19 +99,23 @@
   <button id="btn-explore" title="開拓した人(推定)"><svg class="ic"><use href="#i-compass"/></svg></button>
   <button id="btn-tools" title="描く・編集"><svg class="ic"><use href="#i-pencil"/></svg></button>
   <button id="btn-nether" title="ネザー座標の換算"><svg class="ic"><use href="#i-flame"/></svg></button>
-  <button id="btn-time" title="タイムラプス"><svg class="ic"><use href="#i-history"/></svg></button>
+  <button id="btn-time" title="過去の地図"><svg class="ic"><use href="#i-history"/></svg></button>
   <button id="btn-trails" title="足あと(24時間)"><svg class="ic"><use href="#i-steps"/></svg></button>
-  <button id="btn-contour" title="等高線"><svg class="ic"><use href="#i-mountain"/></svg></button>
-  <button id="btn-slime" title="スライムチャンク"><svg class="ic"><use href="#i-slime"/></svg></button>
-  <button id="btn-grid" title="チャンク線"><svg class="ic"><use href="#i-grid"/></svg></button>
+  <button id="btn-layers" title="表示(等高線・スライムチャンク・チャンク線)" aria-haspopup="true" aria-expanded="false"><svg class="ic"><use href="#i-layers"/></svg></button>
   <button id="btn-realm" title="Realms情報"><svg class="ic"><use href="#i-realm"/></svg></button>
   <button id="btn-site" title="管理者メニュー" hidden><svg class="ic"><use href="#i-admin"/></svg></button>
+</div>
+
+<div id="layer-menu" role="menu" hidden>
+  <button id="btn-contour" role="menuitemcheckbox"><svg class="ic"><use href="#i-mountain"/></svg>等高線</button>
+  <button id="btn-slime" role="menuitemcheckbox"><svg class="ic"><use href="#i-slime"/></svg>スライムチャンク</button>
+  <button id="btn-grid" role="menuitemcheckbox"><svg class="ic"><use href="#i-grid"/></svg>チャンク線(16ブロック)</button>
 </div>
 
 <div id="tools" hidden>
   <div class="row modes">
     <button data-mode="none" class="on" title="通常"><svg class="ic"><use href="#i-pointer"/></svg></button>
-    <button data-mode="waypoint" title="ウェイポイント"><svg class="ic"><use href="#i-pin"/></svg></button>
+    <button data-mode="waypoint" title="ピン"><svg class="ic"><use href="#i-pin"/></svg></button>
     <button data-mode="text" title="テキスト"><svg class="ic"><use href="#i-text"/></svg></button>
     <button data-mode="freehand" title="手書き"><svg class="ic"><use href="#i-freehand"/></svg></button>
     <button data-mode="Line" title="線"><svg class="ic"><use href="#i-line"/></svg></button>
@@ -171,7 +179,7 @@
   <ul id="player-list" class="plist"></ul>
   <label class="check"><input type="checkbox" id="show-deaths" checked> 死んだ場所を表示</label>
   <label class="check"><input type="checkbox" id="show-beds" checked> ベッド(リスポーン地点)を表示</label>
-  <p class="help">誰かがプレイ中のあいだ、5分おきにプレイヤーの位置を更新します。ログアウトした人は、最後にいた場所を表示します。</p>
+  <p class="help">誰かがプレイ中のあいだは、Realms がワールドを保存するたび(1分くらいごと)に位置を更新します。ログアウトした人は、最後にいた場所を表示します。</p>
 </section>
 
 <section id="panel-explore" class="panel" hidden>

@@ -670,7 +670,7 @@ function makeBaseLayer() {
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
     backdropZoom: Math.min(state.config.maxNativeZoom, Math.max(state.config.minNativeZoom, BACKDROP_ZOOM)),
-    attribution: esc(snap.label || snap.id) + (state.snapshotIndex === snapshots().length - 1 ? updatedText() : ''),
+    attribution: esc(snap.label || snap.id),
   });
 }
 
@@ -822,13 +822,6 @@ const HistoryTileLayer = L.TileLayer.extend({
 async function loadManifest(id) {
   const v = encodeURIComponent(state.config.updatedAt || '');
   if (!manifests.has(id)) manifests.set(id, (await fetchJson(`${DATA}manifests/${encodeURIComponent(id)}.json?v=${v}`))?.tiles || null);
-}
-
-function updatedText() {
-  const t = new Date(state.config.updatedAt);
-  if (Number.isNaN(t.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return ` ・最終更新 ${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
 }
 
 let baseToken = 0;
@@ -1703,29 +1696,44 @@ function setupPanels() {
   }
   document.querySelectorAll('.panel .close').forEach((c) => c.addEventListener('click', () => { close(); refreshExplore(); }));
 
+  // 表示: one button for the overlays that are only switched on and off; it stays lit while any of them is on.
+  const layerMenu = $('#layer-menu'), layersBtn = $('#btn-layers');
+  const syncLayers = () => layersBtn.classList.toggle('on', !!layerMenu.querySelector('button.on'));
+  const showLayerMenu = (open) => {
+    layerMenu.hidden = !open;
+    layersBtn.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    const r = layersBtn.getBoundingClientRect();
+    layerMenu.style.top = `${Math.max(8, Math.min(r.top - 5, innerHeight - layerMenu.offsetHeight - 8))}px`;
+    layerMenu.style.right = `${innerWidth - r.left + 8}px`;
+  };
+  layersBtn.addEventListener('click', (e) => { e.stopPropagation(); showLayerMenu(layerMenu.hidden); });
+  layerMenu.addEventListener('click', (e) => { e.stopPropagation(); setTimeout(syncLayers); });
+  document.addEventListener('click', () => showLayerMenu(false));
+  map.on('movestart', () => showLayerMenu(false));
+  syncLayers();
+
   $('#btn-contour').addEventListener('click', () => {
     const on = !$('#btn-contour').classList.contains('on');
     $('#btn-contour').classList.toggle('on', on);
     refreshContours();
-    if (!on) toast('等高線を非表示');
-    else toast(map.getZoom() < -2 ? '等高線はもう少し拡大すると表示されます' : '等高線を表示');
+    // The menu shows what is on; a message only when nothing would show yet.
+    if (on && map.getZoom() < -2) toast('等高線はもう少し拡大すると表示されます');
   });
 
   $('#btn-slime').addEventListener('click', () => {
     if (state.slimeLayer) { map.removeLayer(state.slimeLayer); state.slimeLayer = null; }
     else state.slimeLayer = new SlimeLayer({ minZoom: -6, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 4, updateWhenZooming: false }).addTo(map);
     $('#btn-slime').classList.toggle('on', !!state.slimeLayer);
-    if (!state.slimeLayer) toast('スライムチャンクを非表示');
-    else if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
+    if (!state.slimeLayer) return;
+    if (state.dim !== 'overworld') toast('スライムチャンクは地上だけで表示されます');
     else if (map.getZoom() < SLIME_MIN_ZOOM) toast('スライムチャンクはもう少し拡大すると表示されます');
-    else toast('スライムチャンクを表示');
   });
 
   $('#btn-grid').addEventListener('click', () => {
     if (state.gridLayer) { map.removeLayer(state.gridLayer); state.gridLayer = null; }
     else state.gridLayer = new ChunkGrid({ minZoom: -6, maxZoom: MAX_ZOOM, pmIgnore: true, zIndex: 5, updateWhenZooming: false }).addTo(map);
     $('#btn-grid').classList.toggle('on', !!state.gridLayer);
-    toast(state.gridLayer ? 'チャンク線(16ブロック)と原点の線を表示' : 'チャンク線を非表示');
   });
 
   // nether converter
@@ -3237,6 +3245,7 @@ async function main() {
     crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: MAX_ZOOM,
     zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false,
   });
+  map.attributionControl.setPrefix(false);  // only the map's date shows in the corner
   L.control.zoom({ position: 'bottomright', zoomInTitle: '拡大', zoomOutTitle: '縮小' }).addTo(map);
   map.pm.setLang('ja');
   map.pm.setGlobalOptions({ snappable: false, continueDrawing: false, tooltips: false });
