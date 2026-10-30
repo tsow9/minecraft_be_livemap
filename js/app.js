@@ -2200,10 +2200,14 @@ function buildFindIndex() {
         // Without a job the name is just 村人, which the whole-village entry already uses.
         const label = job === '村人' ? '職業なしの村人' : job;
         group(`job:${v[3]}`, label, label, villagerIcon(v[3]), '人', 'villagers', place);
+        if (VILLAGER_LEVELS[v[6] - 1]) {
+          const lv = VILLAGER_LEVELS[v[6] - 1];
+          group(`level:${v[6]}`, `${lv}の村人`, `${lv} レベル${v[6]}`, VILLAGER_SVG, '人', 'villagers', place);
+        }
       }
       beings.push({ type: 'villager', key: `${dim}:${v[0]}:${v[1]}:${v[2]}`, dim, x: v[0], z: v[2], title,
-        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
-        meta: `${trader ? '行商人' : '村人'}  ${whereText(dim, v[0], v[2])}` });
+        hay: `${v[4] ? v[4].normalize('NFKC') : ''} ${job} ${trader ? '行商人' : '村人'} ${levelText(v)}`, icon: trader ? TRADER_SVG : villagerIcon(v[3]),
+        meta: `${trader ? '行商人' : `村人${levelText(v) ? `・${levelText(v)}` : ''}`}  ${whereText(dim, v[0], v[2])}` });
       // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
@@ -2275,11 +2279,15 @@ function containerMark(dim, c, key) {
   return { dim, x: c[0], y: c[1], z: c[2], icon: CHEST_SVG, iconBig: CHEST_BIG, name: kind,
     popup: `<h4>${esc(kind)}</h4><div class="xyz">X ${c[0]} / Y ${c[1]} / Z ${c[2]}</div>${c[4].length ? invHtml(c[4], key) : '<div class="sub">空っぽ</div>'}` };
 }
+// The trading level on the villager's badge (v[6], 1–5; maps made before it was kept have none).
+const VILLAGER_LEVELS = ['新米', '見習い', '一人前', '熟練者', '達人'];
+const levelText = (v) => (VILLAGER_LEVELS[v[6] - 1] ? `レベル${v[6]}・${VILLAGER_LEVELS[v[6] - 1]}` : '');
 function villagerMark(dim, v, key) {
   const name = v[4] ? `${v[4]}(${jobName(v[3])})` : jobName(v[3]);
   const trader = v[3] === 'wandering_trader';
   return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : villagerIcon(v[3]), iconBig: trader ? TRADER_BIG : villagerIcon(v[3], true), name,
-    popup: `<h4>${esc(name)}</h4><div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
+    popup: `<h4>${esc(name)}</h4>${levelText(v) ? `<div class="sub">${levelText(v)}</div>` : ''}`
+      + `<div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
 }
 function signMark(dim, g) {
   const lines = g[3].split('\n');

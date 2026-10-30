@@ -147,8 +147,10 @@ def _villager(actor, dim):
             continue
         buy = [b for b in (_item(r.get('buyA')), _item(r.get('buyB'))) if b]
         trades.append([buy, sell])
+    # The trading level the game shows on the villager's badge: 1 新米 … 5 達人 (only villagers with a trade).
+    level = tier + 1 if tier is not None and job not in (None, 'wandering_trader', 'nitwit', 'unemployed') else None
     return {'dim': dim, 'x': int(pos[0] // 1), 'y': int(pos[1] // 1), 'z': int(pos[2] // 1), 'job': job,
-            'name': str(actor.get('CustomName') or '')[:40] or None, 'trades': trades}
+            'name': str(actor.get('CustomName') or '')[:40] or None, 'trades': trades, 'level': level}
 
 
 def scan(db_dir, secret=''):
@@ -311,7 +313,7 @@ def write(site, db_dir, lang, secret=''):
     for c in containers:
         of(c['dim'])['containers'].append([c['x'], c['y'], c['z'], c['kind'], c['items']])
     for v in villagers:
-        of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades']])
+        of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades'], v['level']])
     for g in signs:
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     for a in animals:
