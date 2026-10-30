@@ -372,7 +372,7 @@ function setupShare() {
       if (share.pending.size && mayWrite()) pushChanges();
     }).catch(() => {});
   }
-  $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, '地図の住所をコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)'));
+  $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, 'サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)'));
   $('#share-invite').addEventListener('click', () => copyText(inviteLink(), '書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください'));
   loadSyncState();
   renderAll();
