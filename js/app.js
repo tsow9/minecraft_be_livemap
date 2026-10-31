@@ -1849,7 +1849,7 @@ function setupSearch() {
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
-        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || tl('ネザーゲート'), hay: `${g.name || ''} ${tl('ネザーゲート')} ${tl('ゲート')}`,
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーゲート'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーゲート')} ${tl('ゲート')}`,
           icon: PORTAL_SVG, meta: `${tl('ネザーゲート')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
@@ -2538,6 +2538,12 @@ async function loadBiomes() {
 }
 const BIOME_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 9h-3.5l4.5 6H5l4.5-6H6z"/><path d="M12 18v3"/></svg>';
 
+// Gates the map maker named itself (ゲート1, ゲート2…) read as Portal 1… in English; names people gave stay as they are.
+function gateName(g) {
+  const m = /^ゲート(\d+)$/.exec(g?.name || '');
+  return m ? tl('ゲート{n}', { n: m[1] }) : g?.name || '';
+}
+
 async function loadPortals() {
   state.portals = (await fetchJson(`${DATA}portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
   renderPortals();
@@ -2570,12 +2576,12 @@ function renderPortals() {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(g.name || tl('ゲート'))}</span></div>` }),
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(gateName(g) || tl('ゲート'))}</span></div>` }),
     });
-    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: g.name || tl('ネザーゲート'), x: g.x, z: g.z, dim: state.dim };
+    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>${esc(g.name || tl('ネザーゲート'))}</h4><div class="sub">${tl('ネザーゲート')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      el.innerHTML = `<h4>${esc(gateName(g) || tl('ネザーゲート'))}</h4><div class="sub">${tl('ネザーゲート')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       acts.append(routeButton(place));
       const link = portalLink(g, state.dim);
@@ -2583,7 +2589,7 @@ function renderPortals() {
         const name = DIMS[link.other].name;
         const line = document.createElement('div'); line.className = 'sub';
         if (link.gate) {
-          line.textContent = `${tl('つながり先(推定): {dim}の「{gate}」', { dim: name, gate: link.gate.name || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          line.textContent = `${tl('つながり先(推定): {dim}の「{gate}」', { dim: name, gate: gateName(link.gate) || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
           el.append(line);
           acts.append(button(tl('つながり先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
@@ -2685,7 +2691,7 @@ function routePlaces(dim) {
     if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}${DOT}${tl('最終死亡地点')}`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: g.name || tl('ネザーゲート'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }
