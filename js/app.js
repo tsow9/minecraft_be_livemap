@@ -2190,8 +2190,12 @@ function buildFindIndex() {
       // What villagers sell is found by the item's name only, so "村人" does not list every item on sale.
       for (const [, sell] of v[5]) {
         const k = itemKey(sell);
-        if (!trades.has(k)) trades.set(k, { key: k, label: itemLabel(sell), hay: `${itemLabel(sell)} ${sell[0]}`, villagers: new Set() });
-        trades.get(k).villagers.add(`${dim}:${v[0]}:${v[1]}:${v[2]}`);
+        if (!trades.has(k)) trades.set(k, { key: k, label: itemLabel(sell), hay: `${itemLabel(sell)} ${sell[0]}`, villagers: new Set(), jobs: new Map() });
+        const e = trades.get(k), place = `${dim}:${v[0]}:${v[1]}:${v[2]}`;
+        if (!e.villagers.has(place)) {
+          e.villagers.add(place);
+          e.jobs.set(v[3] || 'unemployed', (e.jobs.get(v[3] || 'unemployed') || 0) + 1);  // who sells it
+        }
       }
     }
     // Signs with the same words (signposts along a road) are one entry.
@@ -2227,7 +2231,13 @@ function findSuggestions(q) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: SIGN_SVG, meta: tl('看板・{n}枚', { n: e.count }), go: () => showFinds('sign', e.key) });
   }
   for (const e of findIndex.trades.filter(hit)) {
-    out.push({ kind: 'find', title: e.label, hay: e.hay, icon: VILLAGER_SVG, meta: tl('{n}人', { n: e.villagers.size }), go: () => showFinds('trade', e.key) });
+    // Drawn as whoever sells it (a wandering trader, an armorer…), and named with how many of each.
+    const jobs = [...e.jobs.entries()].sort((a, b) => b[1] - a[1]);
+    const icon = jobs.length > 1 ? VILLAGER_SVG : jobs[0][0] === 'wandering_trader' ? TRADER_SVG : villagerIcon(jobs[0][0]);
+    const rest = jobs.slice(3).reduce((t, [, n]) => t + n, 0);
+    const meta = jobs.slice(0, 3).map(([j, n]) => tl('{who}・{n}人', { who: jobName(j), n }))
+      .concat(rest ? [tl('ほか{n}人', { n: rest })] : []).join(LANG === 'en' ? ', ' : '、');
+    out.push({ kind: 'find', title: e.label, hay: e.hay, icon, meta, go: () => showFinds('trade', e.key) });
   }
   for (const e of findIndex.items.filter(hit)) {
     out.push({ kind: 'find', title: e.label, hay: e.hay, icon: CHEST_SVG, meta: tl('{n}件・全{total}個', { n: e.places.size, total: e.total }), go: () => showFinds('item', e.key) });
