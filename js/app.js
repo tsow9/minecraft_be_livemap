@@ -3234,11 +3234,15 @@ async function loadConfig() {
 
 async function main() {
   translatePage();
-  // One button, naming the other language (in that language): 日本語 → English, English → 日本語.
-  const other = LANG === 'en' ? 'ja' : 'en';
-  $('#lang-switch').textContent = other === 'en' ? 'English' : '日本語';
-  $('#lang-switch').lang = other;
-  $('#lang-switch').addEventListener('click', () => setLang(other));
+  // 言語設定: opens a small list of the languages, each written in itself; the current one is marked.
+  const langMenu = $('#lang-menu'), langBtn = $('#lang-switch');
+  const showLang = (open) => { langMenu.hidden = !open; langBtn.setAttribute('aria-expanded', String(open)); };
+  langBtn.addEventListener('click', (e) => { e.stopPropagation(); showLang(langMenu.hidden); });
+  langMenu.querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.lang === LANG);
+    b.addEventListener('click', () => (b.dataset.lang === LANG ? showLang(false) : setLang(b.dataset.lang)));
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#lang')) showLang(false); });
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',

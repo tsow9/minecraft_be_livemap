@@ -419,12 +419,16 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #panel-realm .share-row { margin: 12px 0 0; }
 #panel-site .share-row { margin: 10px 0 0; }
 /* Language: a small switch in the corner (PC: top right; phones: bottom left). */
-#lang-switch { position: absolute; z-index: 1050; top: 12px; right: 12px; padding: 4px 11px; border-radius: 999px;
-  background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--fg); font: inherit;
-  font-size: 11px; font-weight: 700; cursor: pointer; }
-#lang-switch:hover { background: var(--hover); }
+#lang { position: absolute; z-index: 1050; top: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#lang button { padding: 4px 11px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line);
+  box-shadow: var(--shadow); color: var(--fg); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+#lang button:hover { background: var(--hover); }
+#lang-menu { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+#lang-menu[hidden] { display: none; }
+#lang-menu button.on { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 700px) {
-  #lang-switch { top: auto; right: auto; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 900; }
+  #lang { top: auto; right: auto; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 900;
+    flex-direction: column-reverse; align-items: flex-start; }
 }
 #writers, #privacy { margin-top: 14px; }
 .switch-list .grow { min-width: 6em; font-weight: 600; }
@@ -541,3 +545,6 @@ body.finding .pl-icon.off { opacity: .4; }
 .gm svg * { pointer-events: visiblePainted; }
 .gm .gm-shadow, .gm .gm-shadow * { pointer-events: none; }
 .gm .nm { pointer-events: auto; }
+/* Once the pointer is on a mark, its whole box keeps it (the mark lifts a little on hover; without this the lifted
+   drawing left the pointer behind, the hover ended, the mark dropped back under it, and so on). */
+.gm:hover, .gm:hover svg { pointer-events: auto; }
