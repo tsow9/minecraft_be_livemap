@@ -33,6 +33,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .leaflet-container { background: var(--bg-page); font: inherit; }
 /* Map pictures stretched while zooming (and the rough one underneath) stay blocky instead of blurring, so the
    edges of unexplored (black) ground keep their place. */
+/* A zoom moves in .12s instead of Leaflet's .25s, so the map answers the wheel sooner (the zoom ends on transitionend). */
+.leaflet-zoom-anim .leaflet-zoom-animated { transition-duration: .12s; }
 .leaflet-tile { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; image-rendering: pixelated; }
 /* The map's own pictures are solid: unexplored ground is painted black rather than left see-through, so the rough
    picture kept underneath (for the gaps while zooming) never shows through it and makes the black look smaller. */

@@ -3317,7 +3317,7 @@ async function main() {
     // No fading of map pictures (it made zooming heavy on large screens) and no Shift-drag box zoom.
     zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false, fadeAnimation: false, boxZoom: false,
     // One wheel notch is one zoom step (at Leaflet's 60 a notch skipped a step, past the pictures fetched ahead).
-    wheelPxPerZoomLevel: 120,
+    wheelPxPerZoomLevel: 120, wheelDebounceTime: 20,
   });
   map.attributionControl.setPrefix(false);  // only the map's date shows in the corner
   keepWheelSteps();
