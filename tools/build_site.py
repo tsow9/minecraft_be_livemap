@@ -45,7 +45,7 @@ def main():
             if os.path.isdir(os.path.join(data, sub)):
                 shutil.copytree(os.path.join(data, sub), os.path.join(put, sub))
     os.makedirs(put, exist_ok=True)
-    for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json'):
+    for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json', 'biomes.json'):
         if os.path.exists(os.path.join(data, name)):
             to = os.path.join(out, 'x', items_folder) if name == 'items.json' and items_folder else put
             os.makedirs(to, exist_ok=True)

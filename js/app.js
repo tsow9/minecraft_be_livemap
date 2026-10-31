@@ -1815,6 +1815,19 @@ function setupSearch() {
       if (p.death) out.push({ kind: 'death', dim: p.death.dim, x: p.death.x, z: p.death.z, title: `${p.name}${DOT}${tl('最終死亡地点')}`, hay: `${p.name} ${tl('死亡')} ${tl('最終死亡地点')}`,
         icon: DEATH_SVG, meta: `${tl('死亡地点')}  ${where(p.death.dim, p.death.x, p.death.z)}`, go: () => goTo(p.death.x, p.death.z, p.death.dim, 0) });
     }
+    // Biomes: each place a biome covers (a run of chunks), nearest first like everything else.
+    for (const [dim, kinds] of Object.entries(state.biomes || {})) {
+      if (!DIMS[dim]) continue;
+      for (const [id, places] of Object.entries(kinds)) {
+        const name = (LANG === 'en' ? BIOME_EN : BIOME_JA)[id];
+        if (!name) continue;
+        const hay = `${BIOME_JA[id] || ''} ${BIOME_EN[id] || ''} ${tl('バイオーム')}`;
+        for (const [x, z, n] of places) {
+          out.push({ kind: 'biome', dim, x, z, title: name, hay, icon: BIOME_SVG,
+            meta: `${tl('バイオーム・{n}チャンク', { n })}  ${where(dim, x, z)}`, go: () => goTo(x, z, dim, n > 60 ? -2 : -1) });
+        }
+      }
+    }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
         out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: g.name || tl('ネザーゲート'), hay: `${g.name || ''} ${tl('ネザーゲート')} ${tl('ゲート')}`,
@@ -2490,6 +2503,12 @@ const PORTAL_SVG = `<svg class="gm-svg" viewBox="0 0 20 28" width="17" height="2
   + '<g class="gm-body"><rect x="2.5" y="2.5" width="15" height="21" rx="1.5" fill="#7b3fe4" stroke="#1b1d22" stroke-width="3"/>'
   + '<path d="M6 8c3-1 5 1 8 0M6 13c3-1 5 1 8 0M6 18c3-1 5 1 8 0" stroke="#d6b8ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g></svg>';
 
+// Where each biome is (biomes.json, made with the map): searched by the biome's name.
+async function loadBiomes() {
+  state.biomes = (await fetchJson(`${DATA}biomes.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
+}
+const BIOME_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 9h-3.5l4.5 6H5l4.5-6H6z"/><path d="M12 18v3"/></svg>';
+
 async function loadPortals() {
   state.portals = (await fetchJson(`${DATA}portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
   renderPortals();
@@ -3025,6 +3044,7 @@ async function refreshConfig() {
   refreshExplore();
   loadPortals();
   loadItems();
+  loadBiomes();
 }
 
 async function refreshLive() {
@@ -3144,6 +3164,7 @@ async function setupPlayers() {
   $('#show-portals').addEventListener('change', renderPortals);
   await loadPortals();
   loadItems();
+  loadBiomes();
   setInterval(renderClock, 15000);
   await refreshLive();
   // While someone plays: positions every 5 seconds and the map every 20 seconds.

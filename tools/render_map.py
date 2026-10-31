@@ -525,6 +525,41 @@ def _load_json(path):
         return None
 
 
+# ---------- where each biome is (for the site's search) ----------
+def biome_regions(surfaces, dims):
+    """Per dimension and biome: the places where it is, one per run of touching chunks (each chunk counted as its
+    most common surface biome), as [x, z, chunks] with x, z a block near the middle of the run. Largest first."""
+    out = {}
+    for name in dims:
+        kind = {}
+        for pos, surf in surfaces[DIM_IDS[name]].items():
+            if surf.biome is None:
+                continue
+            counts = np.bincount(np.asarray(surf.biome, np.int64).ravel())
+            counts[0] = 0  # unknown
+            if counts.any():
+                kind[pos] = int(counts.argmax()) - 1
+        seen, regions = set(), {}
+        for start, b in kind.items():
+            if start in seen:
+                continue
+            run, todo = [], [start]
+            seen.add(start)
+            while todo:
+                cx, cz = todo.pop()
+                run.append((cx, cz))
+                for n in ((cx + 1, cz), (cx - 1, cz), (cx, cz + 1), (cx, cz - 1)):
+                    if n not in seen and kind.get(n) == b:
+                        seen.add(n)
+                        todo.append(n)
+            mx = sum(c[0] for c in run) / len(run)
+            mz = sum(c[1] for c in run) / len(run)
+            cx, cz = min(run, key=lambda c: (c[0] - mx) ** 2 + (c[1] - mz) ** 2)  # inside the run, near its middle
+            regions.setdefault(str(b), []).append([cx * 16 + 8, cz * 16 + 8, len(run)])
+        out[name] = {b: sorted(r, key=lambda v: -v[2])[:300] for b, r in regions.items()}
+    return out
+
+
 # ---------- config ----------
 def snapshot_label(snap_id):
     try:
@@ -610,6 +645,11 @@ def main():
                   f'ペット・名前のある動物: {n_pet} 匹(飼い主が分かった {n_owned} 匹)')
         except Exception as e:  # the map itself matters more than the search data
             print(f'入れ物・村人の読み込みに失敗しました: {e}')
+        try:
+            with open(os.path.join(args.site, 'biomes.json'), 'w', encoding='utf-8') as f:
+                json.dump({'dims': biome_regions(surfaces, dims)}, f, separators=(',', ':'))
+        except Exception as e:  # the search can do without it
+            print(f'バイオームの一覧を作れませんでした: {e}')
         if args.live is not None:
             import players
             explore_path = os.path.join(args.site, 'explore.json')

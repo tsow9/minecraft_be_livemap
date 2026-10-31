@@ -159,5 +159,5 @@ Object.assign(I18N_EN, {
 
   // the page around the map
   '新しいバージョンがあります': 'A new version is available', '更新する': 'Update', '最新版に更新しました': 'Updated to the latest version',
-  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language',
+  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
 });
