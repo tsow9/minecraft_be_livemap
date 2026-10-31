@@ -159,5 +159,5 @@ Object.assign(I18N_EN, {
 
   // the page around the map
   '新しいバージョンがあります': 'A new version is available', '更新する': 'Update', '最新版に更新しました': 'Updated to the latest version',
-  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language', 'つながり先: {dim}の「{gate}」': 'Leads to "{gate}" in the {dim}', 'つながり先(入る位置で変わります): {dim}の「{gate}」など': 'Leads to "{gate}" in the {dim} or another, depending on where you step in', 'ゲート{n}': 'Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
+  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
 });

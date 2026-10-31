@@ -2606,10 +2606,9 @@ function renderPortals() {
         const name = DIMS[link.other].name;
         const line = document.createElement('div'); line.className = 'sub';
         if (link.gate) {
-          const said = link.sure ? 'つながり先: {dim}の「{gate}」' : 'つながり先(入る位置で変わります): {dim}の「{gate}」など';
-          line.textContent = `${tl(said, { dim: name, gate: gateName(link.gate) || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          line.textContent = `${tl(link.sure ? 'リンク先:' : 'リンク先(入る位置で変わります):')} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
           el.append(line);
-          acts.append(button(tl('つながり先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
+          acts.append(button(tl('リンク先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
           // No gate on the other side yet: where the game will make one when someone goes through.
           line.textContent = tl('{dim}側のゲートはまだ見つかっていません', { dim: name });
