@@ -1169,14 +1169,12 @@ const HINTS = {
   Polygon: tl('タップで点を足す → 最初の点をタップで完成'),
   Rectangle: tl('角を1か所タップ → 反対の角をタップ'),
   Circle: tl('中心をタップ → 円の端をタップ'),
-  Ellipse: tl('角を1か所タップ → 反対の角をタップ(その中に楕円)'),
+  Ellipse: tl('ドラッグすると、その大きさの楕円になります'),
   boxdel: tl('消したい範囲をドラッグで囲む'),
   edit: tl('図形の白い点をドラッグして形を直す'),
   drag: tl('動かしたいものをドラッグ'),
 };
-const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle', Ellipse: 'ellipse' };
-// The drawing tool each mode uses (an ellipse is drawn as the box it fills).
-const drawAs = (mode) => (mode === 'Ellipse' ? 'Rectangle' : mode);
+const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
 // Leaflet drops a wheel zoom asked for while the previous zoom is still moving, so a quick turn of the wheel lost
 // steps and the map seemed slow to follow. Those steps are kept and taken as soon as that zoom ends.
@@ -1213,7 +1211,7 @@ function snapPointer() {
   map.on('mousemove mousedown mouseup click dblclick', (e) => {
     const type = GEOMAN_SHAPES[state.mode], p = e.latlng;
     if (!type || !p) return;
-    e.latlng = type === 'rect' || type === 'polygon' || type === 'ellipse' ? L.latLng(toEdge(p.lat), toEdge(p.lng)) : L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
+    e.latlng = type === 'rect' || type === 'polygon' ? L.latLng(toEdge(p.lat), toEdge(p.lng)) : L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
     e.layerPoint = map.latLngToLayerPoint(e.latlng);
     e.containerPoint = map.layerPointToContainerPoint(e.layerPoint);
   });
@@ -1238,13 +1236,13 @@ function setMode(mode) {
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
   // Marks the drawing tool left behind (its white pointer circle could stay after switching tools).
   map.eachLayer((l) => { if (l._pmTempLayer) map.removeLayer(l); });
-  $('#map').classList.toggle('mode-boxdel', mode === 'boxdel');
-  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(drawAs(mode), { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
+  $('#map').classList.toggle('mode-boxdel', mode === 'boxdel' || mode === 'Ellipse');
+  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') {
     map.pm.enableGlobalEditMode();
     // An ellipse is reshaped by its box only through 動かす; its outline points are not handles.
     annGroup.eachLayer((l) => { if (state.annotations.find((v) => v.id === l._annId)?.type === 'ellipse') l.pm?.disable(); });
-  } else if (mode === 'boxdel') map.dragging.disable();
+  } else if (mode === 'boxdel' || mode === 'Ellipse') map.dragging.disable();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
 }
@@ -1263,7 +1261,7 @@ function setupTools() {
   });
 
   map.on('pm:create', (e) => {
-    const type = state.mode === 'Ellipse' && e.shape === 'Rectangle' ? 'ellipse' : GEOMAN_SHAPES[e.shape];
+    const type = GEOMAN_SHAPES[e.shape];
     const layer = e.layer;
     map.removeLayer(layer);
     if (!type) return;
@@ -1282,6 +1280,7 @@ function setupTools() {
     });
   });
   setupBoxDelete();
+  setupEllipse();
   map.on('pm:drawend', () => { if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   map.on('pm:remove', (e) => { if (e.layer._annId) deleteAnn(e.layer._annId); });
 
@@ -1304,6 +1303,33 @@ function setupTools() {
   });
 
   setupCancel();
+}
+
+// 楕円: press and drag; the ellipse grows with the pointer (its box snapped to block edges) and is kept on release.
+function setupEllipse() {
+  const el = map.getContainer();
+  let start = null, shape = null;
+  const at = (e) => { const p = map.mouseEventToLatLng(e); return L.latLng(toEdge(p.lat), toEdge(p.lng)); };
+  const boxOf = (p) => L.latLngBounds(start, p);
+  el.addEventListener('pointerdown', (e) => {
+    if (state.mode !== 'Ellipse' || e.button > 0) return;
+    start = at(e);
+    const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15, pmIgnore: true, interactive: false };
+    shape = L.polygon(ellipsePoints(boxOf(start)), style).addTo(map);
+    el.setPointerCapture?.(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => { if (start) shape.setLatLngs(ellipsePoints(boxOf(at(e)))); });
+  const end = (e) => {
+    if (!start) return;
+    const b = boxOf(at(e));
+    map.removeLayer(shape);
+    start = shape = null;
+    if (b.getEast() - b.getWest() < 1 || b.getNorth() - b.getSouth() < 1) return;  // a tap, not a drag
+    addAnn({ id: uid(), type: 'ellipse', dim: state.dim, color: state.color, weight: state.width, name: '', note: '',
+      pts: [[b.getWest(), -b.getNorth()], [b.getEast(), -b.getSouth()]] });
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', () => { if (shape) map.removeLayer(shape); start = shape = null; });
 }
 
 // 範囲で消す: drag a box; the pins, text and shapes of this dimension inside it or crossing it are deleted.
