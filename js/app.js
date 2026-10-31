@@ -1167,6 +1167,25 @@ const HINTS = {
 };
 const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
+// Leaflet drops a wheel zoom asked for while the previous zoom is still moving, so a quick turn of the wheel lost
+// steps and the map seemed slow to follow. Those steps are kept and taken as soon as that zoom ends.
+function keepWheelSteps() {
+  const wheel = map.scrollWheelZoom, perform = wheel._performZoom;
+  let pending = 0;
+  wheel._performZoom = function () {
+    if (!map._animatingZoom) { perform.call(this); return; }
+    pending += this._delta;
+    this._delta = 0;
+    this._startTime = null;
+  };
+  map.on('zoomend', () => {
+    if (!pending) return;
+    wheel._delta = pending;
+    pending = 0;
+    perform.call(wheel);
+  });
+}
+
 // Shapes snap to whole blocks: the corners of squares and polygons to block edges, lines and circles to block
 // middles (a circle's radius to whole blocks).
 const toEdge = (v) => Math.round(v);
@@ -3297,8 +3316,11 @@ async function main() {
     crs: L.CRS.Simple, center: ll(0, 0), zoom: 0, minZoom: -6, maxZoom: MAX_ZOOM,
     // No fading of map pictures (it made zooming heavy on large screens) and no Shift-drag box zoom.
     zoomSnap: 1, zoomControl: false, attributionControl: true, tap: false, fadeAnimation: false, boxZoom: false,
+    // One wheel notch is one zoom step (at Leaflet's 60 a notch skipped a step, past the pictures fetched ahead).
+    wheelPxPerZoomLevel: 120,
   });
   map.attributionControl.setPrefix(false);  // only the map's date shows in the corner
+  keepWheelSteps();
   L.control.zoom({ position: 'bottomright', zoomInTitle: tl('拡大'), zoomOutTitle: tl('縮小') }).addTo(map);
   map.pm.setLang('ja');
   map.pm.setGlobalOptions({ snappable: false, continueDrawing: false, tooltips: false });
