@@ -1234,14 +1234,16 @@ function setMode(mode) {
   $('#map').classList.toggle('mode-draw', mode !== 'none');
   map.closePopup();
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
+  ellipseHandles.clearLayers();
   // Marks the drawing tool left behind (its white pointer circle could stay after switching tools).
   map.eachLayer((l) => { if (l._pmTempLayer) map.removeLayer(l); });
   $('#map').classList.toggle('mode-boxdel', mode === 'boxdel' || mode === 'Ellipse');
   if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') {
     map.pm.enableGlobalEditMode();
-    // An ellipse is reshaped by its box only through 動かす; its outline points are not handles.
+    // An ellipse is reshaped by the white points around its box (its outline points are not handles).
     annGroup.eachLayer((l) => { if (state.annotations.find((v) => v.id === l._annId)?.type === 'ellipse') l.pm?.disable(); });
+    showEllipseHandles();
   } else if (mode === 'boxdel' || mode === 'Ellipse') map.dragging.disable();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
@@ -1303,6 +1305,48 @@ function setupTools() {
   });
 
   setupCancel();
+}
+
+// 形を直す for ellipses: a white point at each corner and side of the box around it. Dragging one moves that
+// corner or side (snapped to block edges); the ellipse follows, and is kept when the point is let go.
+const ellipseHandles = L.layerGroup();
+function showEllipseHandles() {
+  ellipseHandles.clearLayers();
+  if (!ellipseHandles._map) ellipseHandles.addTo(map);
+  for (const a of state.annotations) {
+    if (a.type !== 'ellipse' || a.dim !== state.dim) continue;
+    const layer = state.layers.get(a.id);
+    if (!layer) continue;
+    layer.pm?.disable();  // its outline points are not handles (also for one just redrawn while editing)
+    // The box: x0..x1 west to east, z0..z1 north to south (block edges).
+    const box = { x0: Math.min(a.pts[0][0], a.pts[1][0]), x1: Math.max(a.pts[0][0], a.pts[1][0]),
+      z0: Math.min(a.pts[0][1], a.pts[1][1]), z1: Math.max(a.pts[0][1], a.pts[1][1]) };
+    const sides = [['x0', 'z0'], ['x1', 'z0'], ['x0', 'z1'], ['x1', 'z1'], [null, 'z0'], [null, 'z1'], ['x0', null], ['x1', null]];
+    const where = ([sx, sz]) => ll(sx ? box[sx] : (box.x0 + box.x1) / 2, sz ? box[sz] : (box.z0 + box.z1) / 2);
+    const handles = sides.map((side) => {
+      const h = L.marker(where(side), { draggable: true, pmIgnore: true, zIndexOffset: 3000, keyboard: false,
+        icon: L.divIcon({ className: 'ellipse-handle', iconSize: [14, 14], iconAnchor: [7, 7] }) });
+      h.on('drag', () => {
+        const p = h.getLatLng();
+        if (side[0]) box[side[0]] = toEdge(p.lng);
+        if (side[1]) box[side[1]] = toEdge(-p.lat);
+        const b = L.latLngBounds(ll(box.x0, box.z0), ll(box.x1, box.z1));
+        layer.setLatLngs(ellipsePoints(b));
+        handles.forEach((o, i) => { if (o !== h) o.setLatLng(where(sides[i])); });
+      });
+      h.on('dragend', () => {
+        const [x0, x1] = [box.x0, box.x1].sort((p, q) => p - q), [z0, z1] = [box.z0, box.z1].sort((p, q) => p - q);
+        if (x1 - x0 >= 1 && z1 - z0 >= 1) {
+          a.pts = [[x0, z0], [x1, z1]];
+          a.updatedAt = Date.now();
+          store.save();
+        }
+        renderAnn(a);
+        showEllipseHandles();
+      });
+      return h.addTo(ellipseHandles);
+    });
+  }
 }
 
 // 楕円: press and drag; the ellipse grows with the pointer (its box snapped to block edges) and is kept on release.

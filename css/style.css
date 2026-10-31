@@ -41,6 +41,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .base-tiles .leaflet-tile-loaded { background: var(--bg-page); }
 #map.mode-draw { cursor: crosshair; }
 #map.mode-boxdel { touch-action: none; }
+/* 形を直す: the points around an ellipse's box, like the drawing tool's own white points. */
+.ellipse-handle { background: #fff; border: 2px solid #3a3f4a; border-radius: 50%; box-sizing: border-box; cursor: move; }
 
 #crosshair { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
   pointer-events: none; z-index: 500; }
