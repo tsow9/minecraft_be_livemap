@@ -2550,18 +2550,35 @@ async function loadPortals() {
 }
 
 // Where a gate leads: the nearest gate on the other side around x/8 (or x*8), as the game looks for it.
+// Where a gate leads, worked out as the game does it: stepping into the gate at (x, z) aims at (x/8, z/8) in the
+// Nether (x*8, z*8 coming back), and the game takes the nearest gate within 16 blocks there (128 in the Overworld).
+// Every block of the gate is tried; when all of them reach the same gate the link is certain (sure), otherwise it
+// depends on where one steps in. No gate in reach: the game makes a new one around (tx, tz).
 function portalLink(g, dim) {
   const other = dim === 'overworld' ? 'nether' : dim === 'nether' ? 'overworld' : null;
   if (!other) return null;
   const k = dim === 'overworld' ? 1 / 8 : 8;
-  const tx = Math.floor(g.x * k), tz = Math.floor(g.z * k);
   const range = dim === 'overworld' ? 16 : 128;
-  let best = null;
-  for (const o of state.portals?.[other] || []) {
-    const d = Math.max(Math.abs(o.x - tx), Math.abs(o.z - tz));
-    if (d <= range && (!best || d < best.d)) best = { ...o, d };
+  const box = (o) => o.box || [o.x, o.z, o.x, o.z];  // maps drawn before the gates' extent was kept: the middle
+  const [x0, z0, x1, z1] = box(g);
+  const reached = new Map();
+  for (let x = x0; x <= x1; x++) {
+    for (let z = z0; z <= z1; z++) {
+      const tx = Math.floor(x * k), tz = Math.floor(z * k);
+      let best = null, bestD = Infinity;
+      for (const o of state.portals?.[other] || []) {
+        const [ox0, oz0, ox1, oz1] = box(o);
+        const dx = Math.max(ox0 - tx, 0, tx - ox1), dz = Math.max(oz0 - tz, 0, tz - oz1);
+        if (Math.max(dx, dz) > range) continue;
+        const d = dx * dx + dz * dz + (o.y - g.y) ** 2;
+        if (d < bestD) { best = o; bestD = d; }
+      }
+      if (best) reached.set(best, (reached.get(best) || 0) + 1);
+    }
   }
-  return { other, tx, tz, gate: best };
+  const tx = Math.floor(g.x * k), tz = Math.floor(g.z * k);
+  const ranked = [...reached.entries()].sort((p, q) => q[1] - p[1]).map(([o]) => o);
+  return { other, tx, tz, gate: ranked[0] || null, sure: ranked.length === 1, others: ranked.slice(1) };
 }
 
 // Every gate found in the world is shown in its own dimension.
@@ -2589,7 +2606,8 @@ function renderPortals() {
         const name = DIMS[link.other].name;
         const line = document.createElement('div'); line.className = 'sub';
         if (link.gate) {
-          line.textContent = `${tl('つながり先(推定): {dim}の「{gate}」', { dim: name, gate: gateName(link.gate) || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
+          const said = link.sure ? 'つながり先: {dim}の「{gate}」' : 'つながり先(入る位置で変わります): {dim}の「{gate}」など';
+          line.textContent = `${tl(said, { dim: name, gate: gateName(link.gate) || tl('ゲート') })} X ${link.gate.x} / Y ${link.gate.y} / Z ${link.gate.z}`;
           el.append(line);
           acts.append(button(tl('つながり先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {

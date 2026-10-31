@@ -299,7 +299,8 @@ def read_surfaces(db_dir, dims):
 
 
 def group_portals(blocks):
-    """Joins touching portal blocks into gates; returns [{x, y, z, w, h}] (bottom centre of each gate)."""
+    """Joins touching portal blocks into gates; returns [{x, y, z, w, h, box}] (bottom centre of each gate; box =
+    [x0, z0, x1, z1], the blocks one can step into, for working out where each leads)."""
     left = set(blocks)
     gates = []
     while left:
@@ -315,7 +316,8 @@ def group_portals(blocks):
                     gate.append(n)
         xs, ys, zs = zip(*gate)
         gates.append({'x': (min(xs) + max(xs)) // 2, 'y': min(ys), 'z': (min(zs) + max(zs)) // 2,
-                      'w': max(max(xs) - min(xs), max(zs) - min(zs)) + 1, 'h': max(ys) - min(ys) + 1})
+                      'w': max(max(xs) - min(xs), max(zs) - min(zs)) + 1, 'h': max(ys) - min(ys) + 1,
+                      'box': [min(xs), min(zs), max(xs), max(zs)]})
     return sorted(gates, key=lambda g: (g['x'], g['z'], g['y']))
 
 
