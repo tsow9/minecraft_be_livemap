@@ -1171,8 +1171,7 @@ const HINTS = {
   Circle: tl('中心をタップ → 円の端をタップ'),
   Ellipse: tl('ドラッグすると、その大きさの楕円になります'),
   boxdel: tl('消したい範囲をドラッグで囲む'),
-  edit: tl('図形の白い点をドラッグして形を直す'),
-  drag: tl('動かしたいものをドラッグ'),
+  edit: tl('白い点をドラッグで形を直す・図形やピンをドラッグで動かす'),
 };
 const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
 
@@ -1219,14 +1218,14 @@ function snapPointer() {
 
 function setMode(mode) {
   // Leaving 形を直す / 動かす: shapes are redrawn as kept (snapped to blocks).
-  const wasEditing = state.mode === 'edit' || state.mode === 'drag';
+  const wasEditing = state.mode === 'edit';
   // Set first: disableDraw() fires pm:drawend, which re-arms the drawing tool for whatever mode is current.
   state.mode = mode;
   map.pm.disableDraw();
   if (map.pm.globalEditModeEnabled()) map.pm.disableGlobalEditMode();
   if (map.pm.globalDragModeEnabled()) map.pm.disableGlobalDragMode();
   if (map.pm.globalRemovalModeEnabled()) map.pm.disableGlobalRemovalMode();
-  if (wasEditing && mode !== 'edit' && mode !== 'drag') renderAll();
+  if (wasEditing && mode !== 'edit') renderAll();
   map.dragging.enable();
   document.querySelectorAll('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   const canCancel = mode !== 'none' && window.matchMedia('(pointer: fine)').matches;
@@ -1240,12 +1239,14 @@ function setMode(mode) {
   $('#map').classList.toggle('mode-boxdel', mode === 'boxdel' || mode === 'Ellipse');
   if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
   else if (mode === 'edit') {
+    // One mode for both: reshape by the white points, move a shape by dragging the rest of it. (Dragging has to be
+    // switched on first; switched on after, it takes the white points away.)
+    annGroup.eachLayer((l) => { if (!(l instanceof L.Marker)) l.pm?.enableLayerDrag(); });
     map.pm.enableGlobalEditMode();
     // An ellipse is reshaped by the white points around its box (its outline points are not handles).
     annGroup.eachLayer((l) => { if (state.annotations.find((v) => v.id === l._annId)?.type === 'ellipse') l.pm?.disable(); });
     showEllipseHandles();
   } else if (mode === 'boxdel' || mode === 'Ellipse') map.dragging.disable();
-  else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
 }
 
@@ -1318,6 +1319,10 @@ function showEllipseHandles() {
     const layer = state.layers.get(a.id);
     if (!layer) continue;
     layer.pm?.disable();  // its outline points are not handles (also for one just redrawn while editing)
+    // …but the ellipse itself can be dragged to move it; its points follow once it is let go.
+    layer.pm?.enableLayerDrag();
+    layer.off('pm:dragstart').on('pm:dragstart', () => ellipseHandles.clearLayers());
+    layer.on('pm:dragend', () => setTimeout(showEllipseHandles));
     // The box: x0..x1 west to east, z0..z1 north to south (block edges).
     const box = { x0: Math.min(a.pts[0][0], a.pts[1][0]), x1: Math.max(a.pts[0][0], a.pts[1][0]),
       z0: Math.min(a.pts[0][1], a.pts[1][1]), z1: Math.max(a.pts[0][1], a.pts[1][1]) };
