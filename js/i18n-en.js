@@ -159,5 +159,5 @@ Object.assign(I18N_EN, {
 
   // the page around the map
   '新しいバージョンがあります': 'A new version is available', '更新する': 'Update', '最新版に更新しました': 'Updated to the latest version',
-  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
+  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語': 'Language', '言語設定': 'Language', '楕円': 'Ellipse', '範囲で消す': 'Delete in an area', '始点をタップ → 終点をタップで完成': 'Tap the start → tap the end', '角を1か所タップ → 反対の角をタップ(その中に楕円)': 'Tap one corner → tap the opposite corner (the ellipse fills the box)', '消したい範囲をドラッグで囲む': 'Drag a box around what to delete', '囲んだ範囲に消せるものはありません': 'Nothing to delete in that box', '{n}個を消しますか?': 'Delete {n} item(s)?', '{n}個を消しました': 'Deleted {n} item(s)', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
 });

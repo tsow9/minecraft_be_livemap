@@ -5,7 +5,7 @@ const DIMS = {
   nether: { name: tl('ネザー') },
   end: { name: tl('エンド') },
 };
-const TYPES = ['waypoint', 'text', 'line', 'draw', 'polygon', 'rect', 'circle'];
+const TYPES = ['waypoint', 'text', 'line', 'draw', 'polygon', 'rect', 'circle', 'ellipse'];
 const ICONS = {
   pin: ['📍', tl('ピン')], home: ['🏠', tl('拠点')], death: ['🪦', tl('死んだ場所')], portal: ['🌀', tl('ポータル')],
   mine: ['⛏️', tl('鉱山')], farm: ['🌾', tl('畑・トラップ')], village: ['🏘️', tl('村')], star: ['⭐', tl('お気に入り')],
@@ -874,7 +874,7 @@ async function refreshBase() {
 
 // ---------- annotations: rendering ----------
 function styleOf(a) {
-  const filled = a.type === 'polygon' || a.type === 'rect' || a.type === 'circle';
+  const filled = a.type === 'polygon' || a.type === 'rect' || a.type === 'circle' || a.type === 'ellipse';
   return { color: a.color, weight: a.weight, opacity: 0.95, smoothFactor: a.type === 'draw' ? 0.3 : 1, fill: filled, fillColor: a.color, fillOpacity: 0.15, lineCap: 'round', lineJoin: 'round' };
 }
 
@@ -882,6 +882,12 @@ function styleOf(a) {
 const flagSvg = (c) => `<svg class="gm-svg flag" viewBox="0 0 26 36" width="22.4" height="31"><ellipse class="gm-shadow" cx="8" cy="33" rx="5.5" ry="1.8"/>`
   + `<g class="gm-body"><path d="M7 31V5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/><path d="M7 31V5" stroke="#f4f1ea" stroke-width="2" stroke-linecap="round"/>`
   + `<path d="M8.5 5.5h13l-3.5 5 3.5 5h-13z" fill="${c}" stroke="#1b1d22" stroke-width="2.6" stroke-linejoin="round"/></g></svg>`;
+
+// An ellipse is kept as the box around it (two corners) and drawn as a smooth outline inside that box.
+function ellipsePoints(b) {
+  const c = b.getCenter(), rx = (b.getEast() - b.getWest()) / 2, ry = (b.getNorth() - b.getSouth()) / 2;
+  return Array.from({ length: 72 }, (_, i) => L.latLng(c.lat + ry * Math.sin(i * Math.PI / 36), c.lng + rx * Math.cos(i * Math.PI / 36)));
+}
 
 function makeLayer(a) {
   const pts = () => a.pts.map((p) => ll(p[0], p[1]));
@@ -903,6 +909,7 @@ function makeLayer(a) {
     case 'line': case 'draw': return L.polyline(pts(), styleOf(a));
     case 'polygon': return L.polygon(pts(), styleOf(a));
     case 'rect': return L.rectangle(L.latLngBounds(pts()), styleOf(a));
+    case 'ellipse': return L.polygon(ellipsePoints(L.latLngBounds(pts())), styleOf(a));
     case 'circle': return L.circle(ll(a.x, a.z), { ...styleOf(a), radius: a.r });
   }
   return null;
@@ -975,7 +982,7 @@ function updateGeometry(id, layer) {
     const b = block(layer.getLatLng()); a.x = b.x; a.z = b.z;
   } else if (a.type === 'circle') {
     const c = layer.getLatLng(); a.x = round1(c.lng); a.z = round1(-c.lat); a.r = round1(layer.getRadius());
-  } else if (a.type === 'rect') {
+  } else if (a.type === 'rect' || a.type === 'ellipse') {
     const b = layer.getBounds(); a.pts = [toPt(b.getNorthWest()), toPt(b.getSouthEast())];
   } else {
     a.pts = L.LineUtil.isFlat(layer.getLatLngs()) ? layer.getLatLngs().map(toPt) : layer.getLatLngs()[0].map(toPt);
@@ -1038,7 +1045,7 @@ function openAnnPopup(id, at) {
   const head = document.createElement('h4');
   if (a.type === 'waypoint') head.textContent = a.name || tl('ピン');
   else if (a.type === 'text') head.textContent = a.text;
-  else head.textContent = a.text || a.name || { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
+  else head.textContent = a.text || a.name || { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円'), ellipse: tl('楕円') }[a.type];
   const isPoint = a.type === 'waypoint' || a.type === 'text';
   el.append(head);
   if (isPoint) el.append(coordBlock(c.x, c.z, a.y, a.dim));
@@ -1073,7 +1080,7 @@ function fillSwatches(container, current, onPick) {
   }
 }
 
-const isShapeWithText = (a) => ['line', 'polygon', 'rect', 'circle'].includes(a.type);
+const isShapeWithText = (a) => ['line', 'polygon', 'rect', 'circle', 'ellipse'].includes(a.type);
 function openEditor(a, isNew) {
   editing = { a, isNew, color: a.color };
   const isWp = a.type === 'waypoint', isText = a.type === 'text' || isShapeWithText(a);
@@ -1158,14 +1165,18 @@ const HINTS = {
   none: tl('地図をタップすると座標が出ます'),
   waypoint: tl('印をつけたい場所をタップ'),
   text: tl('文字を置きたい場所をタップ'),
-  Line: tl('タップで点を足す → 最後の点をもう一度タップで完成'),
+  Line: tl('始点をタップ → 終点をタップで完成'),
   Polygon: tl('タップで点を足す → 最初の点をタップで完成'),
   Rectangle: tl('角を1か所タップ → 反対の角をタップ'),
   Circle: tl('中心をタップ → 円の端をタップ'),
+  Ellipse: tl('角を1か所タップ → 反対の角をタップ(その中に楕円)'),
+  boxdel: tl('消したい範囲をドラッグで囲む'),
   edit: tl('図形の白い点をドラッグして形を直す'),
   drag: tl('動かしたいものをドラッグ'),
 };
-const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle' };
+const GEOMAN_SHAPES = { Line: 'line', Polygon: 'polygon', Rectangle: 'rect', Circle: 'circle', Ellipse: 'ellipse' };
+// The drawing tool each mode uses (an ellipse is drawn as the box it fills).
+const drawAs = (mode) => (mode === 'Ellipse' ? 'Rectangle' : mode);
 
 // Leaflet drops a wheel zoom asked for while the previous zoom is still moving, so a quick turn of the wheel lost
 // steps and the map seemed slow to follow. Those steps are kept and taken as soon as that zoom ends.
@@ -1191,7 +1202,7 @@ function keepWheelSteps() {
 const toEdge = (v) => Math.round(v);
 const toMiddle = (v) => Math.floor(v) + 0.5;
 function snapShape(a) {
-  if (a.type === 'rect' || a.type === 'polygon') a.pts = a.pts.map(([x, z]) => [toEdge(x), toEdge(z)]);
+  if (a.type === 'rect' || a.type === 'polygon' || a.type === 'ellipse') a.pts = a.pts.map(([x, z]) => [toEdge(x), toEdge(z)]);
   else if (a.type === 'line') a.pts = a.pts.map(([x, z]) => [toMiddle(x), toMiddle(z)]);
   else if (a.type === 'circle') { a.x = toMiddle(a.x); a.z = toMiddle(a.z); a.r = Math.max(1, Math.round(a.r)); }
   return a;
@@ -1202,7 +1213,7 @@ function snapPointer() {
   map.on('mousemove mousedown mouseup click dblclick', (e) => {
     const type = GEOMAN_SHAPES[state.mode], p = e.latlng;
     if (!type || !p) return;
-    e.latlng = type === 'rect' || type === 'polygon' ? L.latLng(toEdge(p.lat), toEdge(p.lng)) : L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
+    e.latlng = type === 'rect' || type === 'polygon' || type === 'ellipse' ? L.latLng(toEdge(p.lat), toEdge(p.lng)) : L.latLng(-toMiddle(-p.lat), toMiddle(p.lng));
     e.layerPoint = map.latLngToLayerPoint(e.latlng);
     e.containerPoint = map.layerPointToContainerPoint(e.layerPoint);
   });
@@ -1225,8 +1236,15 @@ function setMode(mode) {
   $('#map').classList.toggle('mode-draw', mode !== 'none');
   map.closePopup();
   const style = { color: state.color, weight: state.width, fillColor: state.color, fillOpacity: 0.15 };
-  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(mode, { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
-  else if (mode === 'edit') map.pm.enableGlobalEditMode();
+  // Marks the drawing tool left behind (its white pointer circle could stay after switching tools).
+  map.eachLayer((l) => { if (l._pmTempLayer) map.removeLayer(l); });
+  $('#map').classList.toggle('mode-boxdel', mode === 'boxdel');
+  if (GEOMAN_SHAPES[mode]) map.pm.enableDraw(drawAs(mode), { pathOptions: style, templineStyle: style, hintlineStyle: { ...style, dashArray: '5,5' }, tooltips: false });
+  else if (mode === 'edit') {
+    map.pm.enableGlobalEditMode();
+    // An ellipse is reshaped by its box only through 動かす; its outline points are not handles.
+    annGroup.eachLayer((l) => { if (state.annotations.find((v) => v.id === l._annId)?.type === 'ellipse') l.pm?.disable(); });
+  } else if (mode === 'boxdel') map.dragging.disable();
   else if (mode === 'drag') map.pm.enableGlobalDragMode();
   else if (mode === 'remove') map.pm.enableGlobalRemovalMode();
 }
@@ -1245,17 +1263,25 @@ function setupTools() {
   });
 
   map.on('pm:create', (e) => {
-    const type = GEOMAN_SHAPES[e.shape];
+    const type = state.mode === 'Ellipse' && e.shape === 'Rectangle' ? 'ellipse' : GEOMAN_SHAPES[e.shape];
     const layer = e.layer;
     map.removeLayer(layer);
     if (!type) return;
     const toPt = (p) => [round1(p.lng), round1(-p.lat)];
     const a = { id: uid(), type, dim: state.dim, color: state.color, weight: state.width, name: '', note: '' };
     if (type === 'circle') { const c = layer.getLatLng(); a.x = round1(c.lng); a.z = round1(-c.lat); a.r = round1(layer.getRadius()); }
-    else if (type === 'rect') { const b = layer.getBounds(); a.pts = [toPt(b.getNorthWest()), toPt(b.getSouthEast())]; }
+    else if (type === 'rect' || type === 'ellipse') { const b = layer.getBounds(); a.pts = [toPt(b.getNorthWest()), toPt(b.getSouthEast())]; }
     else { const ls = layer.getLatLngs(); a.pts = (L.LineUtil.isFlat(ls) ? ls : ls[0]).map(toPt); }
     addAnn(snapShape(a));
   });
+  // A line is one stroke: it ends at the second point.
+  map.on('pm:drawstart', (e) => {
+    if (e.shape !== 'Line') return;
+    e.workingLayer.on('pm:vertexadded', () => {
+      if (e.workingLayer.getLatLngs().length >= 2) setTimeout(() => map.pm.Draw.Line._finishShape());
+    });
+  });
+  setupBoxDelete();
   map.on('pm:drawend', () => { if (GEOMAN_SHAPES[state.mode]) setMode(state.mode); });
   map.on('pm:remove', (e) => { if (e.layer._annId) deleteAnn(e.layer._annId); });
 
@@ -1278,6 +1304,38 @@ function setupTools() {
   });
 
   setupCancel();
+}
+
+// 範囲で消す: drag a box; the pins, text and shapes of this dimension inside it or crossing it are deleted.
+function setupBoxDelete() {
+  const el = map.getContainer();
+  let start = null, box = null;
+  const pt = (e) => map.mouseEventToLatLng(e);
+  el.addEventListener('pointerdown', (e) => {
+    if (state.mode !== 'boxdel' || e.button > 0) return;
+    start = pt(e);
+    box = L.rectangle(L.latLngBounds(start, start), { color: '#ff5252', weight: 2, dashArray: '6 4', fillOpacity: 0.08, pmIgnore: true, interactive: false }).addTo(map);
+    el.setPointerCapture?.(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => { if (start) box.setBounds(L.latLngBounds(start, pt(e))); });
+  const end = () => {
+    if (!start) return;
+    const b = box.getBounds();
+    map.removeLayer(box);
+    start = box = null;
+    const hit = state.annotations.filter((a) => {
+      if (a.dim !== state.dim) return false;
+      const l = state.layers.get(a.id);
+      if (!l) return false;
+      return l.getBounds ? b.intersects(l.getBounds()) : b.contains(l.getLatLng());
+    });
+    if (!hit.length) { toast(tl('囲んだ範囲に消せるものはありません')); return; }
+    if (!confirm(tl('{n}個を消しますか?', { n: hit.length }))) return;
+    hit.forEach((a) => deleteAnn(a.id));
+    toast(tl('{n}個を消しました', { n: hit.length }));
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
 }
 
 // Esc or right-click: drop the shape being drawn and go back to the normal pointer.
@@ -1815,7 +1873,7 @@ function setupSearch() {
     for (const b of findIndex.beings) out.push({ ...b, kind: 'find', go: () => showFinds(b.type, b.key) });
     for (const a of state.annotations) {
       const c = annCenter(a);
-      const shape = { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円') }[a.type];
+      const shape = { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円'), ellipse: tl('楕円') }[a.type];
       out.push({
         kind: 'pin', dim: a.dim, x: c.x, z: c.z,
         title: a.name || a.text || shape || tl('ピン'),
