@@ -34,7 +34,7 @@ Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 ### 1. Create the repository
 
 1. Select **Use this template** → **Create a new repository** at the top of this page.
-2. Keep it **Public** (GitHub Actions is free for public repositories; the data is encrypted).
+2. Keep it **Public** ([why](#why-a-public-repository)).
 3. Leave **Include all branches** unchecked.
 
 ### 2. Prepare Cloudflare
@@ -82,6 +82,21 @@ From then on it updates automatically.
 |---|---|
 | Map | Every hour (each time the world is saved while someone plays) |
 | Players online and positions | Every 10 minutes (every 20 seconds while someone plays) |
+
+## Why a public repository
+
+**Why it must be public**: the map updates and the player checks run on GitHub Actions, which is free without limit for public repositories but limited to 2,000 minutes a month for private ones. Blockmap uses about 4,000 minutes a month on its 10-minute checks alone, so a private repository would stop updating partway through the month.
+
+**Why that is safe**: only the program and encrypted data are public.
+
+| What is public | What it contains |
+|---|---|
+| The program | The same as this repository |
+| The `map-data` and `live-data` branches | Encrypted data, unreadable without `REALMS_CACHE_KEY` |
+| Actions run history | Whether runs succeeded, and counts. Normal runs show no gamertags or coordinates. The site's address is shown, but only the Realm's members can sign in |
+| Your GitHub username | Shown as the repository's owner |
+
+The secrets (keys), the Realms sign-in (Actions cache) and what is on the site are not public.
 
 ## Usage
 

@@ -46,3 +46,6 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; padding: 8px 16px; border-radius: 999px;
   background: #2b2f38; border: 1px solid var(--line); font-size: 13px; transition: .2s; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+.why { margin: 8px 0 12px; font-size: 13px; color: var(--sub); }
+.why summary { cursor: pointer; color: var(--accent); }
+.why p { margin: 6px 0 0; }
