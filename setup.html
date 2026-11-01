@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<title>Blockmap — かんたん設定 / Setup</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="setup.css">
+</head>
+<body>
+<header>
+  <h1>Blockmap <span data-en="Setup">かんたん設定</span></h1>
+  <button id="lang" type="button">English</button>
+</header>
+<p class="lead" data-en="Set up a map site for your Realm in five steps. This page never asks for a password or token, and sends nothing anywhere. Ticks are kept in this browser.">Realm の地図サイトを 5 つの手順で立てます。このページはパスワードやトークンを求めず、どこにも送信しません。チェックはこのブラウザにだけ保存されます。</p>
+<p class="need" data-en="You need: the Realm owner's Microsoft account, a &lt;a href=&quot;https://github.com/signup&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;GitHub&lt;/a&gt; account and a &lt;a href=&quot;https://dash.cloudflare.com/sign-up&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Cloudflare&lt;/a&gt; account (all free).">必要なもの:Realm のオーナーの Microsoft アカウント、<a href="https://github.com/signup" target="_blank" rel="noopener">GitHub</a> アカウント、<a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">Cloudflare</a> アカウント(どれも無料)。</p>
+
+<ol class="steps">
+<li class="step" data-step="1">
+  <h2><span class="num">1</span><span data-en="Create your repository">リポジトリを作る</span></h2>
+  <ol>
+    <li data-en="Open the button below, keep it &lt;b&gt;Public&lt;/b&gt;, leave &lt;b&gt;Include all branches&lt;/b&gt; unticked, and create it.">下のボタンを開き、<b>Public</b> のまま、<b>Include all branches</b> にはチェックを入れずに作成します。</li>
+  </ol>
+  <p><a class="btn" href="https://github.com/tsow9/minecraft_be_livemap/generate" target="_blank" rel="noopener" data-en="Create the repository on GitHub">GitHub でリポジトリを作る</a></p>
+  <label class="field"><span data-en="Your repository (owner/name or its URL)">作ったリポジトリ(owner/name か URL)</span>
+    <input id="repo" type="text" placeholder="yourname/blockmap" autocomplete="off" spellcheck="false"></label>
+  <p class="hint" id="repo-hint"></p>
+  <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
+</li>
+
+<li class="step" data-step="2">
+  <h2><span class="num">2</span><span data-en="Prepare Cloudflare">Cloudflare を準備する</span></h2>
+  <ol>
+    <li><span data-en="Open Workers &amp; Pages. If asked, choose your workers.dev subdomain, and type it here:">Workers & Pages を開きます。サブドメインを聞かれたら決めて、ここにも入れます:</span>
+      <p><a class="btn ghost" href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noopener" data-en="Open Workers &amp; Pages">Workers & Pages を開く</a></p>
+      <label class="field inline"><input id="sub" type="text" placeholder="yourname" autocomplete="off" spellcheck="false"><span>.workers.dev</span></label>
+      <p class="hint" id="site-hint"></p></li>
+    <li><span data-en="Create the API token (permissions are filled in: &lt;b&gt;Workers Scripts: Edit&lt;/b&gt;, &lt;b&gt;D1: Edit&lt;/b&gt;, &lt;b&gt;Account Settings: Read&lt;/b&gt;. If any is missing, add it). Copy the token: it is shown only once.">API トークンを作ります(権限は入力済みです:<b>Workers Scripts: Edit</b>、<b>D1: Edit</b>、<b>Account Settings: Read</b>。足りなければ追加してください)。表示されたトークンを控えます(一度しか表示されません)。</span>
+      <p><a class="btn ghost" id="token-link" target="_blank" rel="noopener" data-en="Create the token">トークンを作る</a></p></li>
+    <li data-en="Copy the &lt;b&gt;Account ID&lt;/b&gt; shown on the Workers &amp; Pages page (on the right).">Workers & Pages の画面(右側)に出ている <b>Account ID</b> を控えます。</li>
+  </ol>
+  <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
+</li>
+
+<li class="step" data-step="3">
+  <h2><span class="num">3</span><span data-en="Add the secrets and variables">Secrets と Variables を登録する</span></h2>
+  <p data-en="Add each of these as a &lt;b&gt;secret&lt;/b&gt; (Name and value, then &lt;b&gt;Add secret&lt;/b&gt;).">次の 4 つを <b>Secret</b> として 1 つずつ登録します(Name と値を入れて <b>Add secret</b>)。</p>
+  <p><a class="btn ghost repo-link" data-path="/settings/secrets/actions/new" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
+  <table class="kv">
+    <tr><td><code>REALMS_CACHE_KEY</code> <button class="copy" data-copy-name>⧉</button></td><td><code class="secret" id="key1"></code> <button class="copy" data-copy="key1" data-en="Copy">コピー</button></td></tr>
+    <tr><td><code>SHARE_PASSPHRASE</code> <button class="copy" data-copy-name>⧉</button></td><td><code class="secret" id="key2"></code> <button class="copy" data-copy="key2" data-en="Copy">コピー</button></td></tr>
+    <tr><td><code>CLOUDFLARE_API_TOKEN</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="The token from step 2">手順 2 のトークン</td></tr>
+    <tr><td><code>CLOUDFLARE_ACCOUNT_ID</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="The Account ID from step 2">手順 2 の Account ID</td></tr>
+  </table>
+  <p class="hint" data-en="The two random strings were made in this browser just now and are not kept anywhere. If you reload the page, new ones are made: use the ones shown when you add them.">2 つのランダムな文字列は、このブラウザで今作ったもので、どこにも保存されません。ページを読み直すと作り直されるので、表示中のものを登録してください。</p>
+  <p data-en="Then add these as &lt;b&gt;variables&lt;/b&gt; (the &lt;b&gt;Variables&lt;/b&gt; tab).">続けて、次を <b>Variable</b> として登録します(<b>Variables</b> タブ)。</p>
+  <p><a class="btn ghost repo-link" data-path="/settings/variables/actions/new" target="_blank" rel="noopener" data-en="Open “New repository variable”">「New repository variable」を開く</a></p>
+  <table class="kv">
+    <tr><td><code>LANGUAGE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-lang"></code> <button class="copy" data-copy="v-lang" data-en="Copy">コピー</button></td></tr>
+    <tr><td><code>TIMEZONE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-tz"></code> <button class="copy" data-copy="v-tz" data-en="Copy">コピー</button></td></tr>
+    <tr><td><code>REALM_NAME</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="Only if you own more than one Realm: its name">Realm を 2 つ以上持っている場合だけ、使う Realm の名前</td></tr>
+  </table>
+  <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
+</li>
+
+<li class="step" data-step="4">
+  <h2><span class="num">4</span><span data-en="Sign in to Realms">Realms にログインする</span></h2>
+  <ol>
+    <li data-en="Open the workflow below (the first time, enable workflows in the Actions tab).">下のワークフローを開きます(初回は Actions タブでワークフローを有効にします)。</li>
+    <li data-en="&lt;b&gt;Run workflow&lt;/b&gt; → &lt;b&gt;What to do&lt;/b&gt;: &lt;b&gt;Sign in to Realms&lt;/b&gt; → &lt;b&gt;Run workflow&lt;/b&gt;.">「<b>Run workflow</b>」→ <b>What to do</b> で <b>Sign in to Realms</b> を選び → <b>Run workflow</b>。</li>
+    <li data-en="Open the running &lt;b&gt;login&lt;/b&gt; job, then enter its code at &lt;a href=&quot;https://www.microsoft.com/link&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;microsoft.com/link&lt;/a&gt; and sign in with the Realm owner's account.">実行中の <b>login</b> を開き、表示されたコードを <a href="https://www.microsoft.com/link" target="_blank" rel="noopener">microsoft.com/link</a> に入れて、Realm のオーナーのアカウントでログインします。</li>
+  </ol>
+  <p><a class="btn ghost repo-link" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener" data-en="Open “Map site”">「Map site」を開く</a></p>
+  <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
+</li>
+
+<li class="step" data-step="5">
+  <h2><span class="num">5</span><span data-en="Make the map">地図を作る</span></h2>
+  <ol>
+    <li data-en="In the same place: &lt;b&gt;Run workflow&lt;/b&gt; → &lt;b&gt;Update map&lt;/b&gt;. It takes a few minutes.">同じ画面で「<b>Run workflow</b>」→ <b>Update map</b> を実行します。数分かかります。</li>
+    <li data-en="When it has finished, open your site and sign in with Microsoft. You are its admin.">終わったら、サイトを開いて Microsoft でログインします。あなたが管理者です。</li>
+  </ol>
+  <p><a class="btn" id="site-link" target="_blank" rel="noopener" data-en="Open my site">サイトを開く</a></p>
+  <p class="hint" data-en="Then send the address to your Realm's members (Admin menu → Copy site URL).">あとは、住所を Realm のメンバーに送るだけです(管理者メニュー → サイトのURLをコピー)。</p>
+  <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
+</li>
+</ol>
+
+<footer>
+  <a href="https://github.com/tsow9/minecraft_be_livemap#readme" target="_blank" rel="noopener" data-en="Instructions (README)">説明書(README)</a> ·
+  <a href="privacy.html" data-en="Privacy Policy">プライバシーポリシー</a> ·
+  <a href="terms.html" data-en="Terms of Use">利用規約</a>
+</footer>
+<div id="toast" role="status"></div>
+<script src="setup.js"></script>
+</body>
+</html>
