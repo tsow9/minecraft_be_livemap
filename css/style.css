@@ -29,6 +29,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
 
+/* Scrollbars: thin and see-through over the dark glass, brighter under the pointer. */
+* { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .2); border: 2px solid transparent; border-radius: 999px; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, .34); }
+
 #map { position: absolute; inset: 0; background: var(--bg-page); }
 .leaflet-container { background: var(--bg-page); font: inherit; }
 /* Map pictures stretched while zooming (and the rough one underneath) stay blocky instead of blurring, so the
@@ -224,17 +231,14 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 .conv > div:not(.arrow) { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: var(--field); }
 .conv h3 { margin: 0 0 2px; }
 .conv label { display: flex; gap: 6px; align-items: center; color: var(--sub); font-weight: 600; }
-.conv input, .datepick input { width: 100%; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line);
+.conv input { width: 100%; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line);
   background: rgba(0,0,0,.3); color: var(--fg); outline: none; color-scheme: dark; }
-.conv input:focus, .datepick input:focus { border-color: var(--accent); }
+.conv input:focus { border-color: var(--accent); }
 .arrow { font-size: 18px; color: var(--sub); }
-.datepick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--sub); white-space: nowrap; }
-.datepick input { width: auto; flex: none; padding: 4px 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 130px; overflow: auto; margin-bottom: 12px; }
 .chips button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--field); font-size: 12px; }
 .chips button:hover { background: var(--hover); }
 .chips button.on { background: var(--accent); border-color: var(--accent); color: #06130d; font-weight: 700; }
-.chips .month { width: 100%; color: var(--sub); font-size: 11px; font-weight: 600; margin-top: 4px; }
 #past-banner { position: absolute; z-index: 1050; left: 50%; transform: translateX(-50%); top: 66px; display: flex; gap: 10px; align-items: center;
   padding: 6px 6px 6px 16px; border-radius: 999px; background: rgba(60, 46, 12, .85); border-color: rgba(240, 190, 70, .55);
   color: #ffe2a0; font-weight: 600; white-space: nowrap; }
@@ -282,8 +286,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #update-bar .mini { background: var(--accent); border-color: var(--accent); color: #06130d; }
 body.tools-open #update-bar { bottom: 160px; }
 .time { display: flex; gap: 10px; align-items: center; }
-.time input { flex: 1; }
-#time-label { min-width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
+.time input { flex: 1; accent-color: var(--accent); }
 #panel-data .mini { margin: 4px 6px 0 0; }
 
 dialog#editor { border: 1px solid var(--line); border-radius: 20px; background: var(--bg-solid); color: var(--fg);

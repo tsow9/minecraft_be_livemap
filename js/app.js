@@ -1761,37 +1761,11 @@ function updatePastBanner() {
 }
 
 let setSnapshotIndex = () => {};
-const isDateId = (id) => /^\d{4}-\d{2}-\d{2}$/.test(id);
-
-function labelTimeline() {
-  const s = snapshots()[state.snapshotIndex];
-  $('#time-label').textContent = s ? snapText(s) : tl('なし');
-  if (s && isDateId(s.id)) $('#time-date').value = s.id;
-  $('#time-chips').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.index) === state.snapshotIndex));
-}
 
 function renderTimeline() {
-  const snaps = snapshots();
   const range = $('#time-range');
-  range.max = Math.max(0, snaps.length - 1);
+  range.max = Math.max(0, snapshots().length - 1);
   range.value = state.snapshotIndex;
-  const dated = snaps.filter((s) => isDateId(s.id));
-  if (dated.length) { $('#time-date').min = dated[0].id; $('#time-date').max = dated[dated.length - 1].id; }
-  const chips = $('#time-chips');
-  chips.innerHTML = '';
-  let month = '';
-  for (let i = snaps.length - 1; i >= 0; i--) {
-    const s = snaps[i];
-    const m = isDateId(s.id) ? tl('{y}年{m}月', { y: Number(s.id.slice(0, 4)), m: LANG === 'en' ? MONTHS_EN[Number(s.id.slice(5, 7)) - 1] : Number(s.id.slice(5, 7)) }) : '';
-    if (m && m !== month) { month = m; chips.insertAdjacentHTML('beforeend', `<div class="month">${m}</div>`); }
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = i === snaps.length - 1 ? tl('{day}(最新)', { day: snapDay(s) }) : snapDay(s);
-    b.dataset.index = i;
-    b.addEventListener('click', () => setSnapshotIndex(i));
-    chips.append(b);
-  }
-  labelTimeline();
 }
 
 // ---------- panels ----------
@@ -1873,18 +1847,9 @@ function setupPanels() {
 
   // past maps
   const range = $('#time-range');
-  const dateInput = $('#time-date');
-  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; labelTimeline(); refreshBase(); };
+  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; refreshBase(); };
   setSnapshotIndex = setSnap;
   renderTimeline();
-  dateInput.addEventListener('change', () => {
-    const snaps = snapshots();
-    const want = dateInput.value;
-    if (!want || !snaps.length) return;
-    const i = Math.max(0, snaps.map((s) => s.id).filter((id) => id <= want).length - 1);
-    setSnap(i);
-    if (snaps[i].id !== want) toast(tl('その日の地図はないので、{day}の地図を表示しています', { day: snapDay(snaps[i]) }));
-  });
   range.addEventListener('input', () => setSnap(Number(range.value)));
   let timer = null;
   const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = tl('▶ 再生'); };
