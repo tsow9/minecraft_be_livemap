@@ -221,18 +221,22 @@ jobs:
           [ -n "$url" ] || { echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"; exit 1; }
           echo "招待制のサイト: $url" >> "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/secrets.json"
-      - name: 古い共有サーバーを片づける
-        if: steps.check.outputs.ready == 'true'
+      - name: 前のアドレスのサイトを片づける
+        # This site's earlier workers: the first pin server (blockmap-share) and the members-only site's first address
+        # (blockmap.<subdomain>.workers.dev, now map.…). Only the workers go; the database stays. Only for this repository,
+        # so nobody else's worker of the same name is touched.
+        if: steps.check.outputs.ready == 'true' && github.repository == 'tsow9/minecraft_be_livemap'
         continue-on-error: true
-        # The first site's pin server (blockmap-share) is no longer used. Only that worker goes; the database stays.
         run: |
-          code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/blockmap-share")
-          case "$code" in
-            200) echo "古い共有サーバー(blockmap-share)を削除しました" ;;
-            404) echo "古い共有サーバーはもうありません" ;;
-            *) echo "::warning::古い共有サーバーを削除できませんでした($code)" ;;
-          esac
+          for old in blockmap-share blockmap; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$old")
+            case "$code" in
+              200) echo "前のサイト($old)を削除しました" ;;
+              404) echo "前のサイト($old)はもうありません" ;;
+              *) echo "::warning::前のサイト($old)を削除できませんでした($code)" ;;
+            esac
+          done
       - name: ログインの記録(件数だけ)
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
