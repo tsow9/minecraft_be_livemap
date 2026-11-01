@@ -4,6 +4,8 @@
 
 Minecraft 統合版の Realm を、ブラウザで見られる地図にするツールです。地図はクラウドで自動更新され、PC を起動しておく必要はありません。
 
+![Blockmap の画面(村人を検索したところ)](docs/screenshot-ja.webp)
+
 - 地図を見られるのは Realm のメンバーだけです(Microsoft アカウントでログイン)。
 - 地図などのデータは、利用者自身の Cloudflare アカウントにだけ保存されます。
 - GitHub と Cloudflare の無料枠で動きます。
@@ -139,3 +141,10 @@ Actions の実行結果に表示されるメッセージで確認してくださ
 - [NumPy](https://numpy.org/)、[Pillow](https://python-pillow.org/)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c)(Google Fonts)
 - ペットの顔、アイテム・ブロックの名前は、地図の更新時に公式の [bedrock-samples](https://github.com/Mojang/bedrock-samples) から生成します。公式の画像やテキストはこのリポジトリに含めていません。
+
+## ライセンス
+
+[MIT License](LICENSE)
+
+Leaflet・Leaflet-Geoman などの同梱ライブラリは、それぞれのライセンスに従います(`vendor/` 内の LICENSE を参照)。
+

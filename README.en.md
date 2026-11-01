@@ -4,6 +4,8 @@
 
 A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in the cloud; no PC needs to stay on.
 
+![Blockmap (searching for villagers)](docs/screenshot-en.webp)
+
 - Only the Realm's members can see the map (sign in with Microsoft).
 - The map and other data are stored only in your own Cloudflare account.
 - Runs on the free plans of GitHub and Cloudflare.
@@ -139,3 +141,10 @@ Check the message shown in the Actions run.
 - [NumPy](https://numpy.org/), [Pillow](https://python-pillow.org/)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c) (Google Fonts)
 - Pet faces and item/block names are generated from the official [bedrock-samples](https://github.com/Mojang/bedrock-samples) at each map update. No official images or text are included in this repository.
+
+## License
+
+[MIT License](LICENSE)
+
+Bundled libraries such as Leaflet and Leaflet-Geoman keep their own licenses (see the LICENSE files in `vendor/`).
+
