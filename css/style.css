@@ -434,7 +434,13 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info .dot.on { background: var(--accent); }
 #realm-info .warn { color: var(--danger); }
 #realm-info > .help:last-child { margin: 10px 0 0; }
-#panel-realm .share-row { margin: 12px 0 0; }
+/* 管理者メニュー: the Realm's payment day and price. */
+.billing-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; color: var(--sub); }
+.billing-row label { display: flex; align-items: center; gap: 6px; }
+.billing-row select, .billing-row input { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--field);
+  color: var(--fg); font: inherit; font-size: 13px; }
+.billing-row input { width: 8em; }
+.billing-row .primary { background: var(--accent); border-color: var(--accent); color: #06130d; margin-left: auto; }
 #panel-site .share-row { margin: 10px 0 0; }
 /* Language: a small switch in the corner (PC: top right; phones: bottom left). */
 #lang { position: absolute; z-index: 1050; top: 12px; right: 12px; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }

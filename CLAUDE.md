@@ -15,7 +15,7 @@
 - データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
 - GitHub Pages:「移転しました」のページと login.html(全サイト共通のログイン中継)だけ。地図のデータは置かない
 - Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE(位置確認がサイトに送るときの合言葉)
-- Realms の契約更新日は API の値が当てにならない。手動設定の「毎月26日」が正しい
+- Realms の契約更新日は API の値が当てにならない。支払日と料金は管理者メニューで持ち主が入力する(Worker の /api/settings、D1 の kv 'settings')。私たちの Realm は毎月26日・930円
 
 ## ほかの人に配る方針(決定済み)
 - 無料で配り、寄付を受ける。寄付した人だけの特典は付けない(マイクラの利用ガイドライン)。
@@ -35,4 +35,5 @@
 ## 次にやること
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
 2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。
-3. 持ち主向けのかんたん設定ページ。私たち専用の設定(config.json の realmPrice / realmBillingDay)を外す。古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外す。
+3. (済)私たち専用の設定を外し、古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外した。
+4. 説明書・プライバシーポリシー・利用規約、かんたん設定ページ。公開前に持ち主と手順を通しで確認する(別の Cloudflare アカウントで。同じアカウントだと Worker 名 map と D1 名が重なる)。

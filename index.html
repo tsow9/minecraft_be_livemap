@@ -198,7 +198,6 @@
 <section id="panel-realm" class="panel" hidden>
   <h2>Realms情報 <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
   <div id="realm-info"><p class="help">まだ情報がありません。少し待つと表示されます。</p></div>
-  <p class="share-row"><button id="share-invite" class="mini" hidden>書き込み用の招待リンクをコピー</button></p>
 </section>
 
 <section id="panel-site" class="panel" hidden>
@@ -209,21 +208,21 @@
     <h3>地図に出さないもの</h3>
     <ul id="privacy-list" class="plist switch-list"></ul>
   </div>
+  <form id="billing-form">
+    <h3>Realm の支払い</h3>
+    <p class="help">Realms情報に、次の支払い日と料金が出ます。</p>
+    <div class="billing-row">
+      <label>支払日 <select id="billing-day"></select></label>
+      <label>料金 <input id="billing-price" type="text" maxlength="20" placeholder="例: 930円" autocomplete="off"></label>
+      <button class="mini primary" type="submit">保存</button>
+    </div>
+  </form>
   <div id="writers" hidden>
     <h3>メンバーの書き込み</h3>
     <ul id="writer-list" class="plist switch-list"></ul>
   </div>
 </section>
 
-<dialog id="pass-dialog" class="box">
-  <form method="dialog" id="pass-form">
-    <h2>書き込むには招待リンクが必要です</h2>
-    <p class="help">ピンや図形はみんなで共有しています。仲間からもらった招待リンクを開けば、この端末で書き込めるようになります(次からは不要)。リンクをここに貼り付けてもOKです。</p>
-    <input id="pass-input" type="text" autocomplete="off" placeholder="招待リンクを貼り付け" aria-label="招待リンク">
-    <p id="pass-error" class="error" role="alert"></p>
-    <div class="btns"><span class="grow"></span><button value="cancel">やめる</button><button value="ok" class="primary">OK</button></div>
-  </form>
-</dialog>
 
 <dialog id="editor">
   <form method="dialog" id="editor-form">

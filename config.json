@@ -3,7 +3,5 @@
   "tileUrl": "tiles/{snapshot}/{dim}/{z}/{x}/{y}.png",
   "minNativeZoom": -6,
   "maxNativeZoom": 0,
-  "snapshots": [],
-  "realmPrice": 930,
-  "realmBillingDay": 26
+  "snapshots": []
 }

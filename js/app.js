@@ -48,6 +48,7 @@ const state = {
   explore: null,
   worldAt: null,
   demo: false,
+  billing: null,  // { billingDay, price } the owner typed in (管理者メニュー)
 };
 
 let map;
@@ -73,28 +74,26 @@ const store = {
   },
 };
 
-// ---------- sharing: pins and drawings live on the group's server (share/worker.js) ----------
-// Anyone can look; writing needs the group's passphrase, which this device remembers once entered.
-const PASS_KEY = 'mcmap.pass';
+// ---------- sharing: pins and drawings live on the site's server (worker/worker.js) ----------
+// Members signed in with Microsoft look; the owner, and members the owner allows, write.
 const SYNC_KEY = 'mcmap.sync.v1';
 const LOCAL_ONLY_KEY = 'mcmap.localOnly.v1';
 const share = { url: null, rev: 0, synced: new Map(), pending: new Map(), pushing: false, me: null };
-// On Cloudflare, signed in with Microsoft: the server knows who this is ({ name, role, via }); no passphrase needed.
+// Signed in with Microsoft: the server knows who this is ({ name, role, via }).
 const signedIn = () => share.me?.via === 'microsoft';
-const mayWrite = () => (signedIn() ? share.me.role === 'admin' || share.me.role === 'writer' : !!getPass());
+const mayWrite = () => share.me?.role === 'admin' || share.me?.role === 'writer';
 
 function sharing() { return !!share.url; }
-// What this device may do: 'admin', 'writer', or null (look only). On Cloudflare (DATA) this comes from the Microsoft
-// sign-in (the owner is the admin and chooses who may write); on the old site, from the passphrase or a write link.
+// What this person may do: 'admin', 'writer', or null (look only), from the Microsoft sign-in (the owner is the admin
+// and chooses who may write).
 function showInvites(role) {
   share.role = role || null;
-  $('#share-invite').hidden = !role || !!DATA;
   $('#site-invite').hidden = !DATA || role !== 'admin';
   $('#writers').hidden = !DATA || role !== 'admin';
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
   $('#btn-site').hidden = !DATA || role !== 'admin';
-  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); }
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); }
   renderMe();
 }
 function renderMe() {
@@ -171,10 +170,30 @@ async function loadPrivacy() {
     }
   } catch { list.innerHTML = tl('<li class="sub">設定を読み込めませんでした</li>'); }
 }
-const roleFrom = async (res) => (await res.json().catch(() => ({}))).role || 'writer';
-
-function getPass() { try { return localStorage.getItem(PASS_KEY) || ''; } catch { return ''; } }
-function setPass(v) { try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch { /* private mode */ } }
+// The Realm's payment day and price (the Realms API's own date is not reliable), typed in by the owner.
+async function loadSettings() {
+  if (!DATA) return;
+  const r = await fetchJson(`${share.url}/settings`);
+  if (r) { state.billing = r; renderRealm(lastRealm.r, lastRealm.online, lastRealm.members); }
+}
+function loadBilling() {
+  const day = $('#billing-day'), price = $('#billing-price');
+  if (!day.options.length) {
+    day.append(new Option(tl('なし'), ''));
+    for (let d = 1; d <= 31; d++) day.append(new Option(tl('毎月{n}日', { n: d }), String(d)));
+  }
+  day.value = state.billing?.billingDay ? String(state.billing.billingDay) : '';
+  price.value = state.billing?.price || '';
+}
+async function saveBilling() {
+  const body = { billingDay: Number($('#billing-day').value) || null, price: $('#billing-price').value };
+  const r = await fetch(`${share.url}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+  if (!r?.ok) { toast(tl('変えられませんでした。もう一度ためしてください')); return; }
+  state.billing = await r.json();
+  loadBilling();
+  renderRealm(lastRealm.r, lastRealm.online, lastRealm.members);
+  toast(tl('保存しました'));
+}
 
 function saveSyncState() {
   try {
@@ -222,8 +241,6 @@ function queueChanges() {
 
 async function pushChanges() {
   if (share.pushing || !share.pending.size) return;
-  const pass = getPass();
-  if (!pass && !signedIn()) { askPass(); return; }
   if (!mayWrite()) return;
   share.pushing = true;
   let retry = 10000;
@@ -231,18 +248,13 @@ async function pushChanges() {
   try {
     const res = await fetch(`${share.url}/items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(pass ? { 'X-Passphrase': pass } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: batch.map(([id, p]) => ({ id, data: p.data, deleted: p.deleted })) }),
     });
-    if (res.status === 401 && signedIn() && !pass) {
+    if (res.status === 401) {
       retry = 0;
-      share.me.role = 'viewer';
+      if (share.me) share.me.role = 'viewer';
       toast(tl('書き込みの許可がなくなりました(管理者に頼んでください)'));
-    } else if (res.status === 401) {
-      setPass('');
-      retry = 0;
-      toast(tl('書き込みの許可が切れました。新しい招待リンクを開いてください'));
-      askPass();
     } else if (res.ok) {
       retry = 0;
       for (const [id, p] of batch) {
@@ -302,118 +314,31 @@ async function pullChanges(full = false) {
   if (changed) store.saveLocal();
 }
 
-// Asks for the passphrase (once per device). Resolves true when this device may write.
-let passAsk = null;
-function askPass() {
-  if (passAsk) return passAsk;
-  const dlg = $('#pass-dialog');
-  passAsk = new Promise((resolve) => {
-    $('#pass-error').textContent = '';
-    $('#pass-input').value = '';
-    const finish = (ok) => {
-      dlg.removeEventListener('close', onClose);
-      $('#pass-form').removeEventListener('submit', onSubmit);
-      passAsk = null;
-      resolve(ok);
-    };
-    const onClose = () => finish(!!getPass());
-    const onSubmit = async (e) => {
-      if (e.submitter?.value !== 'ok') return;
-      e.preventDefault();
-      const pass = passFromText($('#pass-input').value);
-      if (!pass) return;
-      $('#pass-error').textContent = tl('確認中…');
-      try {
-        const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
-        if (res.ok) {
-          setPass(pass);
-          dlg.close();
-          toast(tl('書き込めるようになりました'));
-      showInvites(await roleFrom(res));
-          pushChanges();
-          return;
-        }
-        $('#pass-error').textContent = res.status === 401 ? tl('このリンクは使えません。新しい招待リンクをもらってください') : tl('うまく確認できませんでした');
-      } catch {
-        $('#pass-error').textContent = tl('通信できませんでした。電波のよいところでもう一度');
-      }
-    };
-    dlg.addEventListener('close', onClose);
-    $('#pass-form').addEventListener('submit', onSubmit);
-    dlg.showModal();
-    setTimeout(() => $('#pass-input').focus(), 50);
-  });
-  return passAsk;
-}
-
-// The invite link carries the passphrase after # (that part never leaves this device's browser).
-function passFromText(text) {
-  const t = String(text || '').trim();
-  const m = t.match(/[#&](?:join|w)=([^&\s]+)/);
-  if (m) { try { return decodeURIComponent(m[1]); } catch { return m[1]; } }
-  return t;
-}
-function inviteLink() {
-  return `${location.origin}${location.pathname}#join=${encodeURIComponent(getPass())}`;
-}
-
-// Opening an invite link: remember the passphrase on this device and take it out of the address bar.
-async function joinFromLink() {
-  const m = location.hash.match(/[#&](?:join|w)=([^&]+)/);
-  if (!m) return;
-  history.replaceState(null, '', location.pathname + location.search);
-  let pass;
-  try { pass = decodeURIComponent(m[1]); } catch { pass = m[1]; }
-  if (!sharing()) { setPass(pass); toast(tl('招待リンクを受け取りました(共有の準備ができると書き込めます)')); return; }
-  try {
-    const res = await fetch(`${share.url}/check`, { method: 'POST', headers: { 'X-Passphrase': pass } });
-    if (res.ok) {
-      setPass(pass);
-      toast(tl('招待リンクを確認しました。ピンや図形を書き込めます'));
-      showInvites(await roleFrom(res));
-      pushChanges();
-    } else if (res.status === 401) {
-      toast(tl('この招待リンクは使えません。合言葉が合っているか確かめてください'));
-    } else {
-      toast(tl('共有サーバーがうまく答えませんでした({status})', { status: res.status }));
-    }
-  } catch {
-    toast(tl('通信できませんでした。もう一度リンクを開いてください'));
-  }
-}
-
 // Call before anything that changes pins or drawings.
 async function ensureWriter() {
-  if (!sharing() || getPass()) return true;
-  if (signedIn()) {
-    if (mayWrite()) return true;
-    toast(tl('書き込みは、管理者が許可したメンバーだけです'));
-    return false;
-  }
-  return askPass();
+  if (!sharing() || mayWrite()) return true;
+  toast(tl('書き込みは、管理者が許可したメンバーだけです'));
+  return false;
 }
 
 function setupShare() {
-  // Pasting the link into the address bar of an open page only changes the part after #, so watch for that too.
-  window.addEventListener('hashchange', joinFromLink);
-  if (!sharing()) { joinFromLink(); return; }
+  if (!sharing()) return;
   document.body.classList.add('shared');
-  showInvites(getPass() ? 'writer' : null);
-  // On Cloudflare, ask who this is: signed in with Microsoft, or an older key (the owner's, or a write link).
+  showInvites(null);
+  // Ask who this is (signed in with Microsoft) and what they may do.
   if (DATA) {
-    fetch(`${share.url}/me`, { headers: getPass() ? { 'X-Passphrase': getPass() } : {}, cache: 'no-store' }).then(async (res) => {
+    fetch(`${share.url}/me`, { cache: 'no-store' }).then(async (res) => {
       const me = res.ok ? await res.json() : null;
-      if (getPass() && me?.via !== 'key') setPass('');  // that key no longer works
       share.me = me;
       showInvites(me && me.role !== 'viewer' ? me.role : null);
       if (share.pending.size && mayWrite()) pushChanges();
     }).catch(() => {});
   }
   $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, tl('サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)')));
-  $('#share-invite').addEventListener('click', () => copyText(inviteLink(), tl('書き込み用の招待リンクをコピーしました。信頼できる仲間にだけ送ってください')));
+  $('#billing-form').addEventListener('submit', (e) => { e.preventDefault(); saveBilling(); });
   loadSyncState();
   renderAll();
-  joinFromLink();
+  loadSettings();
   pullChanges(true).then(() => { if (share.pending.size && mayWrite()) pushChanges(); });
   setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullChanges(); });
@@ -3166,27 +3091,19 @@ function refreshExplore() {
 
 let lastPlayersJson = '', lastOwners = '';
 
-// The GitHub API answers "unchanged" (304) for free, so polling it stays fresh without the file server's 5-minute cache.
-// The live check also sends its data to the group's server, which pages can ask every few seconds.
+// The live check sends who is online and where players are to the site's server, which pages ask every few seconds.
+// It answers "unchanged" when nothing new came in. (Without a server, as when trying the page out, players.json.)
 let liveAt = 0, liveCache = null;
 async function fetchLive() {
-  if (share.url) {
-    try {
-      const res = await fetch(`${share.url}/live?since=${liveAt}`, { cache: 'no-store' });
-      if (res.ok) {
-        const d = await res.json();
-        if (d.unchanged && liveCache) return liveCache;
-        if (d.live) { liveAt = d.at; liveCache = d.live; return d.live; }
-      }
-    } catch { /* fall back to GitHub */ }
-  }
-  if (state.config.liveApiUrl) {
-    try {
-      const res = await fetch(state.config.liveApiUrl, { cache: 'no-cache', headers: { Accept: 'application/vnd.github.raw' } });
-      if (res.ok) return await res.json();
-    } catch { /* fall back to the file server */ }
-  }
-  return state.config.liveUrl ? fetchJson(state.config.liveUrl) : null;
+  if (!share.url) return DATA ? null : fetchJson(`players.json?t=${Date.now()}`);
+  try {
+    const res = await fetch(`${share.url}/live?since=${liveAt}`, { cache: 'no-store' });
+    if (!res.ok) return liveCache;
+    const d = await res.json();
+    if (d.unchanged && liveCache) return liveCache;
+    if (d.live) { liveAt = d.at; liveCache = d.live; return d.live; }
+  } catch { /* try again next time */ }
+  return liveCache;
 }
 
 async function refreshConfig() {
@@ -3217,10 +3134,6 @@ async function refreshConfig() {
 async function refreshLive() {
   const badge = $('#online-badge');
   const list = $('#live-list');
-  if (!state.config.liveUrl && !share.url) {
-    $('#live-title').textContent = tl('参加中の人(まだ設定されていません)');
-    return;
-  }
   const data = await fetchLive();
   if (!data) { list.innerHTML = tl('<li class="sub">まだ情報がありません</li>'); badge.hidden = true; return; }
   const members = (Array.isArray(data.members) ? data.members : []).filter((m) => m.name)
@@ -3282,9 +3195,11 @@ function nextBillingDate(day) {
   return thisMonth >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) ? thisMonth : on(now.getFullYear(), now.getMonth() + 1);
 }
 
+let lastRealm = {};
 function renderRealm(r, online, memberCount) {
   const box = $('#realm-info');
   if (!r || typeof r !== 'object') return;
+  lastRealm = { r, online, members: memberCount };
   const row = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
   const onOff = (v) => (v === true ? tl('オン') : v === false ? tl('オフ') : esc(v));
   let html = r.motd ? `<p class="help">${esc(r.motd)}</p>` : '';
@@ -3293,13 +3208,9 @@ function renderRealm(r, online, memberCount) {
   html += row(tl('サーバー'), r.open ? tl('<i class="dot on"></i>開いている') : tl('<i class="dot"></i>閉じている'));
   html += row(tl('参加中'), `${tl('{n}人・メンバー {m}人', { n: online, m: memberCount })}${Number.isFinite(r.maxPlayers) ? tl('・最大 {n}人', { n: r.maxPlayers }) : ''}`);
   if (r.expired) html += row(tl('期限'), tl('<span class="warn">切れています</span>'));
-  const day = state.config.realmBillingDay;
-  if (day) {
-    const d = nextBillingDate(day);
-    html += row(tl('次の支払い'), `${dayText(d)}${state.config.realmPrice ? `${DOT}${tl('{n}円', { n: state.config.realmPrice.toLocaleString(LANG === 'en' ? 'en-US' : 'ja-JP') })}` : ''}`);
-  } else if (state.config.realmPrice) {
-    html += row(tl('料金'), tl('月{n}円', { n: state.config.realmPrice.toLocaleString(LANG === 'en' ? 'en-US' : 'ja-JP') }));
-  }
+  const day = state.billing?.billingDay, price = state.billing?.price ? esc(state.billing.price) : '';
+  if (day) html += row(tl('次の支払い'), `${dayText(nextBillingDate(day))}${price ? `${DOT}${price}` : ''}`);
+  else if (price) html += row(tl('料金'), tl('月 {price}', { price }));
   if (r.backups && Number.isFinite(r.backups.count)) {
     html += row(tl('バックアップ'), `${tl('{n}個', { n: r.backups.count })}${r.backups.latest ? tl('・最新 {time}', { time: esc(timeText(r.backups.latest)) }) : ''}`);
   }
@@ -3342,7 +3253,7 @@ async function setupPlayers() {
   setInterval(renderClock, 15000);
   await refreshLive();
   // While someone plays: positions every 10 seconds (the live check brings new ones every 20) and the map every 20 seconds.
-  // Otherwise every 15 seconds through the group's server (cheap; every minute from GitHub without it) and the map every minute.
+  // Otherwise every 15 seconds, and the map every minute.
   const every = (fn, playing, idle) => {
     const next = () => setTimeout(async () => {
       if (document.visibilityState === 'visible') { try { await fn(); } catch { /* try again next time */ } }
@@ -3350,7 +3261,7 @@ async function setupPlayers() {
     }, state.anyoneOnline ? playing : idle);
     next();
   };
-  every(refreshLive, share.url ? 10000 : 30000, share.url ? 15000 : 60000);
+  every(refreshLive, 10000, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
   every(refreshConfig, 20000, 60000);
   // Phones pause background tabs, so also check right away when the page comes back into view.
@@ -3447,11 +3358,6 @@ async function main() {
     snapshots: Array.isArray(cfg.snapshots) ? cfg.snapshots.filter((s) => s && s.id) : [],
     updatedAt: cfg.updatedAt,
     // Monthly Realm fee and day of the month it is paid (written by hand: Realms does not report either).
-    realmPrice: Number.isFinite(cfg.realmPrice) ? cfg.realmPrice : null,
-    realmBillingDay: Number.isInteger(cfg.realmBillingDay) && cfg.realmBillingDay >= 1 && cfg.realmBillingDay <= 31 ? cfg.realmBillingDay : null,
-    liveUrl: typeof cfg.liveUrl === 'string' && /^https:\/\//.test(cfg.liveUrl) ? cfg.liveUrl : null,
-    shareUrl: typeof cfg.shareUrl === 'string' && /^https:\/\/[\w.-]+(:\d+)?$/.test(cfg.shareUrl.replace(/\/$/, '')) ? cfg.shareUrl.replace(/\/$/, '') : null,
-    liveApiUrl: typeof cfg.liveApiUrl === 'string' && /^https:\/\/api\.github\.com\//.test(cfg.liveApiUrl) ? cfg.liveApiUrl : null,
   };
   document.title = state.config.title;
   state.demo = state.config.snapshots.length === 0;
@@ -3479,7 +3385,7 @@ async function main() {
   state.annotations = store.load();
   share.url = DATA ? `${location.origin}/api`
     : new URLSearchParams(location.search).get('share') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-      ? new URLSearchParams(location.search).get('share') : state.config.shareUrl;
+      ? new URLSearchParams(location.search).get('share') : null;
   renderAll();
   setupShare();
   setupTools();

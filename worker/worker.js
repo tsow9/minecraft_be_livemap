@@ -80,6 +80,20 @@ export default {
         if (!hide.chests && !hide.pets) return new Response(file.body, { headers });
         return new Response(JSON.stringify(hideFrom((await live()).data, await file.json(), hide, me.xid)), { headers });
       }
+      // The Realm's payment day and price, which the owner types in (the Realms API's own date is not reliable).
+      // Everyone sees them in Realms情報.
+      if (req.method === 'GET' && path === '/settings') return json(await settings(env));
+      if (path === '/settings' && admin && req.method === 'POST') {
+        const body = await req.json().catch(() => null);
+        const day = Number(body?.billingDay);
+        const next = {
+          billingDay: Number.isInteger(day) && day >= 1 && day <= 31 ? day : null,
+          price: String(body?.price ?? '').trim().slice(0, 20),
+        };
+        await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
+          .bind('settings', JSON.stringify(next), Date.now()).run();
+        return json(next);
+      }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
       if (path === '/privacy' && admin && req.method === 'POST') {
         const body = await req.json().catch(() => null);
@@ -288,6 +302,13 @@ async function privacy(env) {
   let v = {};
   try { v = JSON.parse(row?.v || '{}'); } catch { /* not set */ }
   return { chests: v.chests === true, pets: v.pets === true };
+}
+
+async function settings(env) {
+  const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('settings').first();
+  let v = {};
+  try { v = JSON.parse(row?.v || '{}') || {}; } catch { /* not set */ }
+  return { billingDay: Number.isInteger(v.billingDay) ? v.billingDay : null, price: typeof v.price === 'string' ? v.price : '' };
 }
 
 // items.json as this person may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the
