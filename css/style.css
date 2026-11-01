@@ -287,6 +287,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 body.tools-open #update-bar { bottom: 160px; }
 .time { display: flex; gap: 10px; align-items: center; }
 .time input { flex: 1; accent-color: var(--accent); }
+#time-label { min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
 #panel-data .mini { margin: 4px 6px 0 0; }
 
 dialog#editor { border: 1px solid var(--line); border-radius: 20px; background: var(--bg-solid); color: var(--fg);

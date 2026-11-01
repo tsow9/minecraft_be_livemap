@@ -1766,6 +1766,12 @@ function renderTimeline() {
   const range = $('#time-range');
   range.max = Math.max(0, snapshots().length - 1);
   range.value = state.snapshotIndex;
+  labelTimeline();
+}
+// The day (and the time its world was saved) of the map the slider is on.
+function labelTimeline() {
+  const s = snapshots()[state.snapshotIndex];
+  $('#time-label').textContent = s ? snapText(s) : tl('なし');
 }
 
 // ---------- panels ----------
@@ -1847,7 +1853,7 @@ function setupPanels() {
 
   // past maps
   const range = $('#time-range');
-  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; refreshBase(); };
+  const setSnap = (i) => { state.snapshotIndex = i; range.value = i; labelTimeline(); refreshBase(); };
   setSnapshotIndex = setSnap;
   renderTimeline();
   range.addEventListener('input', () => setSnap(Number(range.value)));
