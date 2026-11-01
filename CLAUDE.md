@@ -15,7 +15,7 @@
 - データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
 - GitHub Pages:「移転しました」のページと login.html(全サイト共通のログイン中継)だけ。地図のデータは置かない
 - Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE(位置確認がサイトに送るときの合言葉)
-- Realms の契約更新日は API の値が当てにならない。支払日と料金は管理者メニューで持ち主が入力する(Worker の /api/settings、D1 の kv 'settings')。私たちの Realm は毎月26日・930円
+- Realms の契約更新日は API の値が当てにならない。支払日・料金・通貨は管理者メニューで持ち主が入力する(Worker の /api/settings、D1 の kv 'settings'。選択はブラウザ標準のメニューを使わず、行の下に開く自作のリスト)。私たちの Realm は毎月26日・930円
 
 ## ほかの人に配る方針(決定済み)
 - 無料で配り、寄付を受ける。寄付した人だけの特典は付けない(マイクラの利用ガイドライン)。

@@ -211,11 +211,18 @@
   <form id="billing-form">
     <h3>Realm の支払い</h3>
     <p class="help">Realms情報に、次の支払い日と料金が出ます。</p>
-    <div class="billing-row">
-      <label>支払日 <select id="billing-day"></select></label>
-      <label>料金 <input id="billing-price" type="text" maxlength="20" placeholder="例: 930円" autocomplete="off"></label>
-      <button class="mini primary" type="submit">保存</button>
+    <div class="billing-grid">
+      <span>支払日</span>
+      <button type="button" id="billing-day" class="pick" aria-expanded="false"></button>
+      <div id="billing-days" class="pick-list days" hidden></div>
+      <span>料金</span>
+      <div class="price-row">
+        <button type="button" id="billing-cur" class="pick" aria-expanded="false"></button>
+        <input id="billing-price" type="number" inputmode="decimal" min="0" step="any" placeholder="930" aria-label="料金" autocomplete="off">
+      </div>
+      <div id="billing-curs" class="pick-list curs" hidden></div>
     </div>
+    <div class="btns"><button class="mini primary" type="submit">保存</button></div>
   </form>
   <div id="writers" hidden>
     <h3>メンバーの書き込み</h3>

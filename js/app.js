@@ -48,7 +48,7 @@ const state = {
   explore: null,
   worldAt: null,
   demo: false,
-  billing: null,  // { billingDay, price } the owner typed in (管理者メニュー)
+  billing: null,  // { billingDay, price, currency } the owner typed in (管理者メニュー)
 };
 
 let map;
@@ -174,19 +174,72 @@ async function loadPrivacy() {
 async function loadSettings() {
   if (!DATA) return;
   const r = await fetchJson(`${share.url}/settings`);
-  if (r) { state.billing = r; renderRealm(lastRealm.r, lastRealm.online, lastRealm.members); }
+  if (!r) return;
+  state.billing = r;
+  renderRealm(lastRealm.r, lastRealm.online, lastRealm.members);
+  if (share.role === 'admin') loadBilling();
 }
+// The currencies to pick from: Realms is sold in these. The names come from the browser, in the page's language.
+const CURRENCIES = ['JPY', 'USD', 'EUR', 'GBP', 'KRW', 'CNY', 'TWD', 'HKD', 'AUD', 'CAD', 'BRL', 'MXN', 'INR', 'CHF'];
+const LOCALE = LANG === 'en' ? 'en-US' : 'ja-JP';
+function currencyName(code) {
+  try { return new Intl.DisplayNames([LOCALE], { type: 'currency' }).of(code); } catch { return code; }
+}
+function currencySymbol(code) {
+  try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code }).formatToParts(0).find((p) => p.type === 'currency').value; }
+  catch { return code; }
+}
+// 930 JPY → "930円" in Japanese; otherwise as the language writes money ("¥930", "$7.99").
+function moneyText(n, code) {
+  if (LANG === 'ja' && code === 'JPY') return `${n.toLocaleString('ja-JP')}円`;
+  try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code }).format(n); } catch { return `${n} ${code}`; }
+}
+
+// The payment day and currency are picked from lists that open right under their row (no browser menu).
+const billingDraft = { day: null, currency: null };
 function loadBilling() {
-  const day = $('#billing-day'), price = $('#billing-price');
-  if (!day.options.length) {
-    day.append(new Option(tl('なし'), ''));
-    for (let d = 1; d <= 31; d++) day.append(new Option(tl('毎月{n}日', { n: d }), String(d)));
+  billingDraft.day = state.billing?.billingDay || null;
+  billingDraft.currency = state.billing?.currency || (LANG === 'ja' ? 'JPY' : 'USD');
+  $('#billing-price').value = state.billing?.price ?? '';
+  showBillingPicks();
+}
+function showBillingPicks() {
+  $('#billing-day').textContent = billingDraft.day ? tl('毎月{n}日', { n: billingDraft.day }) : tl('なし');
+  $('#billing-cur').textContent = `${currencySymbol(billingDraft.currency)} ${billingDraft.currency}`;
+  const days = $('#billing-days');
+  days.innerHTML = '';
+  for (let d = 1; d <= 31; d++) days.append(pickButton(String(d), billingDraft.day === d, () => { billingDraft.day = d; }));
+  const none = pickButton(tl('なし'), !billingDraft.day, () => { billingDraft.day = null; });
+  none.classList.add('wide');
+  days.append(none);
+  const curs = $('#billing-curs');
+  curs.innerHTML = '';
+  for (const c of CURRENCIES) {
+    const b = pickButton(`${currencySymbol(c)}  ${currencyName(c)}`, billingDraft.currency === c, () => { billingDraft.currency = c; });
+    b.title = `${currencyName(c)} (${c})`;
+    curs.append(b);
   }
-  day.value = state.billing?.billingDay ? String(state.billing.billingDay) : '';
-  price.value = state.billing?.price || '';
+}
+function pickButton(label, on, pick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = label;
+  b.classList.toggle('on', on);
+  b.addEventListener('click', () => { pick(); openPick(null); showBillingPicks(); });
+  return b;
+}
+// Opens one list (or none), closing the other.
+function openPick(which) {
+  for (const [btn, list] of [['#billing-day', '#billing-days'], ['#billing-cur', '#billing-curs']]) {
+    const open = btn === which && $(list).hidden;
+    $(list).hidden = !open;
+    $(btn).setAttribute('aria-expanded', String(open));
+  }
 }
 async function saveBilling() {
-  const body = { billingDay: Number($('#billing-day').value) || null, price: $('#billing-price').value };
+  openPick(null);
+  const price = parseFloat($('#billing-price').value);
+  const body = { billingDay: billingDraft.day, price: Number.isFinite(price) ? price : null, currency: billingDraft.currency };
   const r = await fetch(`${share.url}/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
   if (!r?.ok) { toast(tl('変えられませんでした。もう一度ためしてください')); return; }
   state.billing = await r.json();
@@ -336,6 +389,8 @@ function setupShare() {
   }
   $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, tl('サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)')));
   $('#billing-form').addEventListener('submit', (e) => { e.preventDefault(); saveBilling(); });
+  $('#billing-day').addEventListener('click', () => openPick('#billing-day'));
+  $('#billing-cur').addEventListener('click', () => openPick('#billing-cur'));
   loadSyncState();
   renderAll();
   loadSettings();
@@ -3208,7 +3263,8 @@ function renderRealm(r, online, memberCount) {
   html += row(tl('サーバー'), r.open ? tl('<i class="dot on"></i>開いている') : tl('<i class="dot"></i>閉じている'));
   html += row(tl('参加中'), `${tl('{n}人・メンバー {m}人', { n: online, m: memberCount })}${Number.isFinite(r.maxPlayers) ? tl('・最大 {n}人', { n: r.maxPlayers }) : ''}`);
   if (r.expired) html += row(tl('期限'), tl('<span class="warn">切れています</span>'));
-  const day = state.billing?.billingDay, price = state.billing?.price ? esc(state.billing.price) : '';
+  const day = state.billing?.billingDay;
+  const price = Number.isFinite(state.billing?.price) ? esc(moneyText(state.billing.price, state.billing.currency || 'JPY')) : '';
   if (day) html += row(tl('次の支払い'), `${dayText(nextBillingDate(day))}${price ? `${DOT}${price}` : ''}`);
   else if (price) html += row(tl('料金'), tl('月 {price}', { price }));
   if (r.backups && Number.isFinite(r.backups.count)) {

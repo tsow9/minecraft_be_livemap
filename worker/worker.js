@@ -85,11 +85,7 @@ export default {
       if (req.method === 'GET' && path === '/settings') return json(await settings(env));
       if (path === '/settings' && admin && req.method === 'POST') {
         const body = await req.json().catch(() => null);
-        const day = Number(body?.billingDay);
-        const next = {
-          billingDay: Number.isInteger(day) && day >= 1 && day <= 31 ? day : null,
-          price: String(body?.price ?? '').trim().slice(0, 20),
-        };
+        const next = cleanSettings(body);
         await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
           .bind('settings', JSON.stringify(next), Date.now()).run();
         return json(next);
@@ -308,7 +304,25 @@ async function settings(env) {
   const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('settings').first();
   let v = {};
   try { v = JSON.parse(row?.v || '{}') || {}; } catch { /* not set */ }
-  return { billingDay: Number.isInteger(v.billingDay) ? v.billingDay : null, price: typeof v.price === 'string' ? v.price : '' };
+  return cleanSettings(v);
+}
+
+// { billingDay: 1–31 or null, price: a number or null, currency: 'JPY', 'USD', … }. A price once kept as text
+// ("930円") is read as yen.
+function cleanSettings(v) {
+  const day = Number(v?.billingDay);
+  let price = v?.price, currency = typeof v?.currency === 'string' && /^[A-Z]{3}$/.test(v.currency) ? v.currency : null;
+  if (typeof price === 'string') {
+    const n = parseFloat(price.replace(/[^\d.]/g, ''));
+    if (!currency && /円|¥|￥/.test(price)) currency = 'JPY';
+    price = n;
+  }
+  price = Number(price);
+  return {
+    billingDay: Number.isInteger(day) && day >= 1 && day <= 31 ? day : null,
+    price: Number.isFinite(price) && price > 0 && price < 1e7 ? Math.round(price * 100) / 100 : null,
+    currency: currency || 'JPY',
+  };
 }
 
 // items.json as this person may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the

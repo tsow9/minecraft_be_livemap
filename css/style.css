@@ -434,13 +434,35 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #realm-info .dot.on { background: var(--accent); }
 #realm-info .warn { color: var(--danger); }
 #realm-info > .help:last-child { margin: 10px 0 0; }
-/* 管理者メニュー: the Realm's payment day and price. */
-.billing-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; color: var(--sub); }
-.billing-row label { display: flex; align-items: center; gap: 6px; }
-.billing-row select, .billing-row input { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--field);
-  color: var(--fg); font: inherit; font-size: 13px; }
-.billing-row input { width: 8em; }
-.billing-row .primary { background: var(--accent); border-color: var(--accent); color: #06130d; margin-left: auto; }
+/* 管理者メニュー: the Realm's payment day and price. The pickers open as a list right under the row (no browser menu). */
+.billing-grid { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 12px; font-size: 13px; color: var(--sub); }
+.billing-grid .pick-list { grid-column: 1 / -1; }
+.pick { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 9em; height: 32px; padding: 0 10px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--fg); font: inherit; font-size: 13px;
+  font-weight: 600; cursor: pointer; justify-self: start; }
+.pick:hover, .pick[aria-expanded="true"] { background: var(--hover); border-color: rgba(255,255,255,.22); }
+.pick::after { content: ""; width: 7px; height: 7px; border: solid var(--sub); border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s; }
+.pick[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
+.pick-list { display: grid; gap: 4px; padding: 8px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.pick-list[hidden] { display: none; }
+.pick-list.days { grid-template-columns: repeat(7, 1fr); }
+.pick-list.curs { grid-template-columns: repeat(2, 1fr); }
+.pick-list button { height: 30px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; color: var(--fg); font: inherit;
+  font-size: 13px; cursor: pointer; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-list.curs button { text-align: left; padding: 0 8px; font-size: 12px; }
+.pick-list button:hover { background: var(--hover); }
+.pick-list button.on { background: var(--accent); color: #06130d; font-weight: 700; }
+.pick-list .wide { grid-column: span 7; }
+.price-row { display: flex; gap: 8px; min-width: 0; }
+.price-row .pick { min-width: 0; }
+.price-row input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--field);
+  color: var(--fg); font: inherit; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.price-row input:focus { outline: none; border-color: var(--accent); }
+.price-row input::-webkit-inner-spin-button { display: none; }
+.price-row input { -moz-appearance: textfield; }
+#billing-form .btns { display: flex; justify-content: flex-end; margin-top: 10px; }
+#billing-form .primary { background: var(--accent); border-color: var(--accent); color: #06130d; }
 #panel-site .share-row { margin: 10px 0 0; }
 /* Language: a small switch in the corner (PC: top right; phones: bottom left). */
 #lang { position: absolute; z-index: 1050; top: 12px; right: 12px; display: flex; flex-direction: row-reverse; align-items: center; gap: 6px; }
