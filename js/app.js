@@ -84,9 +84,8 @@ const signedIn = () => share.me?.via === 'microsoft';
 const mayWrite = () => (signedIn() ? share.me.role === 'admin' || share.me.role === 'writer' : !!getPass());
 
 function sharing() { return !!share.url; }
-// What this device may do: 'admin' (the owner's passphrase), 'writer' (a write link), or null (look only).
-// On Cloudflare (DATA) writers can hand out the view link and the owner manages the write links;
-// the old site's link carrying the passphrase itself is not offered there.
+// What this device may do: 'admin', 'writer', or null (look only). On Cloudflare (DATA) this comes from the Microsoft
+// sign-in (the owner is the admin and chooses who may write); on the old site, from the passphrase or a write link.
 function showInvites(role) {
   share.role = role || null;
   $('#share-invite').hidden = !role || !!DATA;
@@ -2123,7 +2122,6 @@ const VILLAGER_ART = [[
   'KrRRRRRRRRrK',
   'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
-const VILLAGER_BIG = pixSvg(...VILLAGER_ART, 1.6, 0, { grow: 1 });  // search hits
 // Each job's clothes on the villager above, after the game's: hats, aprons, an eye patch, the armorer's goggles.
 const JOB_ART = {
   farmer: [['..KKKKKKKK..', '..KYyYYyYK..', '..KUUUUUUK..', 'KYYyYYYYyYYK', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#e3be55', y: '#c9a23d', U: '#5a3a22' }],
@@ -2567,8 +2565,6 @@ function renderFinds() {
 
 // A place picked in the search, or any mark that is clicked, keeps its full colour and grows,
 // while the rest of the map's marks fade as for other search results.
-const FOCUS_SCALE = 1.35;  // keep in step with .leaflet-marker-icon.keep .gm-svg in style.css
-
 function focusPlace(it) {
   finds = { type: 'place', label: it.title, place: { dim: it.dim, x: it.x, z: it.z }, matches: [] };
   renderFinds();
@@ -3168,7 +3164,7 @@ function refreshExplore() {
   renderExploreLegend();
 }
 
-let lastPlayersJson = '';
+let lastPlayersJson = '', lastOwners = '';
 
 // The GitHub API answers "unchanged" (304) for free, so polling it stays fresh without the file server's 5-minute cache.
 // The live check also sends its data to the group's server, which pages can ask every few seconds.
@@ -3256,8 +3252,15 @@ async function refreshLive() {
     state.players = players;
     renderPlayers();
     renderExploreLegend();
-    // Pet owners' names and colours come from the player list.
-    if (state.items) { buildFindIndex(); renderThings(); if (finds && finds.type !== 'place') showFinds(finds.type, finds.key, false); }
+    // Pet owners' names and colours come from the player list: the chests' and animals' marks are drawn again only
+    // when someone joins the list or is renamed, not each time a player moves.
+    const owners = players.map((p) => `${p.key}:${p.name}`).join('|');
+    if (state.items) {
+      buildFindIndex();
+      if (owners !== lastOwners) renderThings();
+      if (finds && finds.type !== 'place') showFinds(finds.type, finds.key, false);
+    }
+    lastOwners = owners;
   }
 }
 
@@ -3338,7 +3341,7 @@ async function setupPlayers() {
   loadBiomes();
   setInterval(renderClock, 15000);
   await refreshLive();
-  // While someone plays: positions every 5 seconds and the map every 20 seconds.
+  // While someone plays: positions every 10 seconds (the live check brings new ones every 20) and the map every 20 seconds.
   // Otherwise every 15 seconds through the group's server (cheap; every minute from GitHub without it) and the map every minute.
   const every = (fn, playing, idle) => {
     const next = () => setTimeout(async () => {
@@ -3347,7 +3350,7 @@ async function setupPlayers() {
     }, state.anyoneOnline ? playing : idle);
     next();
   };
-  every(refreshLive, share.url ? 5000 : 30000, share.url ? 15000 : 60000);
+  every(refreshLive, share.url ? 10000 : 30000, share.url ? 15000 : 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
   every(refreshConfig, 20000, 60000);
   // Phones pause background tabs, so also check right away when the page comes back into view.

@@ -29,7 +29,10 @@ export default {
     const cookie = (name, value, days) => `${name}=${value}; Max-Age=${days * 86400}; Path=/; Secure; HttpOnly; SameSite=Lax`;
     try {
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
-      const me = await whoIs(req, env, ip);
+      // The live check's latest data (who the members are, where players are): read once per request at most.
+      let liveP = null;
+      const live = () => (liveP ??= readLive(env));
+      const me = await whoIs(req, env, ip, live);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         if (!me) return gatePage();
         const page = await env.ASSETS.fetch(new Request(new URL('/index.html', url)));
@@ -43,7 +46,7 @@ export default {
       if (path === '/ms/start' && req.method === 'POST') return json(await msStart(env, url));
       if (path === '/ms/finish' && req.method === 'POST') {
         const body = await req.json().catch(() => null);
-        const r = await msFinish(env, String(body?.code || ''), String(body?.ms || ''));
+        const r = await msFinish(env, String(body?.code || ''), String(body?.ms || ''), live);
         if (!r.session) return json(r, r.error === 'not member' ? 403 : 400);
         return json({ ok: true, name: r.name }, 200, { 'Set-Cookie': cookie(SESSION, r.session, COOKIE_DAYS) });
       }
@@ -75,7 +78,7 @@ export default {
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
         const hide = await privacy(env);
         if (!hide.chests && !hide.pets) return new Response(file.body, { headers });
-        return new Response(JSON.stringify(await hideFrom(env, await file.json(), hide, me.xid)), { headers });
+        return new Response(JSON.stringify(hideFrom((await live()).data, await file.json(), hide, me.xid)), { headers });
       }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
       if (path === '/privacy' && admin && req.method === 'POST') {
@@ -90,8 +93,8 @@ export default {
       // Latest player data, put here by the live check so pages can look every few seconds.
       if (req.method === 'GET' && path === '/live') {
         const since = Number(url.searchParams.get('since')) || 0;
-        const row = await env.DB.prepare('SELECT v, at FROM kv WHERE k = ?').bind('live').first();
-        if (!row) return json({ error: 'none' }, 404);
+        const row = await live();
+        if (!row.v) return json({ error: 'none' }, 404);
         if (row.at <= since) return json({ unchanged: true, at: row.at });
         return new Response(`{"at":${row.at},"live":${row.v}}`, {
           headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -100,10 +103,10 @@ export default {
 
       // The owner's list of members, and who of them may write (nobody until the owner says so).
       if (path === '/access' && admin && req.method === 'GET') {
-        const live = await liveInfo(env);
+        const info = liveInfo((await live()).data);
         const { results } = await env.DB.prepare('SELECT xid, write FROM access').all();
         const may = new Map(results.map((r) => [r.xid, !!r.write]));
-        return json({ owner: live.ownerName, members: live.members.filter((m) => m.xid !== live.ownerXid)
+        return json({ owner: info.ownerName, members: info.members.filter((m) => m.xid !== info.ownerXid)
           .map((m) => ({ xid: m.xid, name: m.name, write: !!may.get(m.xid) }))
           // Always by name, so the list does not move around when someone joins or leaves the game.
           .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja', { sensitivity: 'base' }) || a.xid.localeCompare(b.xid)) });
@@ -202,7 +205,7 @@ async function msStart(env, url) {
   return { url: `${MS}/authorize?${q}` };
 }
 
-async function msFinish(env, code, signIn) {
+async function msFinish(env, code, signIn, live) {
   if (!/^[0-9a-f]{32}$/.test(signIn) || !code) return { error: 'bad request' };
   const row = await env.DB.prepare('SELECT verifier, created FROM ms_sessions WHERE id = ?').bind(signIn).first();
   await env.DB.prepare('DELETE FROM ms_sessions WHERE id = ?').bind(signIn).run();
@@ -234,8 +237,8 @@ async function msFinish(env, code, signIn) {
     const who = xsts?.DisplayClaims?.xui?.[0] || {};
     if (!who.gtg || !who.xid) return { error: 'no gamertag', step: 'claims' };
     const xid = await siteId(env, who.xid);
-    const live = await liveInfo(env);
-    if (xid !== live.ownerXid && !live.members.some((m) => m.xid === xid)) return { error: 'not member', gamertag: who.gtg };
+    const info = liveInfo((await live()).data);
+    if (xid !== info.ownerXid && !info.members.some((m) => m.xid === xid)) return { error: 'not member', gamertag: who.gtg };
     const session = randomHex(32), now = Date.now();
     await env.DB.prepare('INSERT INTO sessions (token, xid, name, created, seen) VALUES (?1, ?2, ?3, ?4, ?4)')
       .bind(await sha(session), xid, String(who.gtg).slice(0, 40), now).run();
@@ -265,10 +268,15 @@ async function siteId(env, xuid) {
   return hex(await crypto.subtle.sign('HMAC', key, enc.encode(String(xuid)))).slice(0, 32);
 }
 
-async function liveInfo(env) {
-  const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
-  let live = {};
-  try { live = JSON.parse(row?.v || '{}'); } catch { /* none yet */ }
+// { v: the text as stored, at: when it came, data: the same read in }; v is null before the first check.
+async function readLive(env) {
+  const row = await env.DB.prepare('SELECT v, at FROM kv WHERE k = ?').bind('live').first();
+  let data = {};
+  try { data = JSON.parse(row?.v || '{}') || {}; } catch { /* none yet */ }
+  return { v: row?.v || null, at: row?.at || 0, data };
+}
+
+function liveInfo(live) {
   const members = (Array.isArray(live.members) ? live.members : []).filter((m) => m && typeof m.xid === 'string')
     .map((m) => ({ xid: m.xid, name: String(m.name || '') }));
   return { members, ownerXid: live.realm?.ownerXid || null, ownerName: live.realm?.owner || null };
@@ -284,12 +292,9 @@ async function privacy(env) {
 
 // items.json as this person may see it. Pets nobody owns stay; a pet stays for its owner (the world's player records the
 // live check linked to this member).
-async function hideFrom(env, items, hide, xid) {
+function hideFrom(live, items, hide, xid) {
   let mine = new Set();
   if (hide.pets) {
-    const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('live').first();
-    let live = {};
-    try { live = JSON.parse(row?.v || '{}'); } catch { /* none yet */ }
     const id = (live.members || []).find((m) => m && m.xid === xid)?.id;
     if (id) mine = new Set((live.players || []).filter((p) => p && p.member === id).map((p) => p.key));
   }
@@ -305,7 +310,7 @@ async function hideFrom(env, items, hide, xid) {
 // { role: 'admin' | 'writer' | 'viewer', name, xid, via } for whoever is asking, or null.
 // Signed in with Microsoft: the site's owner is the admin; members the owner allowed may write; other members look.
 // Someone no longer in the Realm is let in no more.
-async function whoIs(req, env, ip) {
+async function whoIs(req, env, ip, live) {
   // The live check puts in player data with the owner's passphrase.
   const pass = req.headers.get('X-Passphrase') || '';
   if (pass && (await keyOk(env, ip, pass, [env.PASSPHRASE]))) return { role: 'admin', name: null, xid: null, via: 'key' };
@@ -314,13 +319,13 @@ async function whoIs(req, env, ip) {
     const id = await sha(jar[SESSION]);
     const row = await env.DB.prepare('SELECT xid, name, seen FROM sessions WHERE token = ?').bind(id).first();
     if (row) {
-      const live = await liveInfo(env);
-      const member = live.members.find((m) => m.xid === row.xid);
-      const owner = row.xid === live.ownerXid;
+      const info = liveInfo((await live()).data);
+      const member = info.members.find((m) => m.xid === row.xid);
+      const owner = row.xid === info.ownerXid;
       if (owner || member) {
         if (!row.seen || Date.now() - row.seen > USED_EVERY_MS) await env.DB.prepare('UPDATE sessions SET seen = ? WHERE token = ?').bind(Date.now(), id).run();
         const may = owner ? null : await env.DB.prepare('SELECT write FROM access WHERE xid = ?').bind(row.xid).first();
-        return { role: owner ? 'admin' : may?.write ? 'writer' : 'viewer', name: (owner ? live.ownerName : member.name) || row.name, xid: row.xid, via: 'microsoft' };
+        return { role: owner ? 'admin' : may?.write ? 'writer' : 'viewer', name: (owner ? info.ownerName : member.name) || row.name, xid: row.xid, via: 'microsoft' };
       }
     }
   }

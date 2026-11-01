@@ -18,14 +18,6 @@ CREATE TABLE IF NOT EXISTS fails (
   count INTEGER NOT NULL,
   since INTEGER NOT NULL
 );
--- Write links the owner made, one per person. Deleting a row stops that link.
-CREATE TABLE IF NOT EXISTS writers (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  token TEXT NOT NULL UNIQUE,
-  created INTEGER NOT NULL,
-  used INTEGER
-);
 -- Microsoft sign-ins in progress: the PKCE secret this site keeps until the sign-in comes back (15 minutes at most).
 CREATE TABLE IF NOT EXISTS ms_sessions (
   id TEXT PRIMARY KEY,
