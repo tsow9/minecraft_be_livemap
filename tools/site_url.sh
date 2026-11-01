@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prints the address of the members-only site on Cloudflare (https://map.<account's subdomain>.workers.dev),
+# Prints the address of the members-only site on Cloudflare (https://blockmap.<account's subdomain>.workers.dev),
 # or nothing when it cannot be found out. Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
 set -uo pipefail
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || exit 0

@@ -39,7 +39,7 @@ Takes about 30 minutes.
 
 ### 2. Prepare Cloudflare
 
-1. Open **Workers & Pages** in the Cloudflare dashboard. If asked for a workers.dev subdomain, choose one. The site will be at `https://map.<subdomain>.workers.dev`.
+1. Open **Workers & Pages** in the Cloudflare dashboard. If asked for a workers.dev subdomain, choose one. The site will be at `https://blockmap.<subdomain>.workers.dev`.
 2. Go to **My Profile** → **API Tokens** → **Create Token**.
 3. Choose the **Edit Cloudflare Workers** template, add the permission **Account / D1 / Edit**, and create the token. Copy it (it is shown only once).
 4. Copy the **Account ID** shown on the **Workers & Pages** page.
@@ -73,7 +73,7 @@ Optionally, add these under the **Variables** tab of the same page (**New reposi
 ### 5. Build the map
 
 1. **Run workflow** again with **Update map**.
-2. When it finishes, the run's Summary shows "Site: https://map.….workers.dev".
+2. When it finishes, the run's Summary shows "Site: https://blockmap.….workers.dev".
 3. Open that address and sign in with Microsoft. The person who set it up is the admin.
 
 From then on it updates automatically.

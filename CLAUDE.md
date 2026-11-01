@@ -29,7 +29,7 @@
   - ログインの仕組み:このプロジェクトとして Azure にアプリを1つ登録(クライアント ID は worker/wrangler.template.toml の MS_CLIENT_ID、個人用 Microsoft アカウントのみ、モバイル/デスクトップのリダイレクト URI = GitHub Pages の login.html)。配った各サイトはこの1つを共通で使い、login.html(中継ページ)経由で戻る。PKCE の秘密は各サイトの Worker が持つ。Xbox の XSTS でゲーマータグと XUID を得て、トークンはすぐ捨てる。
   - メンバーの照合:tools/realms/common.js がメンバーごとに xid = HMAC(MEMBER_KEY, XUID) を live.json に入れ、Worker は同じ MEMBER_KEY で照合する(MEMBER_KEY は REALMS_CACHE_KEY から作る)。
   - ワールドのプレイヤーの記録とメンバーは、player_<id> の MsaId(XUID から作るゲーム内 ID)で確実に結びつける(tools/players.py)。
-  - 実装済み: `worker/`(Cloudflare Worker + D1、https://map.blockmap.workers.dev。最初は blockmap.blockmap… だったが名前が重なって変なので変更)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。SHARE_PASSPHRASE は位置確認が Worker に送るときだけ使う。
+  - 実装済み: `worker/`(Cloudflare Worker + D1、住所は https://blockmap.<Cloudflare のサブドメイン>.workers.dev。Worker 名は blockmap。持ち主は自分のサブドメインを blockmap から別の名前に変える(一時 map.blockmap… にしていた)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。SHARE_PASSPHRASE は位置確認が Worker に送るときだけ使う。
   - 「管理者メニュー」で、地図に出さないもの(チェスト全部/ほかの人のペット)を選べる。管理者も含め全員に効く。items.json は秘密のフォルダ(ITEMS_DIR、ページには教えない)に置き、Worker の /api/world が隠す分を抜いて渡す。チェストは置いた人が記録されないので「全部隠す」だけ。
   - Microsoft アカウントのログイン情報は持ち主の GitHub に暗号化したまま。リンクやデータには入れない。
 

@@ -39,7 +39,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 
 ### 2. Cloudflare を準備する
 
-1. Cloudflare のダッシュボードで **Workers & Pages** を開きます。workers.dev のサブドメインを求められたら決めます。サイトのアドレスは `https://map.<サブドメイン>.workers.dev` になります。
+1. Cloudflare のダッシュボードで **Workers & Pages** を開きます。workers.dev のサブドメインを求められたら決めます。サイトのアドレスは `https://blockmap.<サブドメイン>.workers.dev` になります。
 2. **My Profile** → **API Tokens** → **Create Token** を開きます。
 3. **Edit Cloudflare Workers** テンプレートを選び、権限に **Account / D1 / Edit** を追加して作成します。表示されたトークンを控えます(一度しか表示されません)。
 4. **Workers & Pages** の画面に表示される **Account ID** を控えます。
@@ -73,7 +73,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 ### 5. 地図を作成する
 
 1. **Run workflow** で **What to do** に **Update map** を選んで実行します。
-2. 完了すると、実行結果の Summary に「サイト: https://map.….workers.dev」と表示されます。
+2. 完了すると、実行結果の Summary に「サイト: https://blockmap.….workers.dev」と表示されます。
 3. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
 
 以降は自動で更新されます。

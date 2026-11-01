@@ -1,5 +1,5 @@
 # Filled in by the 地図サイト workflow (database_id). The site and map data are built into ../_site first.
-name = "map"
+name = "blockmap"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 workers_dev = true

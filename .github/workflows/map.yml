@@ -242,13 +242,13 @@ jobs:
           if [ "$BLOCKMAP_LANG" = ja ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
           rm -f "$RUNNER_TEMP/secrets.json"
       - name: Remove the earlier sites
-        # This site's earlier workers: the first pin server (blockmap-share) and the members-only site's first address
-        # (blockmap.<subdomain>.workers.dev, now map.…). Only the workers go; the database stays. Only for this repository,
+        # This site's earlier workers: the first pin server (blockmap-share) and the name the members-only site had
+        # for a while (map.<subdomain>.workers.dev). Only the workers go; the database stays. Only for this repository,
         # so nobody else's worker of the same name is touched.
         if: steps.check.outputs.ready == 'true' && github.repository == 'tsow9/minecraft_be_livemap'
         continue-on-error: true
         run: |
-          for old in blockmap-share blockmap; do
+          for old in blockmap-share map; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$old")
             case "$code" in
