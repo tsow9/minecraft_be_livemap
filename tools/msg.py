@@ -1,8 +1,8 @@
-"""Messages in the owner's language: Japanese when the repository variable LANGUAGE is "ja" (BLOCKMAP_LANG in the
-workflows), English otherwise."""
+"""Messages in the owner's language: English when the repository variable LANGUAGE is "en" (BLOCKMAP_LANG in the
+workflows), Japanese otherwise."""
 import os
 
-JA = os.environ.get('BLOCKMAP_LANG', 'en').lower().startswith('ja')
+JA = not os.environ.get('BLOCKMAP_LANG', 'ja').lower().startswith('en')
 
 
 def t(ja, en):

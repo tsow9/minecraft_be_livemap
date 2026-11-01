@@ -59,7 +59,7 @@ Cloudflare のアカウントを複数持っている場合は、使うアカウ
 
 | Name | 値 |
 |---|---|
-| `LANGUAGE` | `ja` にすると、Actions の実行結果のメッセージが日本語になります(省略時は英語) |
+| `LANGUAGE` | `en` にすると、Actions の実行結果のメッセージが英語になります(省略時は日本語) |
 | `TIMEZONE` | 地図の日付に使うタイムゾーン(省略時は `Asia/Tokyo`) |
 | `REALM_NAME` | Realm を 2 つ以上持っている場合だけ、使う Realm の名前 |
 
@@ -67,14 +67,12 @@ Cloudflare のアカウントを複数持っている場合は、使うアカウ
 
 1. **Actions** タブを開きます(初回はワークフローを有効にします)。
 2. 左の **Map site** → **Run workflow** で、**What to do** に **Sign in to Realms** を選んで実行します。
-3. 実行中のジョブ **login** を開き、表示されたコードを https://www.microsoft.com/link に入力します。
-4. Realm のオーナーのアカウントでログインします(15 分以内)。
+3. 実行中のジョブ **login** を開き、枠で囲まれたコードを https://www.microsoft.com/link に入力します。
+4. Realm のオーナーのアカウントでログインします(15 分以内)。ログイン後に「Minecraft for Nintendo Switch」と表示されますが、正常です([理由](#セキュリティとプライバシー))。
+5. ログインが終わると、自動で地図の作成が始まります。数分後、実行結果の Summary に「サイト: https://blockmap.….workers.dev」と表示されます。
+6. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
 
-### 5. 地図を作成する
-
-1. **Run workflow** で **What to do** に **Update map** を選んで実行します。
-2. 完了すると、実行結果の Summary に「サイト: https://blockmap.….workers.dev」と表示されます。
-3. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
+[かんたん設定ページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)では、コードの場所と地図の進み具合が自動で表示されます。
 
 以降は自動で更新されます。
 
@@ -123,7 +121,7 @@ Secrets(鍵)、Realms のログイン情報(Actions キャッシュ)、サイト
 
 ## トラブルシューティング
 
-Actions の実行結果に表示されるメッセージで確認してください(`LANGUAGE` を `ja` にした場合。英語のメッセージは [English の README](README.en.md#troubleshooting) を参照)。
+Actions の実行結果に表示されるメッセージで確認してください(`LANGUAGE` を `en` にした場合の英語のメッセージは [English の README](README.en.md#troubleshooting) を参照)。
 
 | メッセージ | 対処 |
 |---|---|

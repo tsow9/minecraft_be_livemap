@@ -14,7 +14,7 @@ permissions:
   actions: write
 
 env:
-  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'en' }}
+  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'ja' }}
 
 concurrency:
   group: live-players

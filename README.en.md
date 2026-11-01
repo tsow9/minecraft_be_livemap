@@ -59,7 +59,7 @@ Optionally, add these under the **Variables** tab of the same page (**New reposi
 
 | Name | Value |
 |---|---|
-| `LANGUAGE` | `ja` shows the messages in the Actions runs in Japanese (English if left out) |
+| `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
 | `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
 | `REALM_NAME` | Only if you own more than one Realm: the name of the one to use |
 
@@ -67,14 +67,12 @@ Optionally, add these under the **Variables** tab of the same page (**New reposi
 
 1. Open the **Actions** tab (enable workflows the first time).
 2. Select **Map site** → **Run workflow**, choose **Sign in to Realms** under **What to do** and run it.
-3. Open the running **login** job and enter the code it shows at https://www.microsoft.com/link.
-4. Sign in with the Realm owner's account (within 15 minutes).
+3. Open the running **login** job and enter the boxed code at https://www.microsoft.com/link.
+4. Sign in with the Realm owner's account (within 15 minutes). Afterwards Microsoft says "Minecraft for Nintendo Switch"; that is expected ([why](#security-and-privacy)).
+5. Once signed in, making the map starts by itself. A few minutes later the run's Summary shows "Site: https://blockmap.….workers.dev".
+6. Open that address and sign in with Microsoft. The person who set it up is the admin.
 
-### 5. Build the map
-
-1. **Run workflow** again with **Update map**.
-2. When it finishes, the run's Summary shows "Site: https://blockmap.….workers.dev".
-3. Open that address and sign in with Microsoft. The person who set it up is the admin.
+The [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows where the code is and how the map is getting on.
 
 From then on it updates automatically.
 
@@ -123,7 +121,7 @@ The secrets (keys), the Realms sign-in (Actions cache) and what is on the site a
 
 ## Troubleshooting
 
-Check the message shown in the Actions run.
+Check the message shown in the Actions run (in English when the `LANGUAGE` variable is `en`).
 
 | Message | Fix |
 |---|---|

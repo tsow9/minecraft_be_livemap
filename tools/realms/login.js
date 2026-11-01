@@ -9,13 +9,16 @@ async function main () {
   const dir = tempCacheDir()
   try {
     const auth = makeAuth(dir, (res) => {
-      console.log('')
-      console.log('==================================================')
-      console.log(t(` スマホかPCで ${res.verification_uri} を開き、`, ` Open ${res.verification_uri} on a phone or PC,`))
-      console.log(t(` コード「${res.user_code}」を入力して、Realmsの持ち主のアカウントでログインしてください。`, ` enter the code ${res.user_code} and sign in with the Realm owner's account.`))
-      console.log(t(` (${Math.round(res.expires_in / 60)}分以内に入力してください)`, ` (within ${Math.round(res.expires_in / 60)} minutes)`))
-      console.log('==================================================')
-      console.log('')
+      const line = '='.repeat(60)
+      console.log(['', line,
+        t('  Realms にログイン', '  Sign in to Realms'), '',
+        t(`  1. ${res.verification_uri} を開きます`, `  1. Open ${res.verification_uri}`),
+        t(`  2. このコードを入力します:  ${res.user_code}`, `  2. Enter this code:  ${res.user_code}`),
+        t('  3. Realm のオーナーのアカウントでログインします', "  3. Sign in with the Realm owner's account"),
+        t(`  (${Math.round(res.expires_in / 60)} 分以内に)`, `  (within ${Math.round(res.expires_in / 60)} minutes)`), '',
+        t('  ※「Minecraft for Nintendo Switch」と表示されますが、正常です。', '  Note: it says "Minecraft for Nintendo Switch". That is expected:'),
+        t('    Realms に入るために、Switch 版マイクラと同じ方法でログインしています。', '    Realms is reached the way Minecraft for Switch signs in.'),
+        line, ''].join('\n'))
     })
     await auth.getXboxToken(REALMS_RELYING_PARTY)
     const realm = await pickOwnedRealm(makeApi(auth), auth)

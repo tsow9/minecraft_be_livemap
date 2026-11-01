@@ -24,8 +24,9 @@ concurrency:
 
 env:
   # Repository variables (Settings → Secrets and variables → Actions → Variables), both optional:
-  # LANGUAGE "ja" or "en" for the messages in these runs; TIMEZONE for the map's dates (e.g. America/New_York).
-  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'en' }}
+  # LANGUAGE "en" for English messages in these runs (Japanese if not set); TIMEZONE for the map's dates
+  # (e.g. America/New_York; Asia/Tokyo if not set).
+  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'ja' }}
   TZ: ${{ vars.TIMEZONE || 'Asia/Tokyo' }}
 
 jobs:
@@ -33,6 +34,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write  # to start "Update map" once signed in
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,6 +53,13 @@ jobs:
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
+      # Signed in: make the map right away, so setting up needs no second run.
+      - name: Start making the map
+        run: |
+          gh workflow run map.yml --ref "$GITHUB_REF_NAME" -f action='Update map'
+          if [ "$BLOCKMAP_LANG" != en ]; then echo "地図を作り始めました。数分でサイトができます"; else echo "Started making the map. The site is ready in a few minutes"; fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   diagnose:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'Diagnose'
@@ -113,7 +124,7 @@ jobs:
         # Before the first "Sign in to Realms" there is nothing to do yet: say so, without failing every hour.
         run: |
           if [ ! -f .auth/token.enc ] || [ -z "$CACHE_KEY" ]; then
-            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::notice::まだ「Sign in to Realms」をしていないので、地図は作りません(Actions の「Map site」から実行してください)"
+            if [ "$BLOCKMAP_LANG" != en ]; then echo "::notice::まだ「Sign in to Realms」をしていないので、地図は作りません(Actions の「Map site」から実行してください)"
             else echo "::notice::Not signed in to Realms yet, so no map is made (run \"Sign in to Realms\" from \"Map site\" in Actions)"; fi
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -192,7 +203,7 @@ jobs:
           if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CACHE_KEY" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
+            if [ "$BLOCKMAP_LANG" != en ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
             else echo "::warning::The Cloudflare secrets are not all set, so the site is not published"; fi
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
@@ -206,7 +217,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if ! bash tools/cloudflare.sh export >/dev/null; then
-            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::error::Cloudflare のアカウントが見つかりませんでした。CLOUDFLARE_API_TOKEN を確かめてください"
+            if [ "$BLOCKMAP_LANG" != en ]; then echo "::error::Cloudflare のアカウントが見つかりませんでした。CLOUDFLARE_API_TOKEN を確かめてください"
             else echo "::error::Could not find the Cloudflare account. Check CLOUDFLARE_API_TOKEN"; fi
             exit 1
           fi
@@ -248,11 +259,11 @@ jobs:
           npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -n1)
           if [ -z "$url" ]; then
-            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"
+            if [ "$BLOCKMAP_LANG" != en ]; then echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"
             else echo "::error::Could not find the site's address. Open Workers & Pages in Cloudflare once, choose a workers.dev subdomain, then run this again"; fi
             exit 1
           fi
-          if [ "$BLOCKMAP_LANG" = ja ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ "$BLOCKMAP_LANG" != en ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
           rm -f "$RUNNER_TEMP/secrets.json"
       - name: Remove the earlier sites
         # This site's earlier workers: the first pin server (blockmap-share) and the name the members-only site had

@@ -7,8 +7,8 @@
 #        vault.sh put DIR BRANCH   (the branch keeps a single commit, so the repository never grows)
 # Needs CACHE_KEY (REALMS_CACHE_KEY) and, for put, GH_TOKEN.
 set -euo pipefail
-# Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): Japanese for "ja", else English.
-t() { case "${BLOCKMAP_LANG:-en}" in ja*) printf '%s' "$1" ;; *) printf '%s' "$2" ;; esac; }
+# Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): English for "en", else Japanese.
+t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
 
 need_key() {
   [ -n "${CACHE_KEY:-}" ] || { echo "::error::$(t 'REALMS_CACHE_KEY が設定されていません' 'REALMS_CACHE_KEY is not set')"; exit 1; }

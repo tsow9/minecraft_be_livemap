@@ -1,12 +1,13 @@
 'use strict';
-// かんたん設定: the setup steps on one page. Nothing is sent anywhere; the repository name, the subdomain and the
-// ticks are kept in this browser (never the keys, which are made afresh each time the page opens).
+// かんたん設定: the setup steps on one page. Nothing is sent anywhere. The repository's link is kept in this
+// browser; the random key is made afresh each time the page opens and is never kept. Step 4 follows the runs of the
+// repository's "Map site" workflow through GitHub's public API (the repository is public, so no sign-in is needed).
 (() => {
   const $ = (s) => document.querySelector(s);
   const KEY = 'blockmap.setup';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* private mode */ } };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ repo: saved.repo || '' })); } catch { /* private mode */ } };
 
   // ---- language: the map's choice, else the browser's ----
   let lang = null;
@@ -21,8 +22,8 @@
       el.innerHTML = lang === 'en' ? el.dataset.en : ja.get(el);
     }
     $('#lang').textContent = lang === 'ja' ? 'English' : '日本語';
-    $('#v-lang').textContent = lang;
     refresh();
+    renderStatus();
   }
   $('#lang').addEventListener('click', () => {
     lang = lang === 'ja' ? 'en' : 'ja';
@@ -30,7 +31,12 @@
     applyLang();
   });
 
-  // ---- the two random keys (48 letters and digits each) ----
+  // ---- ⓘ buttons open their explanation ----
+  for (const b of document.querySelectorAll('.info')) {
+    b.addEventListener('click', () => { const box = document.getElementById(b.dataset.info); box.hidden = !box.hidden; });
+  }
+
+  // ---- the random key (48 letters and digits) ----
   function randomKey(n = 48) {
     const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     const out = [];
@@ -39,24 +45,37 @@
     return out.join('');
   }
   $('#key1').textContent = randomKey();
-  $('#v-tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
-
-  // ---- the repository and the subdomain ----
-  const repoOf = (text) => {
-    const m = String(text || '').trim().replace(/\.git$/, '').match(/(?:github\.com\/)?([\w.-]+)\/([\w.-]+)\/?$/);
-    return m ? `${m[1]}/${m[2]}` : '';
-  };
-  const subOf = (text) => String(text || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\.workers\.dev.*$/, '')
-    .split('.').pop().replace(/[^a-z0-9-]/g, '');
-  $('#repo').value = saved.repo || '';
-  $('#sub').value = saved.sub || '';
-  $('#repo').addEventListener('input', () => { saved.repo = repoOf($('#repo').value); save(); refresh(); });
-  $('#sub').addEventListener('input', () => { saved.sub = subOf($('#sub').value); save(); refresh(); });
 
   // The token page with its permissions filled in (Cloudflare's template links).
   const perms = [{ key: 'workers_scripts', type: 'edit' }, { key: 'd1', type: 'edit' }, { key: 'account_settings', type: 'read' }];
   $('#token-link').href = `https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=${encodeURIComponent(JSON.stringify(perms))}`
     + `&accountId=*&zoneId=all&name=${encodeURIComponent('Blockmap')}`;
+
+  // ---- the repository ----
+  const repoOf = (text) => {
+    const m = String(text || '').trim().replace(/\.git$/, '').match(/(?:github\.com\/)?([\w.-]+)\/([\w.-]+)\/?$/);
+    return m ? `${m[1]}/${m[2]}` : '';
+  };
+  $('#repo').value = saved.repo ? `https://github.com/${saved.repo}` : '';
+  $('#repo').addEventListener('input', () => { saved.repo = repoOf($('#repo').value); save(); refresh(); poll(true); });
+  // The address the workflow gives a new site (tools/cloudflare.sh): blockmap.<GitHub owner>.workers.dev.
+  const siteOf = (repo) => `https://blockmap.${repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')}.workers.dev`;
+
+  // Variables this browser's settings call for (Japanese and Japan's time are what a site uses when none are set).
+  function renderVars() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
+    const rows = [];
+    if (lang === 'en') rows.push(['LANGUAGE', 'en']);
+    if (tz !== 'Asia/Tokyo') rows.push(['TIMEZONE', tz]);
+    const box = $('#vars');
+    if (!rows.length) { box.innerHTML = ''; return; }
+    const link = saved.repo ? `https://github.com/${saved.repo}/settings/variables/actions/new` : '';
+    box.innerHTML = `<p>${T('このブラウザの設定に合わせて、次も <b>Variable</b> として登録します(<b>Variables</b> タブ)。',
+      'For this browser\'s settings, also add these as <b>variables</b> (the <b>Variables</b> tab).')}</p>
+      ${link ? `<p><a class="btn ghost" href="${link}" target="_blank" rel="noopener">${T('「New repository variable」を開く', 'Open “New repository variable”')}</a></p>` : ''}
+      <table class="kv"><tr><th>Name</th><th>Value</th></tr>${rows.map(([k, v]) => `<tr><td><code>${k}</code> <button class="copy" data-text="${k}">⧉</button></td>
+      <td><code>${v}</code> <button class="copy" data-text="${v}">${T('コピー', 'Copy')}</button></td></tr>`).join('')}</table>`;
+  }
 
   function refresh() {
     const repo = saved.repo || '';
@@ -65,17 +84,9 @@
       if (repo) a.href = `https://github.com/${repo}${a.dataset.path}`; else a.removeAttribute('href');
     }
     $('#repo-hint').innerHTML = repo
-      ? T(`リポジトリ:<code>${repo}</code>(手順 3〜5 のボタンが、このリポジトリを開きます)`, `Repository: <code>${repo}</code> (the buttons in steps 3–5 open it)`)
-      : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます', 'Once filled in, the buttons in steps 3–5 open it directly');
-    // Without a chosen subdomain, the workflow makes one from the GitHub owner's name (tools/cloudflare.sh).
-    const sub = saved.sub || (repo ? repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') : '');
-    const site = sub ? `https://blockmap.${sub}.workers.dev` : '';
-    $('#site-hint').innerHTML = !site ? ''
-      : saved.sub ? T(`サイトの住所は <code>${site}</code> になります`, `Your site will be at <code>${site}</code>`)
-        : T(`サイトの住所は、おそらく <code>${site}</code> になります(手順 5 の実行結果に正しい住所が出ます)`,
-          `Your site will most likely be at <code>${site}</code> (step 5's run shows the exact address)`);
-    $('#site-link').classList.toggle('off', !site);
-    if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
+      ? T(`<code>${repo}</code>(手順 3・4 のボタンが、このリポジトリを開きます)`, `<code>${repo}</code> (the buttons in steps 3 and 4 open it)`)
+      : T('入れると、手順 3・4 のボタンがそのリポジトリを直接開きます', 'Once filled in, the buttons in steps 3 and 4 open it directly');
+    renderVars();
   }
 
   // ---- copy buttons ----
@@ -91,21 +102,92 @@
     try { await navigator.clipboard.writeText(text); toast(T('コピーしました', 'Copied')); }
     catch { toast(T('コピーできませんでした', 'Could not copy')); }
   }
-  for (const b of document.querySelectorAll('[data-copy]')) b.addEventListener('click', () => copy($(`#${b.dataset.copy}`).textContent));
-  for (const b of document.querySelectorAll('[data-copy-name]')) {
-    b.title = 'Copy';
-    b.addEventListener('click', () => copy(b.previousElementSibling.textContent));
-  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.copy');
+    if (!b) return;
+    if (b.dataset.copy) copy($(`#${b.dataset.copy}`).textContent);
+    else if (b.dataset.text) copy(b.dataset.text);
+    else if (b.hasAttribute('data-copy-name')) copy(b.previousElementSibling.textContent);
+  });
 
-  // ---- ticks ----
-  saved.done = saved.done || {};
-  for (const step of document.querySelectorAll('.step')) {
-    const box = step.querySelector('.done input');
-    const n = step.dataset.step;
-    box.checked = !!saved.done[n];
-    step.classList.toggle('is-done', box.checked);
-    box.addEventListener('change', () => { saved.done[n] = box.checked; save(); step.classList.toggle('is-done', box.checked); });
+  // ---- step 4: how the sign-in and the first map are getting on ----
+  // Runs of "Map site" started by hand; a run's jobs say what it was (login, or update + cloudflare).
+  let state = null;     // { kind, url } shown in #status
+  const jobsCache = new Map();
+  async function getJSON(url) {
+    // no-cache: the browser asks again with the ETag, and GitHub's "unchanged" answers don't count against its limit.
+    const res = await fetch(url, { cache: 'no-cache', headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.json();
   }
+  async function jobsOf(run) {
+    const k = `${run.id}:${run.updated_at}`;
+    if (!jobsCache.has(k)) jobsCache.set(k, (await getJSON(run.jobs_url)).jobs || []);
+    return jobsCache.get(k);
+  }
+  const ran = (jobs, name) => jobs.find((j) => j.name === name && j.conclusion !== 'skipped');
+  async function check() {
+    const repo = saved.repo;
+    if (!repo) { state = null; return; }
+    const { workflow_runs: runs = [] } = await getJSON(`https://api.github.com/repos/${repo}/actions/workflows/map.yml/runs?event=workflow_dispatch&per_page=6`);
+    let login = null, loginJobs = null;
+    for (const run of runs) {  // newest first
+      const jobs = await jobsOf(run);
+      if (ran(jobs, 'login')) { login = run; loginJobs = jobs; break; }  // a login job that was not skipped (running or done)
+    }
+    if (!login) { state = { kind: 'waiting' }; return; }
+    const job = loginJobs.find((j) => j.name === 'login');
+    if (login.status !== 'completed') { state = { kind: 'code', url: job?.html_url || login.html_url }; return; }
+    if (login.conclusion !== 'success') { state = { kind: 'login-failed', url: job?.html_url || login.html_url }; return; }
+    // The map run the sign-in started: the newest run after it that made the map.
+    for (const run of runs) {
+      if (new Date(run.created_at) < new Date(login.created_at) || run.id === login.id) continue;
+      const jobs = await jobsOf(run);
+      if (!jobs.some((j) => j.name === 'update')) continue;
+      const cf = jobs.find((j) => j.name === 'cloudflare');
+      if (run.status !== 'completed') { state = { kind: 'making', url: run.html_url }; return; }
+      state = run.conclusion === 'success' && cf?.conclusion === 'success'
+        ? { kind: 'done', url: run.html_url } : { kind: 'map-failed', url: run.html_url };
+      return;
+    }
+    state = { kind: 'making', url: login.html_url };
+  }
+  function renderStatus() {
+    const box = $('#status');
+    if (!state) { box.hidden = true; return; }
+    box.hidden = false;
+    const site = saved.repo ? siteOf(saved.repo) : '';
+    const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+    const html = {
+      waiting: `<b>${T('待っています', 'Waiting')}</b> ${T('「Sign in to Realms」を実行すると、ここに進み具合が出ます。', 'Once “Sign in to Realms” runs, its progress shows here.')}`,
+      code: `<b>${T('コードを入力してください', 'Enter the code')}</b> ${T('下のボタンを開くと、四角で囲まれたコードが出ています。', 'Open the button below: the code is shown in a box.')}
+        <p><a class="btn" href="${state?.url}" target="_blank" rel="noopener">${T('コードを開く', 'Show the code')}</a></p>
+        ${T('コードを <a href="https://www.microsoft.com/link" target="_blank" rel="noopener">microsoft.com/link</a> に入れて、Realm のオーナーのアカウントでログインします(15 分以内)。',
+          'Enter it at <a href="https://www.microsoft.com/link" target="_blank" rel="noopener">microsoft.com/link</a> and sign in with the Realm owner\'s account (within 15 minutes).')}`,
+      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+      making: `<b>${T('地図を作っています', 'Making the map')}</b><span class="spin"></span> ${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes. You can leave this page open.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+      'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+      done: `<b class="good">${T('できました!', 'Done!')}</b> ${T('サイトを開いて、Microsoft でログインしてください。あなたが管理者です。', 'Open your site and sign in with Microsoft. You are its admin.')}
+        <p><a class="btn" href="${site}" target="_blank" rel="noopener">${T('サイトを開く', 'Open my site')}</a></p>
+        <span class="small">${site} ${T('(違う住所になった場合は、記録の Summary に正しい住所が出ます)', '(if it differs, the run\'s Summary shows the address)')}</span><br>
+        ${T('あとは、管理者メニューの「サイトのURLをコピー」で住所を Realm のメンバーに送るだけです。', 'Then send the address to your members (Admin menu → Copy site URL).')}`,
+    }[state?.kind] || '';
+    box.className = `status ${state?.kind || ''}`;
+    box.innerHTML = html;
+  }
+  let timer = null;
+  async function poll(now = false) {
+    clearTimeout(timer);
+    if (!now) {
+      try { await check(); } catch { /* offline or GitHub's limit: try again later */ }
+      renderStatus();
+    } else { state = saved.repo ? { kind: 'waiting' } : null; renderStatus(); }
+    if (now) { timer = setTimeout(() => poll(), 1500); return; }
+    const busy = state && (state.kind === 'code' || state.kind === 'making');
+    if (state?.kind !== 'done' || busy) timer = setTimeout(() => poll(), busy ? 15000 : 30000);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });
 
   applyLang();
+  if (saved.repo) poll();
 })();

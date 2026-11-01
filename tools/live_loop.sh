@@ -4,8 +4,8 @@
 # LOOP_SECONDS for a new world save, so positions and the map follow soon after Realms saves.
 # It ends after LOOP_BUDGET seconds (the next run takes over) or once nobody has played for IDLE_EXIT seconds.
 set -u
-# Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): Japanese for "ja", else English.
-t() { case "${BLOCKMAP_LANG:-en}" in ja*) printf '%s' "$1" ;; *) printf '%s' "$2" ;; esac; }
+# Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): English for "en", else Japanese.
+t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
 LOOP_SECONDS=${LOOP_SECONDS:-20}
 LOOP_BUDGET=${LOOP_BUDGET:-3000}
 IDLE_EXIT=${IDLE_EXIT:-180}
