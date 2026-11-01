@@ -4,7 +4,7 @@
 
 A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in the cloud; no PC needs to stay on.
 
-![Blockmap (contour lines and past maps)](docs/screenshot-en.webp)
+![Blockmap (a village: villagers, chests and a trade)](docs/screenshot-en.webp)
 
 - Only the Realm's members can see the map (sign in with Microsoft).
 - The map and other data are stored only in your own Cloudflare account.

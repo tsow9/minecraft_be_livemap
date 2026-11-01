@@ -4,7 +4,7 @@
 
 Minecraft 統合版の Realm を、ブラウザで見られる地図にするツールです。地図はクラウドで自動更新され、PC を起動しておく必要はありません。
 
-![Blockmap の画面(等高線と過去の地図)](docs/screenshot-ja.webp)
+![Blockmap の画面(村の村人とチェスト、村人の取引)](docs/screenshot-ja.webp)
 
 - 地図を見られるのは Realm のメンバーだけです(Microsoft アカウントでログイン)。
 - 地図などのデータは、利用者自身の Cloudflare アカウントにだけ保存されます。
