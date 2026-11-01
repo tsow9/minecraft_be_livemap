@@ -107,22 +107,33 @@ jobs:
       - run: npm ci --prefix tools/realms --no-audit --no-fund
       - name: Realmsからワールドをダウンロード
         id: download
-        run: node tools/realms/download.js world.mcworld members.json
+        # Before the first 「Realmsにログイン」 there is nothing to do yet: say so, without failing every hour.
+        run: |
+          if [ ! -f .auth/token.enc ] || [ -z "$CACHE_KEY" ]; then
+            echo "::notice::まだ「Realmsにログイン」をしていないので、地図は作りません(Actions の「地図サイト」から実行してください)"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          node tools/realms/download.js world.mcworld members.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - name: 新しくなったログイン情報を保存
+        if: steps.download.outputs.ready == 'true'
         uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: 前回の地図データを取得
+        if: steps.download.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
       - name: ワールドか地図の描き方が変わったか確認
         id: compare
+        if: steps.download.outputs.ready == 'true'
         # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played.
         run: |
           echo "${{ steps.download.outputs.world_hash }}-$(cat tools/*.py | sha256sum | cut -c1-64)" > fingerprint.txt
@@ -249,8 +260,12 @@ jobs:
 
   # GitHub Pages keeps only two pages: a notice that the map has moved (to the members-only site on Cloudflare), and
   # login.html, the page every Blockmap site's Microsoft sign-in comes back through. No map data is published here.
+  # Only in this project's own repository: copies have no GitHub Pages and need none.
   deploy:
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開')
+    if: >-
+      github.repository == 'tsow9/minecraft_be_livemap' && (
+        github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read

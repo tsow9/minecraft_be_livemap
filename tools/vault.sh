@@ -22,7 +22,12 @@ case "${1:-}" in
     git archive FETCH_HEAD | tar -x -C "$tmp"
     if compgen -G "$tmp/data.enc.*" >/dev/null; then
       need_key
-      cat "$tmp"/data.enc.* | crypt -d | tar -xz -C "$dir"
+      # Made with another key (copied with someone else's branches, or REALMS_CACHE_KEY was changed). Stop rather than
+      # start afresh, so a hiccup can never wipe the map's history.
+      if ! cat "$tmp"/data.enc.* | crypt -d 2>/dev/null | tar -xz -C "$dir" 2>/dev/null; then
+        echo "::error::$branch ブランチをこの鍵(REALMS_CACHE_KEY)で開けませんでした。鍵を変えた場合は元に戻すか、$branch ブランチを削除すると新しく作り直します"
+        exit 1
+      fi
     else
       cp -a "$tmp"/. "$dir"/
     fi
