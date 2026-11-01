@@ -88,7 +88,7 @@ function sharing() { return !!share.url; }
 // and chooses who may write).
 function showInvites(role) {
   share.role = role || null;
-  $('#site-invite').hidden = !DATA || role !== 'admin';
+  $('#site-share').hidden = !DATA || role !== 'admin';
   $('#writers').hidden = !DATA || role !== 'admin';
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
@@ -105,11 +105,16 @@ function renderMe() {
   if (share.me.role === 'admin') body('panel-site').prepend(line);
   else body('panel-realm').append(line);
   const what = { admin: tl('管理者'), writer: tl('書き込みOK'), viewer: tl('見るだけ') }[share.me.role] || '';
-  line.textContent = `${tl('{name} としてログイン中({role})', { name: share.me.name || '', role: what })} `;
-  line.append(button(tl('ログアウト'), async () => {
+  line.className = 'me-card';
+  line.innerHTML = `<span class="me-avatar"><svg class="ic"><use href="#i-user"/></svg></span>
+    <span class="me-who"><b></b><span>${esc(tl('{role}としてログイン中', { role: what }))}</span></span>`;
+  line.querySelector('b').textContent = share.me.name || '';
+  const out = button(tl('ログアウト'), async () => {
     await fetch(`${share.url}/logout`, { method: 'POST' }).catch(() => {});
     location.reload();
-  }));
+  }, 'logout');
+  out.classList.add('me-out');
+  line.append(out);
 }
 
 // The owner's list of the Realm's members: each one looks only until the owner lets them write.
@@ -228,13 +233,27 @@ function pickButton(label, on, pick) {
   b.addEventListener('click', () => { pick(); openPick(null); showBillingPicks(); });
   return b;
 }
-// Opens one list (or none), closing the other.
+// Opens one list (or none), closing the other. A list floats over the page right under its button (above it when
+// there is no room below), so the menu itself does not grow.
+const PICKS = [['#billing-day', '#billing-days'], ['#billing-cur', '#billing-curs']];
 function openPick(which) {
-  for (const [btn, list] of [['#billing-day', '#billing-days'], ['#billing-cur', '#billing-curs']]) {
-    const open = btn === which && $(list).hidden;
-    $(list).hidden = !open;
+  for (const [btn, list] of PICKS) {
+    const el = $(list), open = btn === which && el.hidden;
+    el.hidden = !open;
     $(btn).setAttribute('aria-expanded', String(open));
+    if (!open) continue;
+    const r = $(btn).getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+    el.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
+    el.style.top = `${r.bottom + 6 + h <= innerHeight - 8 ? r.bottom + 6 : Math.max(8, r.top - 6 - h)}px`;
   }
+}
+function setupPicks() {
+  for (const [btn] of PICKS) $(btn).addEventListener('click', (e) => { e.stopPropagation(); openPick(btn); });
+  // Anywhere else, Esc, scrolling the menu or resizing closes it.
+  document.addEventListener('click', (e) => { if (!e.target.closest('.pick-list')) openPick(null); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openPick(null); });
+  $('#panel-site').addEventListener('scroll', () => openPick(null), true);
+  addEventListener('resize', () => openPick(null));
 }
 async function saveBilling() {
   openPick(null);
@@ -389,8 +408,7 @@ function setupShare() {
   }
   $('#site-invite').addEventListener('click', () => copyText(`${location.origin}/`, tl('サイトのURLをコピーしました。Realm のメンバーに送ってください(ログインすれば見られます)')));
   $('#billing-form').addEventListener('submit', (e) => { e.preventDefault(); saveBilling(); });
-  $('#billing-day').addEventListener('click', () => openPick('#billing-day'));
-  $('#billing-cur').addEventListener('click', () => openPick('#billing-cur'));
+  setupPicks();
   loadSyncState();
   renderAll();
   loadSettings();

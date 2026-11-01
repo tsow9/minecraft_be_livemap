@@ -54,6 +54,8 @@
     <symbol id="i-admin" viewBox="0 0 24 24"><path d="M12 2.5l7.5 3v5.5c0 4.8-3.2 8.6-7.5 10.5-4.3-1.9-7.5-5.7-7.5-10.5V5.5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
   </defs>
 </svg>
@@ -202,11 +204,11 @@
 
 <section id="panel-site" class="panel" hidden>
   <h2>管理者メニュー <button class="close" title="閉じる"><svg class="ic"><use href="#i-close"/></svg></button></h2>
-  <p id="me-line" class="help" hidden></p>
-  <p class="share-row"><button id="site-invite" class="mini" hidden>サイトのURLをコピー</button></p>
-  <div id="privacy" hidden>
-    <h3>地図に出さないもの</h3>
-    <ul id="privacy-list" class="plist switch-list"></ul>
+  <div id="me-line" hidden></div>
+  <div id="site-share" hidden>
+    <h3>サイトの住所</h3>
+    <p class="help">この住所を Realm の仲間に知らせましょう。マイクラの Microsoft アカウントでログインすれば、だれでも見られます。</p>
+    <p class="share-row"><button id="site-invite" class="mini"><svg class="ic"><use href="#i-copy"/></svg>サイトのURLをコピー</button></p>
   </div>
   <form id="billing-form">
     <h3>Realm の支払い</h3>
@@ -214,22 +216,28 @@
     <div class="billing-grid">
       <span>支払日</span>
       <button type="button" id="billing-day" class="pick" aria-expanded="false"></button>
-      <div id="billing-days" class="pick-list days" hidden></div>
       <span>料金</span>
       <div class="price-row">
         <button type="button" id="billing-cur" class="pick" aria-expanded="false"></button>
         <input id="billing-price" type="number" inputmode="decimal" min="0" step="any" placeholder="930" aria-label="料金" autocomplete="off">
       </div>
-      <div id="billing-curs" class="pick-list curs" hidden></div>
     </div>
     <div class="btns"><button class="mini primary" type="submit">保存</button></div>
   </form>
+  <div id="privacy" hidden>
+    <h3>地図に出さないもの</h3>
+    <ul id="privacy-list" class="plist switch-list"></ul>
+  </div>
   <div id="writers" hidden>
     <h3>メンバーの書き込み</h3>
     <ul id="writer-list" class="plist switch-list"></ul>
   </div>
 </section>
 
+
+<!-- 管理者メニュー's pickers: they float over the page under their button. -->
+<div id="billing-days" class="pick-list days" hidden></div>
+<div id="billing-curs" class="pick-list curs" hidden></div>
 
 <dialog id="editor">
   <form method="dialog" id="editor-form">

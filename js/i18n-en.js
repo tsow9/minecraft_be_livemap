@@ -11,7 +11,6 @@ Object.assign(I18N_EN, {
   // signing in, members, admin menu
   'この端末に保存できませんでした': 'Could not save on this device',
   '管理者': 'admin', '書き込みOK': 'Can edit', '見るだけ': 'View only',
-  '{name} としてログイン中({role})': 'Signed in as {name} ({role})',
   'ログアウト': 'Sign out',
   '<li class="sub">メンバーの情報がまだありません</li>': '<li class="sub">No member information yet</li>',
   '(名前なし)': '(no name)',
@@ -129,4 +128,6 @@ Object.assign(I18N_EN, {
   'Realm の支払い': 'Realm payment', 'Realms情報に、次の支払い日と料金が出ます。': 'Realms info shows the next payment day and the price.',
   '支払日': 'Payment day', '保存しました': 'Saved', 'なし': 'None',
   '毎月{n}日': 'Day {n} of each month', '月 {price}': '{price} a month',
+  '{role}としてログイン中': 'Signed in ({role})', 'サイトの住所': 'Site address',
+  'この住所を Realm の仲間に知らせましょう。マイクラの Microsoft アカウントでログインすれば、だれでも見られます。': 'Share this address with the Realm\'s members. Anyone of them can see the map by signing in with the Microsoft account they play Minecraft with.',
 });
