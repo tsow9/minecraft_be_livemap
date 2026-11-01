@@ -14,13 +14,13 @@
 - `.github/workflows/map.yml`(地図の更新・Cloudflare への公開・GitHub Pages)、`live.yml`(10分おきの位置確認。サイトの /api/live に送る)
 - Actions の名前・ボタン・手順名は英語(Map site / Live players、Update map / Sign in to Realms / Publish site only / Diagnose)。実行中のメッセージはリポジトリ変数 LANGUAGE で切り替え(省略時は日本語、en で英語。tools/msg.py、tools/realms/msg.js、シェルの t())。地図の日付のタイムゾーンは TIMEZONE(省略時 Asia/Tokyo)。Sign in to Realms が成功すると、続けて Update map を自動で起動する
 - データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
-- GitHub Pages:「移転しました」のページ、login.html(全サイト共通のログイン中継)、privacy.html・terms.html(日英。legal.css/legal.js)、setup.html(かんたん設定。setup.css/setup.js。4手順。鍵はブラウザで作り保存しない。リポジトリ名だけ localStorage。手順4は GitHub の公開 API で Map site の実行を見て、コードの場所→地図作成中→完成を表示)だけ。地図のデータは置かない。ログイン画面の下からポリシーと規約へリンク
+- GitHub Pages:「移転しました」のページ、login.html(全サイト共通のログイン中継)、privacy.html・terms.html(日英。legal.css/legal.js)、setup.html(セットアップページ。setup.css/setup.js。5手順:リポジトリ→トークン作成→トークン登録→Realms ログイン→仲間にリンク。リポジトリ名だけ localStorage。言語は地球儀+今の言語のメニュー。日本語は word-break: auto-phrase で文節改行。手順4は GitHub の公開 API で Map site の実行を見て、コードの場所→地図作成中→完成を表示)だけ。地図のデータは置かない。ログイン画面の下からポリシーと規約へリンク
 - Secrets:必須は CLOUDFLARE_API_TOKEN の1つだけ。暗号化の鍵(CACHE_KEY)は tools/realms_key.sh が各ジョブの最初に用意する:Secret の REALMS_CACHE_KEY があればそれ(私たちのリポジトリ)、なければ Cloudflare の D1(blockmap-share の kv 'realms_key')に初回だけランダムに作って保存し、以後読み出す。Worker はこの行を外に出さない。CLOUDFLARE_ACCOUNT_ID は省略可(トークンのアカウントを tools/cloudflare.sh で調べる)。SHARE_PASSPHRASE も省略可(REALMS_CACHE_KEY から作る。私たちのリポジトリは設定済みのものを使い続ける)。workers.dev のサブドメインが未設定なら、GitHub の持ち主名から自動で決める
 - Realms の契約更新日は API の値が当てにならない。支払日・料金・通貨は管理者メニューで持ち主が入力する(Worker の /api/settings、D1 の kv 'settings'。選択はブラウザ標準のメニューを使わず、行の下に開く自作のリスト)。私たちの Realm は毎月26日・930円
 
 ## ほかの人に配る方針(決定済み)
 - 無料で配り、寄付を受ける。寄付した人だけの特典は付けない(マイクラの利用ガイドライン)。
-- 配り方:各自の GitHub と Cloudflare の無料枠を使い、かんたん設定ページで導入を自動化する。サーバーを私たちが持ったり、アカウントを預かったりはしない。
+- 配り方:各自の GitHub と Cloudflare の無料枠を使い、セットアップページで導入を自動化する。サーバーを私たちが持ったり、アカウントを預かったりはしない。
 - 「公式とは関係ありません」の注意書きは、いったん入れない。
 - 見せる範囲(案C):
   - 地図・チェスト・位置などのデータは全部、持ち主の Cloudflare に置く。GitHub にはデータを置かず、リポジトリはプログラムだけの公開にする(Actions を無料で回すため)。
@@ -37,4 +37,4 @@
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
 2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。
 3. (済)私たち専用の設定を外し、古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外した。
-4. 説明書・プライバシーポリシー・利用規約、かんたん設定ページ。公開前に持ち主と手順を通しで確認する(別の Cloudflare アカウントで。同じアカウントだと Worker 名 map と D1 名が重なる)。
+4. 説明書・プライバシーポリシー・利用規約、セットアップページ。公開前に持ち主と手順を通しで確認する(別の Cloudflare アカウントで。同じアカウントだと Worker 名 map と D1 名が重なる)。

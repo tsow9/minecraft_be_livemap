@@ -29,7 +29,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 
 ## セットアップ
 
-所要時間は 30 分ほどです。[かんたん設定ページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)を使うと、必要な画面を順に開き、鍵も自動で作れます。手順は下と同じです。
+所要時間は 30 分ほどです。[セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)を使うと、必要な画面を順に開き、鍵も自動で作れます。手順は下と同じです。
 
 ### 1. リポジトリを作成する
 
@@ -72,7 +72,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 5. ログインが終わると、自動で地図の作成が始まります。数分後、実行結果の Summary に「サイト: https://blockmap.….workers.dev」と表示されます。
 6. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
 
-[かんたん設定ページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)では、コードの場所と地図の進み具合が自動で表示されます。
+[セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)では、コードの場所と地図の進み具合が自動で表示されます。
 
 以降は自動で更新されます。
 

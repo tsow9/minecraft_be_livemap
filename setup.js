@@ -1,6 +1,6 @@
 'use strict';
-// かんたん設定: the setup steps on one page. Nothing is sent anywhere. The repository's link is kept in this
-// browser; the random key is made afresh each time the page opens and is never kept. Step 4 follows the runs of the
+// Setup: the steps on one page. Nothing is sent anywhere; the repository's link is kept in this browser. Step 4
+// follows the runs of the
 // repository's "Map site" workflow through GitHub's public API (the repository is public, so no sign-in is needed).
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -21,30 +21,27 @@
       if (!ja.has(el)) ja.set(el, el.innerHTML);
       el.innerHTML = lang === 'en' ? el.dataset.en : ja.get(el);
     }
-    $('#lang').textContent = lang === 'ja' ? 'English' : '日本語';
+    $('#lang-now').textContent = lang === 'ja' ? '日本語' : 'English';
+    for (const b of document.querySelectorAll('#lang-menu button')) b.classList.toggle('on', b.dataset.lang === lang);
     refresh();
     renderStatus();
   }
-  $('#lang').addEventListener('click', () => {
-    lang = lang === 'ja' ? 'en' : 'ja';
-    try { localStorage.setItem('blockmap.lang', lang); } catch { /* private mode */ }
-    applyLang();
-  });
+  const menu = (open) => { $('#lang-menu').hidden = !open; $('#lang').setAttribute('aria-expanded', String(open)); };
+  $('#lang').addEventListener('click', (e) => { e.stopPropagation(); menu($('#lang-menu').hidden); });
+  document.addEventListener('click', () => menu(false));
+  for (const b of document.querySelectorAll('#lang-menu button')) {
+    b.addEventListener('click', () => {
+      lang = b.dataset.lang;
+      try { localStorage.setItem('blockmap.lang', lang); } catch { /* private mode */ }
+      menu(false);
+      applyLang();
+    });
+  }
 
   // ---- ⓘ buttons open their explanation ----
   for (const b of document.querySelectorAll('.info')) {
     b.addEventListener('click', () => { const box = document.getElementById(b.dataset.info); box.hidden = !box.hidden; });
   }
-
-  // ---- the random key (48 letters and digits) ----
-  function randomKey(n = 48) {
-    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-    const out = [];
-    const bytes = crypto.getRandomValues(new Uint8Array(n * 2));
-    for (const b of bytes) { if (b < 248 - (248 % abc.length)) out.push(abc[b % abc.length]); if (out.length === n) break; }
-    return out.join('');
-  }
-  $('#key1').textContent = randomKey();
 
   // The token page with its permissions filled in (Cloudflare's template links).
   const perms = [{ key: 'workers_scripts', type: 'edit' }, { key: 'd1', type: 'edit' }, { key: 'account_settings', type: 'read' }];
@@ -61,22 +58,6 @@
   // The address the workflow gives a new site (tools/cloudflare.sh): blockmap.<GitHub owner>.workers.dev.
   const siteOf = (repo) => `https://blockmap.${repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')}.workers.dev`;
 
-  // Variables this browser's settings call for (Japanese and Japan's time are what a site uses when none are set).
-  function renderVars() {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
-    const rows = [];
-    if (lang === 'en') rows.push(['LANGUAGE', 'en']);
-    if (tz !== 'Asia/Tokyo') rows.push(['TIMEZONE', tz]);
-    const box = $('#vars');
-    if (!rows.length) { box.innerHTML = ''; return; }
-    const link = saved.repo ? `https://github.com/${saved.repo}/settings/variables/actions/new` : '';
-    box.innerHTML = `<p>${T('このブラウザの設定に合わせて、次も <b>Variable</b> として登録します(<b>Variables</b> タブ)。',
-      'For this browser\'s settings, also add these as <b>variables</b> (the <b>Variables</b> tab).')}</p>
-      ${link ? `<p><a class="btn ghost" href="${link}" target="_blank" rel="noopener">${T('「New repository variable」を開く', 'Open “New repository variable”')}</a></p>` : ''}
-      <table class="kv"><tr><th>Name</th><th>Value</th></tr>${rows.map(([k, v]) => `<tr><td><code>${k}</code> <button class="copy" data-text="${k}">⧉</button></td>
-      <td><code>${v}</code> <button class="copy" data-text="${v}">${T('コピー', 'Copy')}</button></td></tr>`).join('')}</table>`;
-  }
-
   function refresh() {
     const repo = saved.repo || '';
     for (const a of document.querySelectorAll('.repo-link')) {
@@ -84,9 +65,14 @@
       if (repo) a.href = `https://github.com/${repo}${a.dataset.path}`; else a.removeAttribute('href');
     }
     $('#repo-hint').innerHTML = repo
-      ? T(`<code>${repo}</code>(手順 3・4 のボタンが、このリポジトリを開きます)`, `<code>${repo}</code> (the buttons in steps 3 and 4 open it)`)
-      : T('入れると、手順 3・4 のボタンがそのリポジトリを直接開きます', 'Once filled in, the buttons in steps 3 and 4 open it directly');
-    renderVars();
+      ? T(`<code>${repo}</code> を使います。手順 3〜5 のボタンが、このリポジトリを開きます。`, `Using <code>${repo}</code>. The buttons in steps 3–5 open it.`)
+      : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます。', 'Once filled in, the buttons in steps 3–5 open it directly.');
+    const site = repo ? siteOf(repo) : '';
+    $('#site-link').classList.toggle('off', !site);
+    if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
+    $('#site-hint').innerHTML = site
+      ? T(`サイトのアドレスは、おそらく <code>${site}</code> です。違う場合は、手順 4 の記録の Summary に正しいアドレスが表示されます。`,
+        `Your site is most likely at <code>${site}</code>. If not, step 4's run shows the address in its Summary.`) : '';
   }
 
   // ---- copy buttons ----
@@ -105,9 +91,7 @@
   document.addEventListener('click', (e) => {
     const b = e.target.closest('.copy');
     if (!b) return;
-    if (b.dataset.copy) copy($(`#${b.dataset.copy}`).textContent);
-    else if (b.dataset.text) copy(b.dataset.text);
-    else if (b.hasAttribute('data-copy-name')) copy(b.previousElementSibling.textContent);
+    copy(b.dataset.text);
   });
 
   // ---- step 4: how the sign-in and the first map are getting on ----
@@ -167,10 +151,7 @@
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('地図を作っています', 'Making the map')}</b><span class="spin"></span> ${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes. You can leave this page open.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
-      done: `<b class="good">${T('できました!', 'Done!')}</b> ${T('サイトを開いて、Microsoft でログインしてください。あなたが管理者です。', 'Open your site and sign in with Microsoft. You are its admin.')}
-        <p><a class="btn" href="${site}" target="_blank" rel="noopener">${T('サイトを開く', 'Open my site')}</a></p>
-        <span class="small">${site} ${T('(違う住所になった場合は、記録の Summary に正しい住所が出ます)', '(if it differs, the run\'s Summary shows the address)')}</span><br>
-        ${T('あとは、管理者メニューの「サイトのURLをコピー」で住所を Realm のメンバーに送るだけです。', 'Then send the address to your members (Admin menu → Copy site URL).')}`,
+      done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
     box.innerHTML = html;
