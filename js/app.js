@@ -1757,7 +1757,8 @@ function updatePastBanner() {
   const snaps = snapshots();
   const past = !state.demo && state.snapshotIndex < snaps.length - 1;
   $('#past-banner').hidden = !past;
-  if (past) $('#past-text').textContent = `📅 ${tl('{when}の地図を表示中', { when: snapText(snaps[state.snapshotIndex]) })}`;
+  document.body.classList.toggle('showing-past', past);
+  if (past) $('#past-text').textContent = tl('{when}の地図を表示中', { when: snapText(snaps[state.snapshotIndex]) });
 }
 
 let setSnapshotIndex = () => {};
@@ -1766,12 +1767,15 @@ function renderTimeline() {
   const range = $('#time-range');
   range.max = Math.max(0, snapshots().length - 1);
   range.value = state.snapshotIndex;
+  const days = snapshots().map((s) => s.id).filter((id) => /^\d{4}-\d{2}-\d{2}$/.test(id));
+  if (days.length) { $('#time-date').min = days[0]; $('#time-date').max = days[days.length - 1]; }
   labelTimeline();
 }
 // The day (and the time its world was saved) of the map the slider is on.
 function labelTimeline() {
   const s = snapshots()[state.snapshotIndex];
   $('#time-label').textContent = s ? snapText(s) : tl('なし');
+  if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.id)) $('#time-date').value = s.id;
 }
 
 // ---------- panels ----------
@@ -1856,6 +1860,15 @@ function setupPanels() {
   const setSnap = (i) => { state.snapshotIndex = i; range.value = i; labelTimeline(); refreshBase(); };
   setSnapshotIndex = setSnap;
   renderTimeline();
+  // A day picked in the calendar: that day's map, or the nearest kept day before it.
+  const dateInput = $('#time-date');
+  dateInput.addEventListener('change', () => {
+    const snaps = snapshots(), want = dateInput.value;
+    if (!want || !snaps.length) return;
+    const i = Math.max(0, snaps.map((s) => s.id).filter((id) => id <= want).length - 1);
+    setSnap(i);
+    if (snaps[i].id !== want) toast(tl('その日の地図はないので、{day}の地図を表示しています', { day: snapDay(snaps[i]) }));
+  });
   range.addEventListener('input', () => setSnap(Number(range.value)));
   let timer = null;
   const stop = () => { clearInterval(timer); timer = null; $('#time-play').textContent = tl('▶ 再生'); };

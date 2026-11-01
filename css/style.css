@@ -286,8 +286,14 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #update-bar .mini { background: var(--accent); border-color: var(--accent); color: #06130d; }
 body.tools-open #update-bar { bottom: 160px; }
 .time { display: flex; gap: 10px; align-items: center; }
-.time input { flex: 1; accent-color: var(--accent); }
-#time-label { min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+.time input { flex: 1; min-width: 0; accent-color: var(--accent); }
+#time-label { flex: none; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.datepick { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--sub); font-size: 13px; white-space: nowrap; }
+.datepick input { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--fg);
+  font: inherit; color-scheme: dark; }
+.datepick input:focus { outline: none; border-color: var(--accent); }
+.past-what { display: inline-flex; align-items: center; gap: 7px; }
+.past-what .ic { flex: none; width: 18px; height: 18px; }
 #panel-data .mini { margin: 4px 6px 0 0; }
 
 dialog#editor { border: 1px solid var(--line); border-radius: 20px; background: var(--bg-solid); color: var(--fg);
@@ -438,6 +444,8 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #lang-menu[hidden] { display: none; }
 #lang-menu button.on { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 700px) {
+  /* While a past map's banner sits at the bottom, the language button moves up above it. */
+  body.showing-past #lang { bottom: calc(76px + env(safe-area-inset-bottom)); }
   #lang { top: auto; right: auto; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 900;
     flex-direction: column-reverse; align-items: flex-start; }
   #lang-menu { flex-direction: column; }
