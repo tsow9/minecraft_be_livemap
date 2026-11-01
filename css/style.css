@@ -591,7 +591,11 @@ body.finding .pl-icon.off { opacity: .4; }
 .me-who { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
 .me-who b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .me-who span { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.me-out { flex: none; }
+.me-out { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 16px; padding: 10px;
+  border-radius: 10px; background: transparent; border: 1px solid rgba(229, 72, 77, .45); color: #ff8a86; font: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer; }
+.me-out:hover { background: rgba(229, 72, 77, .12); }
+.me-out .ic { width: 16px; height: 16px; }
 
 /* Text written in a shape: centred on it, the same size on screen at any zoom. */
 .shape-label { position: absolute; transform: translate(-50%, -50%); max-width: 220px; width: max-content; text-align: center;

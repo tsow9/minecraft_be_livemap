@@ -107,14 +107,16 @@ function renderMe() {
   const what = { admin: tl('管理者'), writer: tl('書き込みOK'), viewer: tl('見るだけ') }[share.me.role] || '';
   line.className = 'me-card';
   line.innerHTML = `<span class="me-avatar"><svg class="ic"><use href="#i-user"/></svg></span>
-    <span class="me-who"><b></b><span>${esc(tl('{role}としてログイン中', { role: what }))}</span></span>`;
+    <span class="me-who"><b></b><span>${esc(tl('ログイン中・{role}', { role: what }))}</span></span>`;
   line.querySelector('b').textContent = share.me.name || '';
   const out = button(tl('ログアウト'), async () => {
     await fetch(`${share.url}/logout`, { method: 'POST' }).catch(() => {});
     location.reload();
   }, 'logout');
-  out.classList.add('me-out');
-  line.append(out);
+  // At the very end of the menu, apart from everything else, so it is easy to find and hard to press by mistake.
+  out.className = 'me-out';
+  $('.me-out')?.remove();
+  (share.me.role === 'admin' ? body('panel-site') : body('panel-realm')).append(out);
 }
 
 // The owner's list of the Realm's members: each one looks only until the owner lets them write.
