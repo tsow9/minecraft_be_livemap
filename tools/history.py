@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import shutil
+from msg import t
 
 DAILY_DAYS = 30
 WEEKLY_DAYS = 183
@@ -56,7 +57,7 @@ def store(site, snap, staging, snaps):
     """Save the freshly rendered tiles in `staging` as snapshot `snap`, keeping only changed images."""
     later = [s for s in snaps if s > snap]
     if later:
-        raise SystemExit(f'{snap} より新しい地図({later[-1]})があるため、この日付では保存できません。')
+        raise SystemExit(t(f'{snap} より新しい地図({later[-1]})があるため、この日付では保存できません。', f'A newer map ({later[-1]}) than {snap} exists, so this date cannot be saved.'))
     earlier = [s for s in snaps if s < snap]
     prev = load_manifest(site, earlier[-1]) if earlier else {}
     folder = os.path.join(site, 'tiles', snap)
@@ -134,5 +135,5 @@ def prune(site, snaps, today):
     for snap in sorted(snaps):
         if snap not in keep:
             snaps = remove(site, snap, snaps)
-            print(f'古い地図 {snap} を間引きました')
+            print(t(f'古い地図 {snap} を間引きました', f'Thinned out the old map {snap}'))
     return snaps

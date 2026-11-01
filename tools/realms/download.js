@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 // Downloads the current Realm world as .mcworld and writes the member list (hashed IDs) next to it.
 const crypto = require('crypto')
 const fs = require('fs')
@@ -21,8 +22,8 @@ async function main () {
     fs.writeFileSync(out, buf)
     const hash = crypto.createHash('sha256').update(buf).digest('hex')
     if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `world_hash=${hash}\n`)
-    console.log(`ワールドをダウンロードしました(${(buf.length / 1048576).toFixed(1)} MB、メンバー ${members.length}人)`)
+    console.log(t(`ワールドをダウンロードしました(${(buf.length / 1048576).toFixed(1)} MB、メンバー ${members.length}人)`, `Downloaded the world (${(buf.length / 1048576).toFixed(1)} MB, ${members.length} members)`))
   })
 }
 
-main().catch((e) => { console.error('ダウンロードに失敗しました:', e.message); process.exit(1) })
+main().catch((e) => { console.error(t('ダウンロードに失敗しました:', 'Download failed:'), e.message); process.exit(1) })

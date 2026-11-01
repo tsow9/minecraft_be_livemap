@@ -10,6 +10,7 @@ import hmac
 import json
 import os
 import sys
+from msg import t
 
 
 def derive(secret, label):
@@ -20,7 +21,7 @@ def main():
     out = sys.argv[1]
     secret, passphrase = os.environ.get('CACHE_KEY', ''), os.environ.get('SHARE_PASSPHRASE', '')
     if not secret or not passphrase:
-        sys.exit('REALMS_CACHE_KEY と SHARE_PASSPHRASE が必要です')
+        sys.exit(t('REALMS_CACHE_KEY と SHARE_PASSPHRASE が必要です', 'REALMS_CACHE_KEY and SHARE_PASSPHRASE are needed'))
     data = derive(secret, 'blockmap data')
     items = derive(secret, 'blockmap items')  # never told to pages: items.json goes out through the worker
     # Checks a Microsoft sign-in against the members (tools/realms/common.js makes the members' side the same way).

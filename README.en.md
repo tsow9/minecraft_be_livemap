@@ -4,7 +4,7 @@
 
 A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in the cloud; no PC needs to stay on.
 
-![Blockmap (searching for villagers)](docs/screenshot-en.webp)
+![Blockmap (contour lines and past maps)](docs/screenshot-en.webp)
 
 - Only the Realm's members can see the map (sign in with Microsoft).
 - The map and other data are stored only in your own Cloudflare account.
@@ -55,19 +55,25 @@ In the new repository, go to **Settings** → **Secrets and variables** → **Ac
 | `CLOUDFLARE_API_TOKEN` | The token from step 2-3 |
 | `CLOUDFLARE_ACCOUNT_ID` | The Account ID from step 2-4 |
 
-If you own more than one Realm, also add `REALM_NAME` (the Realm's name) under **Variables** on the same page.
+Optionally, add these under the **Variables** tab of the same page (**New repository variable**).
+
+| Name | Value |
+|---|---|
+| `LANGUAGE` | `ja` shows the messages in the Actions runs in Japanese (English if left out) |
+| `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
+| `REALM_NAME` | Only if you own more than one Realm: the name of the one to use |
 
 ### 4. Sign in to Realms
 
 1. Open the **Actions** tab (enable workflows the first time).
-2. Select **地図サイト** → **Run workflow**, choose **Realmsにログイン** (sign in to Realms) and run it.
+2. Select **Map site** → **Run workflow**, choose **Sign in to Realms** under **What to do** and run it.
 3. Open the running **login** job and enter the code it shows at https://www.microsoft.com/link.
 4. Sign in with the Realm owner's account (within 15 minutes).
 
 ### 5. Build the map
 
-1. **Run workflow** again with **地図を更新** (update the map).
-2. When it finishes, the run's Summary shows "招待制のサイト: https://map.….workers.dev".
+1. **Run workflow** again with **Update map**.
+2. When it finishes, the run's Summary shows "Site: https://map.….workers.dev".
 3. Open that address and sign in with Microsoft. The person who set it up is the admin.
 
 From then on it updates automatically.
@@ -106,25 +112,25 @@ Check the message shown in the Actions run.
 
 | Message | Fix |
 |---|---|
-| まだ「Realmsにログイン」をしていない (not signed in yet) | Run step 4 |
-| ログイン情報がありません / 有効期限が切れました (no sign-in / expired) | Run step 4 again |
-| Realmが2個以上あります (more than one Realm) | Add `REALM_NAME` (step 3) |
-| Cloudflare の Secrets がそろっていない (Cloudflare secrets missing) | Check the four secrets from step 3 |
-| 公開先のアドレスがわかりませんでした (address not found) | Choose a subdomain (step 2-1), then update the map again |
-| ブランチをこの鍵で開けませんでした (branch cannot be decrypted) | If you changed `REALMS_CACHE_KEY`, restore it. Otherwise delete that branch (the map is rebuilt from scratch) |
+| Not signed in to Realms yet | Run step 4 |
+| Not signed in / The sign-in has expired | Run step 4 again |
+| There are 2 Realms | Add `REALM_NAME` (step 3) |
+| The Cloudflare secrets are not all set | Check the four secrets from step 3 |
+| Could not find the site's address | Choose a subdomain (step 2-1), then update the map again |
+| The … branch cannot be opened with this key | If you changed `REALMS_CACHE_KEY`, put it back. Otherwise delete that branch (the map is rebuilt from scratch) |
 | Scheduled updates stopped | GitHub may pause scheduled runs in public repositories after 60 days without activity. Re-enable them in Actions |
 
 ## How it works
 
 ```
-地図サイト / Map site (.github/workflows/map.yml)
+Map site (.github/workflows/map.yml)
   download the world from Realms (tools/realms)
   → stop if nothing changed
   → build tiles, items.json and more (tools/render_map.py and others)
   → encrypt into the map-data branch (tools/vault.sh)
   → publish as a Cloudflare Worker with static files (worker/, tools/build_site.py)
 
-参加中の人と現在地 / Live check (.github/workflows/live.yml)
+Live players (.github/workflows/live.yml)
   get members and who is online → while playing, read player positions from the world
   → send to the site's /api/live and keep an encrypted copy in the live-data branch
 ```

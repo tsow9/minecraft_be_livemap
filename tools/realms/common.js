@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 const crypto = require('crypto')
 const fs = require('fs')
 const os = require('os')
@@ -33,7 +34,7 @@ function snapshotDir (dir) {
 // Runs fn(auth, api) with the saved login; re-saves the encrypted tokens only if they were refreshed.
 async function withSavedLogin (fn) {
   if (!fs.existsSync(ENC_FILE)) {
-    throw new Error('ログイン情報がありません。Actions の「地図サイト」から「Realmsにログイン」を実行してください')
+    throw new Error(t('ログイン情報がありません。Actions の「Map site」から「Sign in to Realms」を実行してください', 'Not signed in. Run "Sign in to Realms" from "Map site" in Actions'))
   }
   const dir = tempCacheDir()
   try {
@@ -41,7 +42,7 @@ async function withSavedLogin (fn) {
     const before = snapshotDir(dir)
     // Never show a sign-in code from an unattended job; ask for a manual login instead.
     const auth = makeAuth(dir, () => {
-      console.error('ログインの有効期限が切れました。「Realmsにログイン」をもう一度実行してください')
+      console.error(t('ログインの有効期限が切れました。「Sign in to Realms」をもう一度実行してください', 'The sign-in has expired. Run "Sign in to Realms" again'))
       process.exit(1)
     })
     const result = await fn(auth, makeApi(auth))
@@ -60,9 +61,9 @@ async function pickOwnedRealm (api, auth) {
   if (owned.length === 0) owned = realms
   const wanted = (process.env.REALM_NAME || '').trim()
   if (wanted) owned = owned.filter(r => r.name === wanted)
-  if (owned.length === 0) throw new Error('自分が持ち主のRealmが見つかりませんでした')
+  if (owned.length === 0) throw new Error(t('自分が持ち主のRealmが見つかりませんでした', 'No Realm owned by this account was found'))
   if (owned.length > 1) {
-    throw new Error(`Realmが${owned.length}個あります。リポジトリの Variables に REALM_NAME(Realmの名前)を設定してください`)
+    throw new Error(t(`Realmが${owned.length}個あります。リポジトリの Variables に REALM_NAME(Realmの名前)を設定してください`, `There are ${owned.length} Realms. Set REALM_NAME (the Realm's name) in the repository's Variables`))
   }
   return owned[0]
 }
@@ -143,11 +144,11 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
   const info = realmInfo(realm)
   if (withBackups) {
     info.extrasAt = Date.now()
-    try { info.backups = await realmBackups(api, realm) } catch (e) { console.error('バックアップ情報を取得できませんでした:', e.message) }
+    try { info.backups = await realmBackups(api, realm) } catch (e) { console.error(t('バックアップ情報を取得できませんでした:', 'Could not get the backups:'), e.message) }
     try {
       const sub = await api.getRealmSubscriptionInfo(realm.id)
       info.subscription = { start: toMillis(sub.startDate), daysLeft: typeof sub.daysLeft === 'number' ? sub.daysLeft : null, type: String(sub.subscriptionType || '').slice(0, 30) }
-    } catch (e) { console.error('契約情報を取得できませんでした:', e.message) }
+    } catch (e) { console.error(t('契約情報を取得できませんでした:', 'Could not get the subscription:'), e.message) }
     // The detailed form (store, end date, renewal period) answers only for some accounts; keep it when it does.
     try {
       const d = await api.rest.get(`/subscriptions/${realm.id}/details`)
@@ -158,7 +159,7 @@ async function realmStatus (api, auth, realmId, withBackups = false) {
         daysLeft: typeof d.daysLeft === 'number' ? d.daysLeft : null,
         product: text(d.productId), variant: text(d.productVariantId)
       }
-    } catch (e) { console.error('契約の詳細を取得できませんでした:', e.message) }
+    } catch (e) { console.error(t('契約の詳細を取得できませんでした:', 'Could not get the subscription details:'), e.message) }
   }
   const { members, names } = await memberList(auth, realm)
   // The owner's gamertag (the account the map uses), looked up together with the members' names.

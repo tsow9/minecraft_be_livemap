@@ -4,6 +4,8 @@
 # LOOP_SECONDS for a new world save, so positions and the map follow soon after Realms saves.
 # It ends after LOOP_BUDGET seconds (the next run takes over) or once nobody has played for IDLE_EXIT seconds.
 set -u
+# Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): Japanese for "ja", else English.
+t() { case "${BLOCKMAP_LANG:-en}" in ja*) printf '%s' "$1" ;; *) printf '%s' "$2" ;; esac; }
 LOOP_SECONDS=${LOOP_SECONDS:-20}
 LOOP_BUDGET=${LOOP_BUDGET:-3000}
 IDLE_EXIT=${IDLE_EXIT:-180}
@@ -13,18 +15,18 @@ last_online=0
 last_stamp=""
 last_map=0
 site_url=$(bash tools/site_url.sh)
-[ -n "$site_url" ] || echo "::warning::Cloudflare のサイトの住所がわからないので、位置はサイトに送りません"
+[ -n "$site_url" ] || echo "::warning::$(t 'Cloudflare のサイトの住所がわからないので、位置はサイトに送りません' 'The Cloudflare site address is unknown, so positions are not sent to the site')"
 
 bash tools/vault.sh get live-data live
 
 publish() {
   # The site reads this copy every few seconds.
   if [ -n "$site_url" ] && [ -n "${SHARE_PASSPHRASE:-}" ]; then
-    curl -sS --max-time 20 -o /dev/null -w 'サイトへ送信: %{http_code}\n' -X POST "$site_url/api/live" \
+    curl -sS --max-time 20 -o /dev/null -w "$(t 'サイトへ送信' 'Sent to the site'): %{http_code}\n" -X POST "$site_url/api/live" \
       -H "X-Passphrase: $SHARE_PASSPHRASE" -H 'Content-Type: application/json' --data-binary @live/live.json || true
   fi
   # Kept (encrypted) for the next run and the map drawing.
-  bash tools/vault.sh put live live-data || echo "live-data への保存に失敗しました"
+  bash tools/vault.sh put live live-data || echo "$(t 'live-data への保存に失敗しました' 'Could not save to live-data')"
 }
 
 while :; do
@@ -41,7 +43,7 @@ while :; do
           last_stamp=$stamp
         fi
       else
-        echo "ワールドの保存は前回のまま"
+        echo "$(t 'ワールドの保存は前回のまま' 'The world save has not changed')"
       fi
     fi
     out=$(mktemp)
@@ -49,7 +51,7 @@ while :; do
     publish
     # Redraw the map when live_update asks for it (a new save while playing, or hourly), at most once a minute.
     if grep -q 'run_map=true' "$out" && [ $((now - last_map)) -ge 60 ]; then
-      gh workflow run map.yml --ref main -f action=地図を更新 && last_map=$now
+      gh workflow run map.yml --ref main -f action='Update map' && last_map=$now
     fi
     rm -f "$out"
     if python3 -c "import json,sys; sys.exit(0 if any(m.get('online') for m in json.load(open('members.json')).get('members', [])) else 1)"; then

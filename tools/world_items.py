@@ -14,6 +14,7 @@ import tempfile
 import bedrock_db
 import nbt
 import players
+from msg import t
 
 DIM_NAMES = {0: 'overworld', 1: 'nether', 2: 'end'}
 BLOCK_ENTITY, OLD_ENTITY = 49, 50  # chunk key tags
@@ -276,7 +277,7 @@ def _faces(site, animals):
         with tempfile.TemporaryDirectory(prefix='mcassets-') as repo:
             return pet_faces.build(wanted, os.path.join(repo, 'pack'))
     except Exception as e:  # git missing, no network, the pack changed shape...
-        print(f'ペットの顔を作れませんでした(前回の顔を使います): {e}')
+        print(t(f'ペットの顔を作れませんでした(前回の顔を使います): {e}', f'Could not make the pet faces (using the previous ones): {e}'))
         try:
             with open(os.path.join(site, 'items.json'), encoding='utf-8') as f:
                 return json.load(f).get('faces') or {}

@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 // Prints a short stamp of the Realm's latest saved world without downloading it, so the frequent
 // check can tell whether Realms has saved again. If the file cannot be asked about, the stamp
 // changes every minute instead, which makes the caller download at most once a minute.
@@ -22,4 +23,4 @@ async function main () {
   })
 }
 
-main().catch((e) => { console.error('保存状態の確認に失敗しました:', e.message); process.exit(1) })
+main().catch((e) => { console.error(t('保存状態の確認に失敗しました:', 'Could not check the world save:'), e.message); process.exit(1) })

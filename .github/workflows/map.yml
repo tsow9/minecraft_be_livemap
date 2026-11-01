@@ -1,4 +1,4 @@
-name: 地図サイト
+name: Map site
 
 # Runs only on this repository's own main branch, schedule, or manual start.
 # There is deliberately no pull_request trigger, so outside contributions never see the login secret.
@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: やること
+        description: What to do
         type: choice
-        options: [地図を更新, Realmsにログイン, サイトだけ公開, 診断]
-        default: 地図を更新
+        options: [Update map, Sign in to Realms, Publish site only, Diagnose]
+        default: Update map
 
 permissions:
   contents: read
@@ -23,11 +23,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TZ: Asia/Tokyo
+  # Repository variables (Settings → Secrets and variables → Actions → Variables), both optional:
+  # LANGUAGE "ja" or "en" for the messages in these runs; TIMEZONE for the map's dates (e.g. America/New_York).
+  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'en' }}
+  TZ: ${{ vars.TIMEZONE || 'Asia/Tokyo' }}
 
 jobs:
   login:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'Realmsにログイン'
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -36,7 +39,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
-      - name: Realmsにログイン(下に出るコードを入力してください)
+      - name: Sign in to Realms (enter the code shown below)
         run: node tools/realms/login.js
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
@@ -48,7 +51,7 @@ jobs:
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
 
   diagnose:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == '診断'
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'Diagnose'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -62,13 +65,13 @@ jobs:
         with:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
-      - name: Realmsのメンバー情報を調べる
+      - name: Look at the Realm's members
         run: node tools/realms/inspect.js
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
-      - name: ワールドをダウンロード
+      - name: Download the world
         run: node tools/realms/download.js world.mcworld members.json
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
@@ -78,7 +81,7 @@ jobs:
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
-      - name: ワールドの中のプレイヤー情報を調べる
+      - name: Look at the players in the world
         env:
           CHECK: ${{ vars.CHECK_SPOT }}
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # to compare hashed account IDs with the members' (only counts are shown)
@@ -87,7 +90,7 @@ jobs:
           python3 tools/inspect_world.py world.mcworld
 
   update:
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == '地図を更新')
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == 'Update map')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -105,12 +108,13 @@ jobs:
         with:
           node-version: 20
       - run: npm ci --prefix tools/realms --no-audit --no-fund
-      - name: Realmsからワールドをダウンロード
+      - name: Download the world from Realms
         id: download
-        # Before the first 「Realmsにログイン」 there is nothing to do yet: say so, without failing every hour.
+        # Before the first "Sign in to Realms" there is nothing to do yet: say so, without failing every hour.
         run: |
           if [ ! -f .auth/token.enc ] || [ -z "$CACHE_KEY" ]; then
-            echo "::notice::まだ「Realmsにログイン」をしていないので、地図は作りません(Actions の「地図サイト」から実行してください)"
+            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::notice::まだ「Sign in to Realms」をしていないので、地図は作りません(Actions の「Map site」から実行してください)"
+            else echo "::notice::Not signed in to Realms yet, so no map is made (run \"Sign in to Realms\" from \"Map site\" in Actions)"; fi
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -120,25 +124,25 @@ jobs:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
-      - name: 新しくなったログイン情報を保存
+      - name: Save the refreshed sign-in
         if: steps.download.outputs.ready == 'true'
         uses: actions/cache/save@v4
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
-      - name: 前回の地図データを取得
+      - name: Get the previous map data
         if: steps.download.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
-      - name: ワールドか地図の描き方が変わったか確認
+      - name: Check whether the world or the drawing code changed
         id: compare
         if: steps.download.outputs.ready == 'true'
         # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played.
         run: |
           echo "${{ steps.download.outputs.world_hash }}-$(cat tools/*.py | sha256sum | cut -c1-64)" > fingerprint.txt
           if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "$(cat fingerprint.txt)" ]; then
-            echo "前回から変化なし"
+            echo "No change since last time"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -147,7 +151,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 地図を作る
+      - name: Make the map
         if: steps.compare.outputs.changed == 'true'
         env:
           CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # pet owners are stored as the same hashed keys live.json uses
@@ -158,7 +162,7 @@ jobs:
           [ -f live/live.json ] && live=live/live.json
           python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --live "$live"
           cp fingerprint.txt data/world.sha256
-      - name: 地図データを保存(暗号化して)
+      - name: Save the map data (encrypted)
         if: steps.compare.outputs.changed == 'true'
         # map-data keeps a single commit so the repository does not grow with every hourly update.
         run: bash tools/vault.sh put data map-data
@@ -172,7 +176,7 @@ jobs:
     if: >-
       always() && !cancelled() && (
         github.event_name == 'push' ||
-        (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開') ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'Publish site only') ||
         needs.update.outputs.changed == 'true'
       )
     runs-on: ubuntu-latest
@@ -183,34 +187,35 @@ jobs:
       SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
       CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
     steps:
-      - name: 設定の確認
+      - name: Check the settings
         id: check
         run: |
           if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$SHARE_PASSPHRASE" ] && [ -n "$CACHE_KEY" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Cloudflare の Secrets がそろっていないので、招待制のサイトは作りません"
+            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
+            else echo "::warning::The Cloudflare secrets are not all set, so the site is not published"; fi
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/checkout@v4
         if: steps.check.outputs.ready == 'true'
-      - name: 鍵を用意(ログには伏せ字で出ます)
+      - name: Make the keys (masked in the log)
         if: steps.check.outputs.ready == 'true'
         run: python3 tools/site_keys.py "$RUNNER_TEMP"
-      - name: 地図データを取得
+      - name: Get the map data
         if: steps.check.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
-      - name: 公開するファイルをまとめる
+      - name: Gather the site files
         if: steps.check.outputs.ready == 'true'
         run: python3 tools/build_site.py data _site --data-folder "$(cat "$RUNNER_TEMP/data_dir")" --items-folder "$(cat "$RUNNER_TEMP/items_dir")"
       - uses: actions/setup-node@v4
         if: steps.check.outputs.ready == 'true'
         with:
           node-version: 22
-      - name: 準備
+      - name: Install
         if: steps.check.outputs.ready == 'true'
         run: npm ci --prefix worker --no-audit --no-fund
-      - name: データベースを用意
+      - name: Prepare the database
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
         run: |
@@ -220,19 +225,23 @@ jobs:
             npx wrangler d1 create blockmap-share
             id=$(find_db)
           fi
-          [ -n "$id" ] || { echo "::error::データベースを作れませんでした"; exit 1; }
+          [ -n "$id" ] || { echo "::error::Could not create the database"; exit 1; }
           sed -e "s/__DB_ID__/$id/" wrangler.template.toml > wrangler.toml
           npx wrangler d1 execute blockmap-share --remote --file schema.sql --yes
-      - name: Cloudflare に公開
+      - name: Publish to Cloudflare
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
         run: |
           npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -n1)
-          [ -n "$url" ] || { echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"; exit 1; }
-          echo "招待制のサイト: $url" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$url" ]; then
+            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"
+            else echo "::error::Could not find the site's address. Open Workers & Pages in Cloudflare once, choose a workers.dev subdomain, then run this again"; fi
+            exit 1
+          fi
+          if [ "$BLOCKMAP_LANG" = ja ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
           rm -f "$RUNNER_TEMP/secrets.json"
-      - name: 前のアドレスのサイトを片づける
+      - name: Remove the earlier sites
         # This site's earlier workers: the first pin server (blockmap-share) and the members-only site's first address
         # (blockmap.<subdomain>.workers.dev, now map.…). Only the workers go; the database stays. Only for this repository,
         # so nobody else's worker of the same name is touched.
@@ -243,12 +252,12 @@ jobs:
             code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$old")
             case "$code" in
-              200) echo "前のサイト($old)を削除しました" ;;
-              404) echo "前のサイト($old)はもうありません" ;;
-              *) echo "::warning::前のサイト($old)を削除できませんでした($code)" ;;
+              200) echo "Removed the earlier site ($old)" ;;
+              404) echo "The earlier site ($old) is already gone" ;;
+              *) echo "::warning::Could not remove the earlier site ($old): $code" ;;
             esac
           done
-      - name: ログインの記録(件数だけ)
+      - name: Sign-ins (counts only)
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
         continue-on-error: true
@@ -256,7 +265,7 @@ jobs:
           # How many sign-ins were made each day, and how many devices stay signed in. Counts only, nobody's name or id.
           npx wrangler d1 execute blockmap-share --remote --json --command \
             "SELECT date(created / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM sessions GROUP BY day ORDER BY day DESC LIMIT 14" \
-            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s)[0].results;console.log("ログインした回数(日ごと):");for(const x of r)console.log(`  ${x.day}: ${x.n}回`)})'
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s)[0].results;console.log("Sign-ins per day:");for(const x of r)console.log(`  ${x.day}: ${x.n}`)})'
 
   # GitHub Pages keeps only two pages: a notice that the map has moved (to the members-only site on Cloudflare), and
   # login.html, the page every Blockmap site's Microsoft sign-in comes back through. No map data is published here.
@@ -264,7 +273,7 @@ jobs:
   deploy:
     if: >-
       github.repository == 'tsow9/minecraft_be_livemap' && (
-        github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開')
+        github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'Publish site only')
       )
     runs-on: ubuntu-latest
     permissions:
@@ -276,7 +285,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: 公開するファイルをまとめる
+      - name: Gather the site files
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -294,7 +303,7 @@ jobs:
       - id: deployment
         continue-on-error: true
         uses: actions/deploy-pages@v4
-      - name: 公開をもう一度試す
+      - name: Try publishing again
         if: steps.deployment.outcome == 'failure'
         run: sleep 60
       - if: steps.deployment.outcome == 'failure'

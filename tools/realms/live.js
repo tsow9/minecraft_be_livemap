@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 // Writes the Realm member list (hashed IDs, names, online, last login) and Realm settings for the frequent check.
 const fs = require('fs')
 const { withSavedLogin, pickOwnedRealm, realmStatus } = require('./common')
@@ -12,8 +13,8 @@ async function main () {
     try { last = JSON.parse(fs.readFileSync(process.argv[3] || '', 'utf8')).realm?.extrasAt || 0 } catch { /* first run */ }
     const { members, realm: info } = await realmStatus(api, auth, realm.id, Date.now() - last > 15 * 60 * 1000)
     fs.writeFileSync(out, JSON.stringify({ fetchedAt: Date.now(), members, realm: info }))
-    console.log(`参加中: ${members.filter(m => m.online).length}人`)
+    console.log(t(`参加中: ${members.filter(m => m.online).length}人`, `Online: ${members.filter(m => m.online).length}`))
   })
 }
 
-main().catch((e) => { console.error('参加者の取得に失敗しました:', e.message); process.exit(1) })
+main().catch((e) => { console.error(t('参加者の取得に失敗しました:', 'Could not get who is online:'), e.message); process.exit(1) })

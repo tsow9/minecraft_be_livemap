@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 // Packs the login token folder into one AES-256-GCM encrypted file and back.
 const crypto = require('crypto')
 const fs = require('fs')
@@ -8,7 +9,7 @@ const MAGIC = Buffer.from('MCMAPv1')
 
 function keyFrom (secret, salt) {
   if (!secret || secret.length < 20) {
-    throw new Error('合言葉(REALMS_CACHE_KEY)が設定されていないか、短すぎます(20文字以上必要)')
+    throw new Error(t('合言葉(REALMS_CACHE_KEY)が設定されていないか、短すぎます(20文字以上必要)', 'REALMS_CACHE_KEY is not set or too short (20 characters or more)'))
   }
   return crypto.scryptSync(secret, salt, 32)
 }
@@ -29,7 +30,7 @@ function pack (dir, outFile, secret) {
 
 function unpack (inFile, dir, secret) {
   const data = fs.readFileSync(inFile)
-  if (!data.subarray(0, MAGIC.length).equals(MAGIC)) throw new Error('ログイン情報のファイルが壊れています')
+  if (!data.subarray(0, MAGIC.length).equals(MAGIC)) throw new Error(t('ログイン情報のファイルが壊れています', 'The saved sign-in is damaged'))
   let p = MAGIC.length
   const salt = data.subarray(p, p += 16)
   const iv = data.subarray(p, p += 12)
@@ -40,7 +41,7 @@ function unpack (inFile, dir, secret) {
   try {
     json = Buffer.concat([decipher.update(data.subarray(p)), decipher.final()]).toString('utf8')
   } catch {
-    throw new Error('ログイン情報を開けませんでした。合言葉(REALMS_CACHE_KEY)を変えた場合は、もう一度ログインしてください')
+    throw new Error(t('ログイン情報を開けませんでした。合言葉(REALMS_CACHE_KEY)を変えた場合は、もう一度ログインしてください', 'Could not open the saved sign-in. If REALMS_CACHE_KEY was changed, sign in to Realms again'))
   }
   fs.mkdirSync(dir, { recursive: true })
   for (const [name, content] of Object.entries(JSON.parse(json))) {

@@ -12,6 +12,7 @@ import re
 import shutil
 import sys
 import time
+from msg import t
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'apple-touch-icon.png', 'manifest.webmanifest', 'icons', 'css', 'js', 'vendor']
@@ -24,7 +25,7 @@ def main():
     items_folder = sys.argv[sys.argv.index('--items-folder') + 1] if '--items-folder' in sys.argv else ''
     for name in (folder, items_folder):
         if name and not re.fullmatch(r'[0-9a-f]{16,64}', name):
-            sys.exit('--data-folder と --items-folder は16文字以上の16進数にしてください')
+            sys.exit(t('--data-folder と --items-folder は16文字以上の16進数にしてください', '--data-folder and --items-folder must be 16 or more hex digits'))
     put = os.path.join(out, 'd', folder) if folder else out
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out)
@@ -68,7 +69,7 @@ def main():
     if folder:  # the open part of the site says nothing about the map
         with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
             json.dump({k: v for k, v in cfg.items() if k not in MAP_KEYS}, f, ensure_ascii=False, indent=2)
-    print(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)')
+    print(t(f'公開用のファイルをまとめました(地図 {len(cfg.get("snapshots", []))} 回分)', f'Site files ready ({len(cfg.get("snapshots", []))} maps)'))
 
 
 if __name__ == '__main__':

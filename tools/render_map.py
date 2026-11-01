@@ -25,6 +25,7 @@ import block_colors
 import block_ids
 import history
 from block_colors import color_of, is_foliage
+from msg import t
 
 DIM_IDS = {'overworld': 0, 'nether': 1, 'end': 2}
 MIN_ZOOM = -6
@@ -285,7 +286,7 @@ def read_surfaces(db_dir, dims):
             merge_open_sky(surf, sy, *decoded)
         seen += 1
         if seen % 20000 == 0:
-            print(f'  {seen} 区画を読み込み中... ({time.time() - started:.0f}秒)', flush=True)
+            print(t(f'  {seen} 区画を読み込み中... ({time.time() - started:.0f}秒)', f'  reading {seen} sub-chunks... ({time.time() - started:.0f} s)'), flush=True)
     for pos, subs in nether_raw.items():
         surfaces[1][pos] = nether_surface(subs)
     for (dim, cx, cz), (tag, value) in biome_raw.items():
@@ -508,7 +509,7 @@ def _official_lang(locale='ja_JP'):
     try:
         return official_names.download(locale)
     except OSError as e:
-        print(f'公式の名前({locale})を取得できませんでした(前回の名前を使います): {e}')
+        print(t(f'公式の名前({locale})を取得できませんでした(前回の名前を使います): {e}', f'Could not get the official names ({locale}); using the previous ones: {e}'))
         return None
 
 
@@ -592,7 +593,7 @@ def update_config(site, snap_id, staging, world_saved=None):
     ids = sorted(s['id'] for s in cfg.get('snapshots', []) if s.get('id') and s['id'] != snap_id)
     history.migrate(site, ids)
     changed, total = history.store(site, snap_id, staging, ids)
-    print(f'  保存: 地図画像 {total} 枚のうち、前回から変わった {changed} 枚')
+    print(t(f'  保存: 地図画像 {total} 枚のうち、前回から変わった {changed} 枚', f'  saved: {changed} of {total} map images changed'))
     ids = history.prune(site, sorted(ids + [snap_id]), datetime.date.today())
     # Each day's map keeps when its world was saved, so the site can say which moment it shows.
     saved = {s['id']: s['savedAt'] for s in cfg.get('snapshots', []) if s.get('id') and isinstance(s.get('savedAt'), int)}
@@ -609,17 +610,17 @@ def update_config(site, snap_id, staging, world_saved=None):
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
-    ap = argparse.ArgumentParser(description='統合版ワールドから地図タイルを作ります')
-    ap.add_argument('--world', required=True, help='ワールドのフォルダ、または .mcworld ファイル')
-    ap.add_argument('--site', default=os.path.dirname(here), help='地図サイトのフォルダ')
-    ap.add_argument('--snapshot', help='保存名(省略すると今日の日付)')
+    ap = argparse.ArgumentParser(description='Makes map tiles from a Bedrock world')
+    ap.add_argument('--world', required=True, help='the world folder, or a .mcworld file')
+    ap.add_argument('--site', default=os.path.dirname(here), help='the map site folder')
+    ap.add_argument('--snapshot', help="the snapshot's name (today's date if left out)")
     ap.add_argument('--dims', default='overworld,nether,end')
-    ap.add_argument('--live', help='live.json(開拓者の推定に使う足跡)。空文字なら足跡なしで記録だけ始める')
+    ap.add_argument('--live', help='live.json (trails, for guessing who explored where); empty: start recording without trails')
     args = ap.parse_args()
 
     dims = [d.strip() for d in args.dims.split(',') if d.strip()]
     if any(d not in DIM_IDS for d in dims):
-        sys.exit('--dims には overworld / nether / end を指定してください。')
+        sys.exit(t('--dims には overworld / nether / end を指定してください。', '--dims takes overworld / nether / end.'))
     world = args.world
     tmp = None
     if os.path.isfile(world) and world.lower().endswith(('.mcworld', '.zip')):
@@ -630,12 +631,12 @@ def main():
     db_dir = os.path.join(world, 'db')
     world_saved = saved_at(world)
     if not os.path.isdir(db_dir):
-        sys.exit(f'ワールドのデータ(db フォルダ)が見つかりません: {world}')
+        sys.exit(t(f'ワールドのデータ(db フォルダ)が見つかりません: {world}', f'No world data (db folder) found: {world}'))
 
     snap_id = args.snapshot or datetime.date.today().isoformat()
 
     block_ids.load(args.site)
-    print(f'ワールド「{world_name(world)}」を読み込みます。大きいワールドだと数分かかります。')
+    print(t(f'ワールド「{world_name(world)}」を読み込みます。大きいワールドだと数分かかります。', f'Reading the world "{world_name(world)}". A large world takes a few minutes.'))
     started = time.time()
     lang, lang_en = _official_lang(), _official_lang('en_US')
     try:
@@ -643,15 +644,17 @@ def main():
         try:
             import world_items
             n_box, n_vil, n_trade, n_sign, n_pet, n_owned = world_items.write(args.site, db_dir, lang, os.environ.get('CACHE_KEY') or '', lang_en)
-            print(f'中身のある入れ物: {n_box} 個、村人: {n_vil} 人(取引あり {n_trade} 人)、文字のある看板: {n_sign} 枚、'
-                  f'ペット・名前のある動物: {n_pet} 匹(飼い主が分かった {n_owned} 匹)')
+            print(t(f'中身のある入れ物: {n_box} 個、村人: {n_vil} 人(取引あり {n_trade} 人)、文字のある看板: {n_sign} 枚、'
+                    f'ペット・名前のある動物: {n_pet} 匹(飼い主が分かった {n_owned} 匹)',
+                    f'Containers with items: {n_box}, villagers: {n_vil} ({n_trade} trading), signs with text: {n_sign}, '
+                    f'pets and named animals: {n_pet} ({n_owned} with a known owner)'))
         except Exception as e:  # the map itself matters more than the search data
-            print(f'入れ物・村人の読み込みに失敗しました: {e}')
+            print(t(f'入れ物・村人の読み込みに失敗しました: {e}', f'Could not read containers and villagers: {e}'))
         try:
             with open(os.path.join(args.site, 'biomes.json'), 'w', encoding='utf-8') as f:
                 json.dump({'dims': biome_regions(surfaces, dims)}, f, separators=(',', ':'))
         except Exception as e:  # the search can do without it
-            print(f'バイオームの一覧を作れませんでした: {e}')
+            print(t(f'バイオームの一覧を作れませんでした: {e}', f'Could not make the biome list: {e}'))
         if args.live is not None:
             import players
             explore_path = os.path.join(args.site, 'explore.json')
@@ -661,33 +664,33 @@ def main():
             explore, added = players.update_explore(explore, chunk_sets, live_state, int(time.time() * 1000))
             with open(explore_path, 'w', encoding='utf-8') as f:
                 json.dump(explore, f, separators=(',', ':'))
-            print(f'新しく開拓されたチャンク: {added}')
+            print(t(f'新しく開拓されたチャンク: {added}', f'Newly explored chunks: {added}'))
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
     if block_colors.unknown:
         names = ', '.join(sorted(block_colors.unknown))
-        print(f'色が未登録で灰色になったブロック({len(block_colors.unknown)}種類): {names}')
+        print(t(f'色が未登録で灰色になったブロック({len(block_colors.unknown)}種類): {names}', f'Blocks without a colour, drawn grey ({len(block_colors.unknown)} kinds): {names}'))
     staging = tempfile.mkdtemp(prefix='mcmap-tiles-')
     try:
         total = 0
         for name in dims:
             chunks = surfaces[DIM_IDS[name]]
             if not chunks:
-                print(f'  {name}: データなし')
+                print(t(f'  {name}: データなし', f'  {name}: no data'))
                 continue
             n = write_tiles(chunks, os.path.join(staging, name), os.path.join(staging, 'info', name),
                             os.path.join(staging, 'ground', name), os.path.join(staging, 'biome', name))
             total += n
-            print(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像')
+            print(t(f'  {name}: {len(chunks)} チャンク → {n} 枚の地図画像', f'  {name}: {len(chunks)} chunks → {n} map images'))
         if total == 0:
-            sys.exit('地図にできるデータがありませんでした。')
+            sys.exit(t('地図にできるデータがありませんでした。', 'Nothing to make a map from.'))
         block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
-        print(f'ネザーゲート: {write_portals(args.site)} か所')
+        print(t(f'ネザーゲート: {write_portals(args.site)} か所', f'Nether Portals: {write_portals(args.site)}'))
         update_config(args.site, snap_id, staging, world_saved)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    print(f'完了しました({time.time() - started:.0f}秒)。保存名: {snap_id}')
+    print(t(f'完了しました({time.time() - started:.0f}秒)。保存名: {snap_id}', f'Done ({time.time() - started:.0f} s). Snapshot: {snap_id}'))
 
 
 if __name__ == '__main__':

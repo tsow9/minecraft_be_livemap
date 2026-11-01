@@ -12,6 +12,7 @@
 - 英語対応:`js/i18n.js`(言語の判定・`tl()`・ページの固定文字の置き換え)と `js/i18n-en.js`(日本語の文 → 英語の辞書)。言語はブラウザの設定で決まり、隅の小さな「言語設定」ボタン(PCは右上、スマホは左下。押すと 日本語 / English を選べる)で切り替えられる。ゲームの言葉(アイテム・ブロック・動物・職業・エンチャント・ゲームルール・難易度など)は公式の en_US.lang の訳を使う(items.json の `en`、blocks.json の `en`)。バイオームは js/biomes.js の BIOME_EN。
 - `tools/pet_faces.py`:ペットの顔は地図を更新するたびに公式の bedrock-samples から作り、items.json の `faces` に入れる。公式の絵はリポジトリに入れない。見た目は「少し明るく・色6段階・目鼻口の黒は残す」、ウマ系は首の傾きを半分(15度)
 - `.github/workflows/map.yml`(地図の更新・Cloudflare への公開・GitHub Pages)、`live.yml`(10分おきの位置確認。サイトの /api/live に送る)
+- Actions の名前・ボタン・手順名は英語(Map site / Live players、Update map / Sign in to Realms / Publish site only / Diagnose)。実行中のメッセージはリポジトリ変数 LANGUAGE(ja/en、省略時 en)で切り替え(tools/msg.py、tools/realms/msg.js、シェルの t())。地図の日付のタイムゾーンは TIMEZONE(省略時 Asia/Tokyo)。私たちのリポジトリは LANGUAGE=ja
 - データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
 - GitHub Pages:「移転しました」のページと login.html(全サイト共通のログイン中継)だけ。地図のデータは置かない
 - Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE(位置確認がサイトに送るときの合言葉)

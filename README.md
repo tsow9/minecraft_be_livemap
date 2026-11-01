@@ -4,7 +4,7 @@
 
 Minecraft 統合版の Realm を、ブラウザで見られる地図にするツールです。地図はクラウドで自動更新され、PC を起動しておく必要はありません。
 
-![Blockmap の画面(村人を検索したところ)](docs/screenshot-ja.webp)
+![Blockmap の画面(等高線と過去の地図)](docs/screenshot-ja.webp)
 
 - 地図を見られるのは Realm のメンバーだけです(Microsoft アカウントでログイン)。
 - 地図などのデータは、利用者自身の Cloudflare アカウントにだけ保存されます。
@@ -55,19 +55,25 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 | `CLOUDFLARE_API_TOKEN` | 手順 2-3 のトークン |
 | `CLOUDFLARE_ACCOUNT_ID` | 手順 2-4 の Account ID |
 
-Realm を 2 つ以上持っている場合は、同じ画面の **Variables** に `REALM_NAME`(使う Realm の名前)を追加します。
+同じ画面の **Variables** タブで、必要に応じて次を追加します(**New repository variable**)。
+
+| Name | 値 |
+|---|---|
+| `LANGUAGE` | `ja` にすると、Actions の実行結果のメッセージが日本語になります(省略時は英語) |
+| `TIMEZONE` | 地図の日付に使うタイムゾーン(省略時は `Asia/Tokyo`) |
+| `REALM_NAME` | Realm を 2 つ以上持っている場合だけ、使う Realm の名前 |
 
 ### 4. Realms にログインする
 
 1. **Actions** タブを開きます(初回はワークフローを有効にします)。
-2. 左の **地図サイト** → **Run workflow** で、「やること」に **Realmsにログイン** を選んで実行します。
+2. 左の **Map site** → **Run workflow** で、**What to do** に **Sign in to Realms** を選んで実行します。
 3. 実行中のジョブ **login** を開き、表示されたコードを https://www.microsoft.com/link に入力します。
 4. Realm のオーナーのアカウントでログインします(15 分以内)。
 
 ### 5. 地図を作成する
 
-1. **Run workflow** で「やること」に **地図を更新** を選んで実行します。
-2. 完了すると、実行結果の Summary に「招待制のサイト: https://map.….workers.dev」と表示されます。
+1. **Run workflow** で **What to do** に **Update map** を選んで実行します。
+2. 完了すると、実行結果の Summary に「サイト: https://map.….workers.dev」と表示されます。
 3. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
 
 以降は自動で更新されます。
@@ -102,14 +108,14 @@ Realm を 2 つ以上持っている場合は、同じ画面の **Variables** �
 
 ## トラブルシューティング
 
-Actions の実行結果に表示されるメッセージで確認してください。
+Actions の実行結果に表示されるメッセージで確認してください(`LANGUAGE` を `ja` にした場合。英語のメッセージは [English の README](README.en.md#troubleshooting) を参照)。
 
 | メッセージ | 対処 |
 |---|---|
-| まだ「Realmsにログイン」をしていない | 手順 4 を実行します |
-| ログイン情報がありません / 有効期限が切れました | 手順 4 をもう一度実行します |
+| まだ「Sign in to Realms」をしていない | 手順 4 を実行します |
+| ログイン情報がありません / ログインの有効期限が切れました | 手順 4 をもう一度実行します |
 | Realmが2個以上あります | `REALM_NAME` を追加します(手順 3) |
-| Cloudflare の Secrets がそろっていない | 手順 3 の 4 つを確認します |
+| Cloudflare の Secrets がそろっていない | 手順 3 の 4 つの Secrets を確認します |
 | 公開先のアドレスがわかりませんでした | 手順 2-1 でサブドメインを決めてから、地図を更新し直します |
 | ブランチをこの鍵で開けませんでした | `REALMS_CACHE_KEY` を変更した場合は元に戻します。戻せない場合はそのブランチを削除します(地図は最初から作り直されます) |
 | 自動更新が止まった | 公開リポジトリは、60 日間動きがないと定期実行が停止されることがあります。Actions の画面から再開します |
@@ -117,14 +123,14 @@ Actions の実行結果に表示されるメッセージで確認してくださ
 ## 仕組み
 
 ```
-地図サイト(.github/workflows/map.yml)
+Map site(.github/workflows/map.yml)
   Realms からワールドをダウンロード(tools/realms)
   → 変化がなければ終了
   → タイル・items.json などを作成(tools/render_map.py ほか)
   → 暗号化して map-data ブランチに保存(tools/vault.sh)
   → Cloudflare Worker と静的ファイルとして公開(worker/、tools/build_site.py)
 
-参加中の人と現在地(.github/workflows/live.yml)
+Live players(.github/workflows/live.yml)
   メンバーとオンライン状態を取得 → プレイ中はワールドからプレイヤーの位置を読む
   → サイトの /api/live に送信し、暗号化して live-data ブランチにも保存
 ```

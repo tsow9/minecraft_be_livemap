@@ -1,4 +1,5 @@
 'use strict'
+const { t } = require('./msg')
 // Looks up Xbox gamertags for a list of XUIDs.
 const fetch = require('node-fetch')
 
@@ -15,7 +16,7 @@ async function gamertags (auth, xuids) {
     },
     body: JSON.stringify({ userIds: ids, settings: ['Gamertag'] })
   })
-  if (!res.ok) throw new Error(`名前の取得に失敗しました (${res.status})`)
+  if (!res.ok) throw new Error(t(`名前の取得に失敗しました (${res.status})`, `Could not get the names (${res.status})`))
   const out = {}
   for (const user of (await res.json()).profileUsers || []) {
     const tag = (user.settings || []).find(s => s.id === 'Gamertag')

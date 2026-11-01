@@ -34,19 +34,19 @@ def main():
         shapes[s] += 1
         if 'player' in s.lower() and s not in samples:
             samples[s] = value
-    print('チャンク以外のキーの種類:')
+    print('Kinds of keys other than chunks:')
     for s, n in shapes.most_common(40):
         print(f'  {n:5d}  {s}')
     for s, value in samples.items():
         try:
             root, _ = nbt.root_compound(value, 0)
         except Exception as e:  # noqa: BLE001 - diagnostics only
-            print(f'{s}: NBTとして読めない ({e}) 長さ{len(value)}')
+            print(f'{s}: not readable as NBT ({e}), length {len(value)}')
             continue
         fields = {k: type(v).__name__ for k, v in root.items()}
-        print(f'{s}: 項目 {sorted(fields.items())[:60]}')
+        print(f'{s}: fields {sorted(fields.items())[:60]}')
         if 'Pos' in root:
-            print(f'  Pos の形: {type(root["Pos"]).__name__} {len(root["Pos"])}要素, DimensionId: {"DimensionId" in root}')
+            print(f'  Pos: {type(root["Pos"]).__name__} of {len(root["Pos"])}, DimensionId: {"DimensionId" in root}')
 
     # Field names of every player record (values left out), plus the bed / respawn fields if present.
     names = collections.Counter()
@@ -58,8 +58,8 @@ def main():
         names.update(root.keys())
         spawn = {k: v for k, v in root.items() if 'spawn' in k.lower() and isinstance(v, (int, float))}
         if spawn:
-            print('  リスポーン関連:', spawn)
-    print('プレイヤー記録の項目(出てきた数):', sorted(names.items()))
+            print('  spawn fields:', spawn)
+    print('Player record fields (times seen):', sorted(names.items()))
     account_links(db)
     # Where nether portal blocks are, by raw bytes and by the map maker's decoder.
     raw = collections.Counter()
@@ -72,15 +72,15 @@ def main():
         try:
             dec = render_map.decode_subchunk(value)
         except Exception as e:  # noqa: BLE001 - diagnostics only
-            print('  ゲートを含む区画を読めない', (dim, cx, cz, sy), e, '版', value[0], value[1] if len(value) > 1 else None)
+            print('  cannot read a sub-chunk with a portal', (dim, cx, cz, sy), e, 'version', value[0], value[1] if len(value) > 1 else None)
             continue
         if dec is None:
-            print('  ゲートを含む区画が空扱い', (dim, cx, cz, sy), '版', value[0], value[1] if len(value) > 1 else None)
+            print('  sub-chunk with a portal reads as empty', (dim, cx, cz, sy), 'version', value[0], value[1] if len(value) > 1 else None)
         elif dec[3] is not None and dec[3].any():
             found[(dim, cx, cz, sy)] += int(dec[3].sum())
         else:
-            print('  ゲートの名前はあるのに見つからない区画', (dim, cx, cz, sy), '版', value[0], value[1], '層の頭', value[2:4].hex())
-    print('ゲートのブロック名を含む区画:', sorted(raw), ' 読み取れた:', dict(found))
+            print('  portal name present but not found', (dim, cx, cz, sy), 'version', value[0], value[1], 'layer head', value[2:4].hex())
+    print('Sub-chunks naming the portal block:', sorted(raw), ' read:', dict(found))
     # What blocks are at a given spot (CHECK=x,y,z in the environment), for checking a reported build.
     spot = os.environ.get('CHECK')
     if spot:
@@ -101,8 +101,8 @@ def main():
                     e, q = nbt.root_compound(value, q)
                     names.append(str(e.get('name')))
             except Exception as e:  # noqa: BLE001 - diagnostics only
-                names.append(f'(読めない {e})')
-            print(f'  地上 区画 ({cx},{cz}) 高さ{y_sub * 16}〜: 版{value[0]} 層{value[1]} ブロックの種類 {names}')
+                names.append(f'(unreadable {e})')
+            print(f'  overworld sub-chunk ({cx},{cz}) from y {y_sub * 16}: version {value[0]}, layers {value[1]}, blocks {names}')
             dec = render_map.decode_subchunk(value)
             if dec:
                 _, idx, _, _ = dec
@@ -118,9 +118,9 @@ def main():
             root, _ = nbt.root_compound(data, 8)
             keep = {k: v for k, v in root.items() if re.search(r'time|tick|rain|lightning|weather|daylight|played', k, re.I)
                     and isinstance(v, (int, float))}
-            print('level.dat の時刻・天気:', keep)
+            print('level.dat time and weather:', keep)
         except Exception as e:  # noqa: BLE001 - diagnostics only
-            print('level.dat を読めない', e)
+            print('cannot read level.dat', e)
 
 
 def account_links(db):
@@ -145,27 +145,27 @@ def account_links(db):
         try:
             root, _ = nbt.root_compound(value, 0)
         except Exception:  # noqa: BLE001 - diagnostics only
-            fields['(NBTとして読めない)'] += 1
+            fields['(not NBT)'] += 1
             continue
         for k, v in root.items():
             fields[f'{k}:{type(v).__name__}'] += 1
             if not isinstance(v, str) or not v:
                 continue
             if v in server_keys or f'player_server_{v}' in server_keys:
-                hits[f'{k} → プレイヤー記録'] += 1
+                hits[f'{k} -> player record'] += 1
             if secret and players._hash(secret, v) in member_ids:
-                hits[f'{k} → Realmのメンバー'] += 1
+                hits[f'{k} -> Realm member'] += 1
             plain = v.lower().replace('-', '')
             if secret and players._hash(secret, plain) in identities:
-                hits[f'{k} → メンバーのゲーム内ID'] += 1
+                hits[f'{k} -> member in-game id'] += 1
             if v.isdigit():
-                hits[f'{k} は数字だけ({len(v)}桁)'] += 1
+                hits[f'{k} is digits only ({len(v)})'] += 1
         own = key.decode('latin-1')[len('player_'):]
         if secret and players._hash(secret, own) in member_ids:
-            hits['キーの番号 → Realmのメンバー'] += 1
-    print(f'アカウントとのつながり: player_ の記録 {links} 件、プレイヤー記録 {len(server_keys)} 件、メンバー {len(member_ids)} 人')
-    print('  player_ の記録の項目:', sorted(fields.items()))
-    print('  一致した数:', sorted(hits.items()) or 'なし')
+            hits['key number -> Realm member'] += 1
+    print(f'Links to accounts: {links} player_ records, {len(server_keys)} player records, {len(member_ids)} members')
+    print('  player_ record fields:', sorted(fields.items()))
+    print('  matches:', sorted(hits.items()) or 'none')
 
 
 if __name__ == '__main__':

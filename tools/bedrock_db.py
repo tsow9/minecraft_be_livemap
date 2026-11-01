@@ -2,6 +2,7 @@
 import os
 import struct
 import zlib
+from msg import t
 
 TABLE_MAGIC = 0xDB4775248B80FB57
 LOG_BLOCK = 32768
@@ -25,7 +26,7 @@ def _decompress(raw, kind):
         return zlib.decompress(raw)
     if kind == 4:
         return zlib.decompress(raw, -15)
-    raise ValueError(f'未対応の圧縮形式です: {kind}')
+    raise ValueError(t(f'未対応の圧縮形式です: {kind}', f'Unsupported compression: {kind}'))
 
 
 def _block_entries(block):
