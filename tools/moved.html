@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<meta name="robots" content="noindex">
+<title>Blockmap</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
+font-family:"M PLUS Rounded 1c",system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+.box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:#1f2229;border:1px solid #2e323b}
+h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6;font-size:14px}
+a.go{display:flex;align-items:center;justify-content:center;height:46px;border-radius:10px;background:#3ecf8e;color:#06130d;
+font-weight:700;font-size:16px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1 id="h">地図は引っ越しました</h1>
+  <p id="p">Realm のメンバーだけが見られる新しいサイトに移りました。マイクラで使っている Microsoft アカウントでログインすると見られます。</p>
+  <a class="go" id="go" href="__SITE__">新しいサイトを開く</a>
+</div>
+<script>
+// Japanese or English, the same choice as the map: the viewer's pick, else the browser's language.
+let saved = null;
+try { saved = localStorage.getItem('blockmap.lang'); } catch { /* private mode */ }
+if (saved ? saved === 'en' : !/^ja\b/i.test(navigator.language || '')) {
+  document.documentElement.lang = 'en';
+  document.getElementById('h').textContent = 'The map has moved';
+  document.getElementById('p').textContent = 'It is now on a new site that only members of the Realm can see. Sign in with the Microsoft account you play Minecraft with.';
+  document.getElementById('go').textContent = 'Open the new site';
+}
+if (!/^https:/.test(document.getElementById('go').getAttribute('href'))) document.getElementById('go').hidden = true;
+</script>
+</body>
+</html>

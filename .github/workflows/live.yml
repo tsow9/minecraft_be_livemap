@@ -2,7 +2,8 @@ name: 参加中の人と現在地
 
 # Who is online and where players are. While someone plays, one run keeps checking every 20 seconds.
 # GitHub's own timer is unreliable, so an outside timer may also start this through workflow_dispatch.
-# The site reads live.json straight from the live-data branch, so no site rebuild is needed.
+# Each look goes to the members-only site on Cloudflare (pages ask it every few seconds) and, encrypted, to the
+# live-data branch (where the next run and the map drawing pick it up).
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -40,6 +41,8 @@ jobs:
           MC_VERSION: ${{ vars.MC_VERSION }}
           SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
           GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: 新しくなったログイン情報を保存
         if: always()
         uses: actions/cache/save@v4

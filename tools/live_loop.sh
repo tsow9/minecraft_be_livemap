@@ -12,29 +12,19 @@ started=$(date +%s)
 last_online=0
 last_stamp=""
 last_map=0
-owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-share_url=$(python3 -c "import json; print(json.load(open('config.json')).get('shareUrl') or '')")
+site_url=$(bash tools/site_url.sh)
+[ -n "$site_url" ] || echo "::warning::Cloudflare のサイトの住所がわからないので、位置はサイトに送りません"
 
-mkdir -p live
-if git fetch -q --depth 1 origin live-data; then git archive FETCH_HEAD | tar -x -C live; fi
+bash tools/vault.sh get live-data live
 
 publish() {
-  # Single force-pushed commit so the branch never grows.
-  (
-    cd live
-    rm -rf .git
-    git init -q -b live-data
-    git add live.json
-    git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-      commit -q -m "参加中の人と現在地 $(date -u '+%F %H:%M:%S')"
-    git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live-data
-  ) || echo "live-data への保存に失敗しました"
   # The site reads this copy every few seconds.
-  if [ -n "$share_url" ] && [ -n "${SHARE_PASSPHRASE:-}" ]; then
-    curl -sS --max-time 20 -o /dev/null -w '共有サーバー: %{http_code}\n' -X POST "$share_url/live" \
-      -H "Origin: https://$owner.github.io" -H "X-Passphrase: $SHARE_PASSPHRASE" \
-      -H 'Content-Type: application/json' --data-binary @live/live.json || true
+  if [ -n "$site_url" ] && [ -n "${SHARE_PASSPHRASE:-}" ]; then
+    curl -sS --max-time 20 -o /dev/null -w 'サイトへ送信: %{http_code}\n' -X POST "$site_url/api/live" \
+      -H "X-Passphrase: $SHARE_PASSPHRASE" -H 'Content-Type: application/json' --data-binary @live/live.json || true
   fi
+  # Kept (encrypted) for the next run and the map drawing.
+  bash tools/vault.sh put live live-data || echo "live-data への保存に失敗しました"
 }
 
 while :; do

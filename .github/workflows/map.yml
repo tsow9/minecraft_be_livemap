@@ -118,9 +118,9 @@ jobs:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}
       - name: 前回の地図データを取得
-        run: |
-          mkdir -p data
-          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
+        run: bash tools/vault.sh get map-data data
+        env:
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
       - name: ワールドか地図の描き方が変わったか確認
         id: compare
         # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played.
@@ -143,21 +143,17 @@ jobs:
         run: |
           pip install --quiet numpy pillow
           live=""
-          if git fetch --depth 1 origin live-data; then git show FETCH_HEAD:live.json > live.json && live=live.json; fi
+          bash tools/vault.sh get live-data live
+          [ -f live/live.json ] && live=live/live.json
           python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --live "$live"
           cp fingerprint.txt data/world.sha256
-      - name: 地図データを保存
+      - name: 地図データを保存(暗号化して)
         if: steps.compare.outputs.changed == 'true'
         # map-data keeps a single commit so the repository does not grow with every hourly update.
-        run: |
-          cd data
-          git init -q -b map-data
-          git add -A
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -q -m "地図データ $(date '+%F %H:%M')"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" map-data
+        run: bash tools/vault.sh put data map-data
         env:
           GH_TOKEN: ${{ github.token }}
+          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
 
   # The invite-only site on Cloudflare (worker/): the site, the map data in a hidden folder, and the shared pins.
   cloudflare:
@@ -192,9 +188,7 @@ jobs:
         run: python3 tools/site_keys.py "$RUNNER_TEMP"
       - name: 地図データを取得
         if: steps.check.outputs.ready == 'true'
-        run: |
-          mkdir -p data
-          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
+        run: bash tools/vault.sh get map-data data
       - name: 公開するファイルをまとめる
         if: steps.check.outputs.ready == 'true'
         run: python3 tools/build_site.py data _site --data-folder "$(cat "$RUNNER_TEMP/data_dir")" --items-folder "$(cat "$RUNNER_TEMP/items_dir")"
@@ -227,6 +221,18 @@ jobs:
           [ -n "$url" ] || { echo "::error::公開先のアドレスがわかりませんでした。Cloudflare の画面で「Workers & Pages」を一度開いて workers.dev のサブドメインを決めてから、もう一度実行してください"; exit 1; }
           echo "招待制のサイト: $url" >> "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/secrets.json"
+      - name: 古い共有サーバーを片づける
+        if: steps.check.outputs.ready == 'true'
+        continue-on-error: true
+        # The first site's pin server (blockmap-share) is no longer used. Only that worker goes; the database stays.
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/blockmap-share")
+          case "$code" in
+            200) echo "古い共有サーバー(blockmap-share)を削除しました" ;;
+            404) echo "古い共有サーバーはもうありません" ;;
+            *) echo "::warning::古い共有サーバーを削除できませんでした($code)" ;;
+          esac
       - name: ログインの記録(件数だけ)
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
@@ -237,14 +243,10 @@ jobs:
             "SELECT date(created / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM sessions GROUP BY day ORDER BY day DESC LIMIT 14" \
             | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s)[0].results;console.log("ログインした回数(日ごと):");for(const x of r)console.log(`  ${x.day}: ${x.n}回`)})'
 
+  # GitHub Pages keeps only two pages: a notice that the map has moved (to the members-only site on Cloudflare), and
+  # login.html, the page every Blockmap site's Microsoft sign-in comes back through. No map data is published here.
   deploy:
-    needs: [update]
-    if: >-
-      always() && !cancelled() && (
-        github.event_name == 'push' ||
-        (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開') ||
-        needs.update.outputs.changed == 'true'
-      )
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'サイトだけ公開')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -255,12 +257,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: 地図データを取得
-        run: |
-          mkdir -p data
-          if git fetch --depth 1 origin map-data; then git archive FETCH_HEAD | tar -x -C data; fi
       - name: 公開するファイルをまとめる
-        run: python3 tools/build_site.py data _site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir _site
+          cp login.html favicon.svg _site/
+          url=$(bash tools/site_url.sh)
+          sed "s#__SITE__#${url:-}#" tools/moved.html > _site/index.html
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -50,12 +50,6 @@ def main():
             to = os.path.join(out, 'x', items_folder) if name == 'items.json' and items_folder else put
             os.makedirs(to, exist_ok=True)
             shutil.copy2(os.path.join(data, name), to)
-    repo = os.environ.get('GITHUB_REPOSITORY')
-    if folder:
-        cfg.pop('shareUrl', None)  # the worker answers the api on the same site
-    elif repo and not cfg.get('liveUrl'):
-        cfg['liveUrl'] = f'https://raw.githubusercontent.com/{repo}/live-data/live.json'
-        cfg['liveApiUrl'] = f'https://api.github.com/repos/{repo}/contents/live.json?ref=live-data'
     version = (os.environ.get('GITHUB_SHA') or str(int(time.time())))[:12]
     page = os.path.join(out, 'index.html')
     with open(page, encoding='utf-8') as f:

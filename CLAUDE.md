@@ -11,9 +11,10 @@
 - `tools/*.py`(ワールド → タイル・items.json)、`tools/realms/*.js`(Realms から取得)
 - 英語対応:`js/i18n.js`(言語の判定・`tl()`・ページの固定文字の置き換え)と `js/i18n-en.js`(日本語の文 → 英語の辞書)。言語はブラウザの設定で決まり、隅の小さな「言語設定」ボタン(PCは右上、スマホは左下。押すと 日本語 / English を選べる)で切り替えられる。ゲームの言葉(アイテム・ブロック・動物・職業・エンチャント・ゲームルール・難易度など)は公式の en_US.lang の訳を使う(items.json の `en`、blocks.json の `en`)。バイオームは js/biomes.js の BIOME_EN。
 - `tools/pet_faces.py`:ペットの顔は地図を更新するたびに公式の bedrock-samples から作り、items.json の `faces` に入れる。公式の絵はリポジトリに入れない。見た目は「少し明るく・色6段階・目鼻口の黒は残す」、ウマ系は首の傾きを半分(15度)
-- `.github/workflows/map.yml`(地図の更新)、`live.yml`(10分おきの位置確認)、`share/`(Cloudflare Worker:ピン共有)
-- 今のデータの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)
-- Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE
+- `.github/workflows/map.yml`(地図の更新・Cloudflare への公開・GitHub Pages)、`live.yml`(10分おきの位置確認。サイトの /api/live に送る)
+- データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
+- GitHub Pages:「移転しました」のページと login.html(全サイト共通のログイン中継)だけ。地図のデータは置かない
+- Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE(位置確認がサイトに送るときの合言葉)
 - Realms の契約更新日は API の値が当てにならない。手動設定の「毎月26日」が正しい
 
 ## ほかの人に配る方針(決定済み)
@@ -33,5 +34,5 @@
 
 ## 次にやること
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
-2. 切り替え(持ち主が新しいサイトを色々確認して「大丈夫」と言うまで保留。それまでは今の GitHub Pages のサイトも残す):map-data / live-data ブランチを暗号化(リポジトリは公開なので今は丸見え)、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」だけ、古い share/(blockmap-share Worker)を片づける。
-3. 持ち主向けのかんたん設定ページ。私たち専用の設定(config.json の realmPrice / realmBillingDay / shareUrl)を外す。
+2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。
+3. 持ち主向けのかんたん設定ページ。私たち専用の設定(config.json の realmPrice / realmBillingDay)を外す。古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外す。
