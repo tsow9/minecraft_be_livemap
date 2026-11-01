@@ -110,6 +110,7 @@ function renderMe() {
     <span class="me-who"><b></b><span>${esc(tl('ログイン中・{role}', { role: what }))}</span></span>`;
   line.querySelector('b').textContent = share.me.name || '';
   const out = button(tl('ログアウト'), async () => {
+    if (!confirm(tl('ログアウトしますか?'))) return;
     await fetch(`${share.url}/logout`, { method: 'POST' }).catch(() => {});
     location.reload();
   }, 'logout');

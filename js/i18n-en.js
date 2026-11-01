@@ -129,5 +129,7 @@ Object.assign(I18N_EN, {
   '支払日': 'Payment day', '保存しました': 'Saved', 'なし': 'None',
   '毎月{n}日': 'Day {n} of each month', '月 {price}': '{price} a month',
   'ログイン中・{role}': 'Signed in · {role}', 'サイトの住所': 'Site address',
-  'この住所を Realm の仲間に知らせましょう。Realm のメンバーが、マイクラで使っている Microsoft アカウントでログインすると見られます(メンバー以外は入れません)。': 'Share this address with the Realm\'s members. They see the map by signing in with the Microsoft account they play Minecraft with (nobody else can get in).',
+  'この住所を Realm の仲間に知らせましょう。': 'Share this address with the Realm\'s members.',
+  'Microsoft アカウントでログインすると見られます(メンバー以外は入れません)。': 'They see the map by signing in with their Microsoft account (nobody else can get in).',
+  'ログアウトしますか?': 'Sign out?',
 });
