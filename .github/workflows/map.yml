@@ -39,6 +39,12 @@ jobs:
       actions: write  # to start "Update map" once signed in
     steps:
       - uses: actions/checkout@v4
+      - name: Get the key
+        run: bash tools/realms_key.sh
+        env:
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -46,7 +52,6 @@ jobs:
       - name: Sign in to Realms (enter the code shown below)
         run: node tools/realms/login.js
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - uses: actions/cache/save@v4
@@ -67,6 +72,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Get the key
+        run: bash tools/realms_key.sh
+        env:
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/cache/restore@v4
         with:
           path: .auth/token.enc
@@ -79,13 +90,11 @@ jobs:
       - name: Look at the Realm's members
         run: node tools/realms/inspect.js
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - name: Download the world
         run: node tools/realms/download.js world.mcworld members.json
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - uses: actions/cache/save@v4
@@ -95,7 +104,6 @@ jobs:
       - name: Look at the players in the world
         env:
           CHECK: ${{ vars.CHECK_SPOT }}
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # to compare hashed account IDs with the members' (only counts are shown)
         run: |
           pip install --quiet numpy pillow
           python3 tools/inspect_world.py world.mcworld
@@ -110,6 +118,12 @@ jobs:
       changed: ${{ steps.compare.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+      - name: Get the key
+        run: bash tools/realms_key.sh
+        env:
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/cache/restore@v4
         with:
           path: .auth/token.enc
@@ -132,7 +146,6 @@ jobs:
           echo "ready=true" >> "$GITHUB_OUTPUT"
           node tools/realms/download.js world.mcworld members.json
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
       - name: Save the refreshed sign-in
@@ -145,7 +158,6 @@ jobs:
         if: steps.download.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
       - name: Check whether the world or the drawing code changed
         id: compare
         if: steps.download.outputs.ready == 'true'
@@ -165,7 +177,6 @@ jobs:
       - name: Make the map
         if: steps.compare.outputs.changed == 'true'
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # pet owners are stored as the same hashed keys live.json uses
         run: |
           pip install --quiet numpy pillow
           live=""
@@ -179,7 +190,6 @@ jobs:
         run: bash tools/vault.sh put data map-data
         env:
           GH_TOKEN: ${{ github.token }}
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
 
   # The invite-only site on Cloudflare (worker/): the site, the map data in a hidden folder, and the shared pins.
   cloudflare:
@@ -194,13 +204,12 @@ jobs:
     timeout-minutes: 15
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}  # optional: made from REALMS_CACHE_KEY when not set
-      CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+      SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}  # optional: made from the key when not set
     steps:
       - name: Check the settings
         id: check
         run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CACHE_KEY" ]; then
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$BLOCKMAP_LANG" != en ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
@@ -209,6 +218,13 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.check.outputs.ready == 'true'
+      - name: Get the key
+        if: steps.check.outputs.ready == 'true'
+        run: bash tools/realms_key.sh
+        env:
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       # CLOUDFLARE_ACCOUNT_ID may be left out: the token's account is used. A new account gets a workers.dev name
       # (its GitHub owner's name) if it has none yet.
       - name: Find the Cloudflare account

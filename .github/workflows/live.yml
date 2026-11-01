@@ -27,6 +27,12 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Get the key
+        run: bash tools/realms_key.sh
+        env:
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/cache/restore@v4
         with:
           path: .auth/token.enc
@@ -39,7 +45,6 @@ jobs:
       - name: Who is online and where (every 20 seconds while someone plays)
         run: bash tools/live_loop.sh
         env:
-          CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
           SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}

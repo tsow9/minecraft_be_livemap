@@ -44,24 +44,24 @@ Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 
 The site will be at `https://blockmap.<subdomain>.workers.dev`. You can choose the subdomain on the **Workers & Pages** page; if you have not, one is chosen from your GitHub username (shown in the run's log).
 
-### 3. Add the secrets
+### 3. Add the token
 
-In the new repository, go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret** and add these two.
+In the new repository, go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret** and add:
 
-| Name | Value |
+| Name | Secret |
 |---|---|
-| `REALMS_CACHE_KEY` | About 40 random characters (from a password generator). You never need to remember it |
 | `CLOUDFLARE_API_TOKEN` | The token from step 2 |
 
-If you have more than one Cloudflare account, also add the ID of the one to use as `CLOUDFLARE_ACCOUNT_ID`.
+The key that encrypts the data is made automatically on the first run and kept in the site's Cloudflare database.
 
-Optionally, add these under the **Variables** tab of the same page (**New repository variable**).
+Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the rest under **Variables**).
 
 | Name | Value |
 |---|---|
 | `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
 | `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
-| `REALM_NAME` | Only if you own more than one Realm: the name of the one to use |
+| `REALM_NAME` | If you own two or more Realms: the Realm's name (as in Minecraft's list of Realms) |
+| `CLOUDFLARE_ACCOUNT_ID` | If you have two or more Cloudflare accounts: the ID of the one to use |
 
 ### 4. Sign in to Realms
 
@@ -90,7 +90,7 @@ From then on it updates automatically.
 | What is public | What it contains |
 |---|---|
 | The program | The same as this repository |
-| The `map-data` and `live-data` branches | Encrypted data, unreadable without `REALMS_CACHE_KEY` |
+| The `map-data` and `live-data` branches | Encrypted data, unreadable without the key |
 | Actions run history | Whether runs succeeded, and counts. Normal runs show no gamertags or coordinates. The site's address is shown, but only the Realm's members can sign in |
 | Your GitHub username | Shown as the repository's owner |
 
@@ -113,7 +113,7 @@ The secrets (keys), the Realms sign-in (Actions cache) and what is on the site a
 
 ## Security and privacy
 
-- **Signing in to Realms**: Realms has no public API, so this tool uses [prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) to sign in as the official Minecraft app for Nintendo Switch, a method used by many unofficial tools. Sign-in uses a code, so no password is handled. Access is limited to Xbox Live and Realms; email, OneDrive and payment details are out of reach. The sign-in is encrypted with `REALMS_CACHE_KEY` and kept only in the repository's Actions cache.
+- **Signing in to Realms**: Realms has no public API, so this tool uses [prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) to sign in as the official Minecraft app for Nintendo Switch, a method used by many unofficial tools. Sign-in uses a code, so no password is handled. Access is limited to Xbox Live and Realms; email, OneDrive and payment details are out of reach. The sign-in is encrypted with a key and kept only in the repository's Actions cache; the key is in the site's Cloudflare database (or the `REALMS_CACHE_KEY` secret).
 - **Signing in to the site**: used only to check the gamertag; the Microsoft token is discarded right after. The site keeps the sign-in state, the gamertag and a hashed ID.
 - **Where data is stored**: the map, chests and positions are stored in Cloudflare. The `map-data` and `live-data` branches on GitHub hold them only in encrypted form.
 - **Recommended**: turn on two-step verification for your Microsoft and GitHub accounts. To revoke the Realms sign-in, use **Security** → **Sign out everywhere** in your Microsoft account (then repeat step 4 to resume).
@@ -128,9 +128,9 @@ Check the message shown in the Actions run (in English when the `LANGUAGE` varia
 | Not signed in to Realms yet | Run step 4 |
 | Not signed in / The sign-in has expired | Run step 4 again |
 | There are 2 Realms | Add `REALM_NAME` (step 3) |
-| The Cloudflare secrets are not all set / Could not find the Cloudflare account | Check the secrets from step 3 and the token's permissions |
+| The Cloudflare secrets are not all set / Could not find the Cloudflare account / Could not get the key from Cloudflare | Check the token (step 3) and its permissions (step 2) |
 | Could not find the site's address | Choose a subdomain under **Workers & Pages** in Cloudflare, then update the map again |
-| The … branch cannot be opened with this key | If you changed `REALMS_CACHE_KEY`, put it back. Otherwise delete that branch (the map is rebuilt from scratch) |
+| The … branch cannot be opened with this key | The key has changed (for example, the Cloudflare database was made again). Delete that branch and the map is rebuilt from scratch |
 | Scheduled updates stopped | GitHub may pause scheduled runs in public repositories after 60 days without activity. Re-enable them in Actions |
 
 ## How it works

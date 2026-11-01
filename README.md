@@ -44,24 +44,24 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 
 サイトのアドレスは `https://blockmap.<サブドメイン>.workers.dev` です。サブドメインは **Workers & Pages** の画面で決められます。決めていなければ、GitHub のユーザー名をもとに自動で決まります(実行結果に表示されます)。
 
-### 3. Secrets を登録する
+### 3. トークンを登録する
 
-作成したリポジトリの **Settings** → **Secrets and variables** → **Actions** → **New repository secret** で、次の 2 つを登録します。
+作成したリポジトリの **Settings** → **Secrets and variables** → **Actions** → **New repository secret** で、次を登録します。
 
-| Name | 値 |
+| Name | Secret |
 |---|---|
-| `REALMS_CACHE_KEY` | 40 文字程度のランダムな文字列(パスワード生成機能などで作成)。覚えておく必要はありません |
 | `CLOUDFLARE_API_TOKEN` | 手順 2 のトークン |
 
-Cloudflare のアカウントを複数持っている場合は、使うアカウントの ID を `CLOUDFLARE_ACCOUNT_ID` として追加します。
+データを暗号化する鍵は、最初の実行で自動的に作られ、Cloudflare のデータベースに保存されます。
 
-同じ画面の **Variables** タブで、必要に応じて次を追加します(**New repository variable**)。
+必要な場合だけ、次も追加します。`CLOUDFLARE_ACCOUNT_ID` は **Secrets** タブ、それ以外は **Variables** タブです。
 
 | Name | 値 |
 |---|---|
 | `LANGUAGE` | `en` にすると、Actions の実行結果のメッセージが英語になります(省略時は日本語) |
 | `TIMEZONE` | 地図の日付に使うタイムゾーン(省略時は `Asia/Tokyo`) |
-| `REALM_NAME` | Realm を 2 つ以上持っている場合だけ、使う Realm の名前 |
+| `REALM_NAME` | Realm を 2 つ以上持っている場合:Realm の名前(マイクラの Realms の一覧に出ている名前) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウントを 2 つ以上持っている場合:使うアカウントの ID |
 
 ### 4. Realms にログインする
 
@@ -90,7 +90,7 @@ Cloudflare のアカウントを複数持っている場合は、使うアカウ
 | 公開されるもの | 中身 |
 |---|---|
 | プログラム | このリポジトリと同じもの |
-| `map-data`・`live-data` ブランチ | 暗号化されたデータ。`REALMS_CACHE_KEY` がないと読めません |
+| `map-data`・`live-data` ブランチ | 暗号化されたデータ。鍵がないと読めません |
 | Actions の実行記録 | 実行の成否と件数。通常の実行では、ゲーマータグや座標は出しません。サイトのアドレスは表示されますが、Realm のメンバー以外はログインできません |
 | GitHub のユーザー名 | リポジトリの持ち主として表示されます |
 
@@ -113,7 +113,7 @@ Secrets(鍵)、Realms のログイン情報(Actions キャッシュ)、サイト
 
 ## セキュリティとプライバシー
 
-- **Realms へのログイン**:Realms の API は一般公開されていないため、[prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) を使い、Minecraft 公式アプリ(Nintendo Switch 版)としてログインします。多くの非公式ツールで使われている方法です。コードを入力する方式なので、パスワードは扱いません。使える範囲は Xbox Live と Realms に限られ、メール・OneDrive・支払い情報にはアクセスできません。ログイン情報は `REALMS_CACHE_KEY` で暗号化し、リポジトリの Actions キャッシュにのみ保存します。
+- **Realms へのログイン**:Realms の API は一般公開されていないため、[prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) を使い、Minecraft 公式アプリ(Nintendo Switch 版)としてログインします。多くの非公式ツールで使われている方法です。コードを入力する方式なので、パスワードは扱いません。使える範囲は Xbox Live と Realms に限られ、メール・OneDrive・支払い情報にはアクセスできません。ログイン情報は鍵で暗号化し、リポジトリの Actions キャッシュにのみ保存します。鍵は Cloudflare のデータベース(または Secret の `REALMS_CACHE_KEY`)にあります。
 - **サイトへのログイン**:ゲーマータグの確認にだけ使い、Microsoft のトークンは確認後すぐに破棄します。サイトに残るのは、ログイン状態・ゲーマータグ・ハッシュ化した ID です。
 - **データの保存先**:地図・チェスト・位置などは Cloudflare に保存されます。GitHub の `map-data`・`live-data` ブランチには暗号化した状態でのみ置かれます。
 - **推奨**:Microsoft アカウントと GitHub アカウントの 2 段階認証を有効にしてください。Realms へのログインを無効にするには、Microsoft アカウントの **セキュリティ** → **すべての場所からサインアウト** を実行します(再開するには手順 4 をやり直します)。
@@ -128,9 +128,9 @@ Actions の実行結果に表示されるメッセージで確認してくださ
 | まだ「Sign in to Realms」をしていない | 手順 4 を実行します |
 | ログイン情報がありません / ログインの有効期限が切れました | 手順 4 をもう一度実行します |
 | Realmが2個以上あります | `REALM_NAME` を追加します(手順 3) |
-| Cloudflare の Secrets がそろっていない / アカウントが見つかりませんでした | 手順 3 の Secrets と、トークンの権限を確認します |
+| Cloudflare の Secrets がそろっていない / アカウントが見つかりませんでした / 鍵を Cloudflare から用意できませんでした | 手順 3 のトークンと、その権限(手順 2)を確認します |
 | 公開先のアドレスがわかりませんでした | Cloudflare の **Workers & Pages** でサブドメインを決めてから、地図を更新し直します |
-| ブランチをこの鍵で開けませんでした | `REALMS_CACHE_KEY` を変更した場合は元に戻します。戻せない場合はそのブランチを削除します(地図は最初から作り直されます) |
+| ブランチをこの鍵で開けませんでした | 鍵が変わっています(Cloudflare のデータベースを作り直した場合など)。そのブランチを削除すると、地図は最初から作り直されます |
 | 自動更新が止まった | 公開リポジトリは、60 日間動きがないと定期実行が停止されることがあります。Actions の画面から再開します |
 
 ## 仕組み
