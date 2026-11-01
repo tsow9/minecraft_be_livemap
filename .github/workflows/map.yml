@@ -157,7 +157,6 @@ jobs:
       - name: Get the previous map data
         if: steps.download.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
-        env:
       - name: Check whether the world or the drawing code changed
         id: compare
         if: steps.download.outputs.ready == 'true'
@@ -176,7 +175,6 @@ jobs:
           python-version: '3.12'
       - name: Make the map
         if: steps.compare.outputs.changed == 'true'
-        env:
         run: |
           pip install --quiet numpy pillow
           live=""
