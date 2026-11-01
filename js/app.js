@@ -1771,10 +1771,12 @@ function renderTimeline() {
   if (days.length) { $('#time-date').min = days[0]; $('#time-date').max = days[days.length - 1]; }
   labelTimeline();
 }
-// The day (and the time its world was saved) of the map the slider is on.
+// The day of the map the slider is on goes in the date box; beside it, when that world was saved.
 function labelTimeline() {
   const s = snapshots()[state.snapshotIndex];
-  $('#time-label').textContent = s ? snapText(s) : tl('なし');
+  const t = s?.savedAt ? new Date(s.savedAt) : null;
+  $('#time-label').textContent = t && !Number.isNaN(t.getTime())
+    ? tl('{time} 時点', { time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}` }) : '';
   if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.id)) $('#time-date').value = s.id;
 }
 

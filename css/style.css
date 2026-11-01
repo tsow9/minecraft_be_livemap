@@ -286,9 +286,11 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
 #update-bar .mini { background: var(--accent); border-color: var(--accent); color: #06130d; }
 body.tools-open #update-bar { bottom: 160px; }
 .time { display: flex; gap: 10px; align-items: center; }
-.time input { flex: 1; min-width: 0; accent-color: var(--accent); }
-#time-label { flex: none; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.time input { flex: 1; accent-color: var(--accent); }
+/* The day the slider is on (and when its world was saved), on the line below, so the slider keeps its size. */
+#time-label { margin-left: auto; color: var(--fg); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .datepick { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--sub); font-size: 13px; white-space: nowrap; }
+.datepick label { display: flex; align-items: center; gap: 10px; }
 .datepick input { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--fg);
   font: inherit; color-scheme: dark; }
 .datepick input:focus { outline: none; border-color: var(--accent); }
