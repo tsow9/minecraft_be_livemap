@@ -36,36 +36,37 @@
 </li>
 
 <li class="step" data-step="2">
-  <h2><span class="num">2</span><span data-en="Prepare Cloudflare">Cloudflare を準備する</span></h2>
+  <h2><span class="num">2</span><span data-en="Create a Cloudflare token">Cloudflare のトークンを作る</span></h2>
   <ol>
-    <li><span data-en="Open Workers &amp; Pages. If asked, choose your workers.dev subdomain, and type it here:">Workers & Pages を開きます。サブドメインを聞かれたら決めて、ここにも入れます:</span>
-      <p><a class="btn ghost" href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noopener" data-en="Open Workers &amp; Pages">Workers & Pages を開く</a></p>
-      <label class="field inline"><input id="sub" type="text" placeholder="yourname" autocomplete="off" spellcheck="false"><span>.workers.dev</span></label>
-      <p class="hint" id="site-hint"></p></li>
-    <li><span data-en="Create the API token (permissions are filled in: &lt;b&gt;Workers Scripts: Edit&lt;/b&gt;, &lt;b&gt;D1: Edit&lt;/b&gt;, &lt;b&gt;Account Settings: Read&lt;/b&gt;. If any is missing, add it). Copy the token: it is shown only once.">API トークンを作ります(権限は入力済みです:<b>Workers Scripts: Edit</b>、<b>D1: Edit</b>、<b>Account Settings: Read</b>。足りなければ追加してください)。表示されたトークンを控えます(一度しか表示されません)。</span>
+    <li><span data-en="Open the button below. The permissions are filled in (&lt;b&gt;Workers Scripts: Edit&lt;/b&gt;, &lt;b&gt;D1: Edit&lt;/b&gt;, &lt;b&gt;Account Settings: Read&lt;/b&gt;; add any that is missing). Create the token and copy it: it is shown only once.">下のボタンを開きます。権限は入力済みです(<b>Workers Scripts: Edit</b>、<b>D1: Edit</b>、<b>Account Settings: Read</b>。足りなければ追加してください)。作成して、表示されたトークンを控えます(一度しか表示されません)。</span>
       <p><a class="btn ghost" id="token-link" target="_blank" rel="noopener" data-en="Create the token">トークンを作る</a></p></li>
-    <li data-en="Copy the &lt;b&gt;Account ID&lt;/b&gt; shown on the Workers &amp; Pages page (on the right).">Workers & Pages の画面(右側)に出ている <b>Account ID</b> を控えます。</li>
   </ol>
+  <details class="why">
+    <summary data-en="Choosing the site's address (optional)">サイトのアドレスを自分で決める(任意)</summary>
+    <p data-en="The site is at blockmap.&amp;lt;subdomain&amp;gt;.workers.dev. If you have not chosen a subdomain on Workers &amp; Pages, one is made from your GitHub username. To choose it yourself, do it there before step 5 and type it here.">サイトは blockmap.<サブドメイン>.workers.dev になります。Workers & Pages でサブドメインを決めていなければ、GitHub のユーザー名から自動で決まります。自分で決める場合は、手順 5 の前に決めて、ここにも入れてください。</p>
+    <p><a class="btn ghost" href="https://dash.cloudflare.com/?to=/:account/workers-and-pages" target="_blank" rel="noopener" data-en="Open Workers &amp; Pages">Workers & Pages を開く</a></p>
+    <label class="field inline"><input id="sub" type="text" placeholder="yourname" autocomplete="off" spellcheck="false"><span>.workers.dev</span></label>
+  </details>
+  <p class="hint" id="site-hint"></p>
   <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
 </li>
 
 <li class="step" data-step="3">
   <h2><span class="num">3</span><span data-en="Add the secrets and variables">Secrets と Variables を登録する</span></h2>
-  <p data-en="Add each of these as a &lt;b&gt;secret&lt;/b&gt; (Name and value, then &lt;b&gt;Add secret&lt;/b&gt;).">次の 4 つを <b>Secret</b> として 1 つずつ登録します(Name と値を入れて <b>Add secret</b>)。</p>
+  <p data-en="Add these two as &lt;b&gt;secrets&lt;/b&gt; (Name and value, then &lt;b&gt;Add secret&lt;/b&gt;).">次の 2 つを <b>Secret</b> として登録します(Name と値を入れて <b>Add secret</b>)。</p>
   <p><a class="btn ghost repo-link" data-path="/settings/secrets/actions/new" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
   <table class="kv">
     <tr><td><code>REALMS_CACHE_KEY</code> <button class="copy" data-copy-name>⧉</button></td><td><code class="secret" id="key1"></code> <button class="copy" data-copy="key1" data-en="Copy">コピー</button></td></tr>
-    <tr><td><code>SHARE_PASSPHRASE</code> <button class="copy" data-copy-name>⧉</button></td><td><code class="secret" id="key2"></code> <button class="copy" data-copy="key2" data-en="Copy">コピー</button></td></tr>
     <tr><td><code>CLOUDFLARE_API_TOKEN</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="The token from step 2">手順 2 のトークン</td></tr>
-    <tr><td><code>CLOUDFLARE_ACCOUNT_ID</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="The Account ID from step 2">手順 2 の Account ID</td></tr>
   </table>
-  <p class="hint" data-en="The two random strings were made in this browser just now and are not kept anywhere. If you reload the page, new ones are made: use the ones shown when you add them.">2 つのランダムな文字列は、このブラウザで今作ったもので、どこにも保存されません。ページを読み直すと作り直されるので、表示中のものを登録してください。</p>
-  <p data-en="Then add these as &lt;b&gt;variables&lt;/b&gt; (the &lt;b&gt;Variables&lt;/b&gt; tab).">続けて、次を <b>Variable</b> として登録します(<b>Variables</b> タブ)。</p>
+  <p class="hint" data-en="The random string was made in this browser just now and is not kept anywhere. If you reload the page, a new one is made: add the one shown. You never need to remember it.">ランダムな文字列は、このブラウザで今作ったもので、どこにも保存されません。ページを読み直すと作り直されるので、表示中のものを登録してください。覚えておく必要はありません。</p>
+  <p data-en="Then, if you like, add these as &lt;b&gt;variables&lt;/b&gt; (the &lt;b&gt;Variables&lt;/b&gt; tab; all optional).">必要なら、次を <b>Variable</b> として登録します(<b>Variables</b> タブ。どれも任意です)。</p>
   <p><a class="btn ghost repo-link" data-path="/settings/variables/actions/new" target="_blank" rel="noopener" data-en="Open “New repository variable”">「New repository variable」を開く</a></p>
   <table class="kv">
-    <tr><td><code>LANGUAGE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-lang"></code> <button class="copy" data-copy="v-lang" data-en="Copy">コピー</button></td></tr>
-    <tr><td><code>TIMEZONE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-tz"></code> <button class="copy" data-copy="v-tz" data-en="Copy">コピー</button></td></tr>
+    <tr><td><code>LANGUAGE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-lang"></code> <button class="copy" data-copy="v-lang" data-en="Copy">コピー</button> <span class="small" data-en="(messages in the runs; English if left out)">(実行時のメッセージの言語。省略時は英語)</span></td></tr>
+    <tr><td><code>TIMEZONE</code> <button class="copy" data-copy-name>⧉</button></td><td><code id="v-tz"></code> <button class="copy" data-copy="v-tz" data-en="Copy">コピー</button> <span class="small" data-en="(for the map's dates; Asia/Tokyo if left out)">(地図の日付。省略時は Asia/Tokyo)</span></td></tr>
     <tr><td><code>REALM_NAME</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="Only if you own more than one Realm: its name">Realm を 2 つ以上持っている場合だけ、使う Realm の名前</td></tr>
+    <tr><td><code>CLOUDFLARE_ACCOUNT_ID</code> <button class="copy" data-copy-name>⧉</button></td><td data-en="Only if you have more than one Cloudflare account (add it as a &lt;b&gt;secret&lt;/b&gt;)">Cloudflare のアカウントを複数持っている場合だけ(<b>Secret</b> として登録)</td></tr>
   </table>
   <label class="done"><input type="checkbox"> <span data-en="Done">できた</span></label>
 </li>

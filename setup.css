@@ -49,3 +49,4 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .why { margin: 8px 0 12px; font-size: 13px; color: var(--sub); }
 .why summary { cursor: pointer; color: var(--accent); }
 .why p { margin: 6px 0 0; }
+.small { color: var(--sub); font-size: 12px; }

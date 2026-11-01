@@ -15,7 +15,7 @@
 - Actions の名前・ボタン・手順名は英語(Map site / Live players、Update map / Sign in to Realms / Publish site only / Diagnose)。実行中のメッセージはリポジトリ変数 LANGUAGE(ja/en、省略時 en)で切り替え(tools/msg.py、tools/realms/msg.js、シェルの t())。地図の日付のタイムゾーンは TIMEZONE(省略時 Asia/Tokyo)。私たちのリポジトリは LANGUAGE=ja
 - データの置き場所:`map-data` ブランチ(タイル・items.json)、`live-data` ブランチ(live.json)。どちらも `tools/vault.sh` で暗号化(鍵は REALMS_CACHE_KEY)。中身は暗号文だけ
 - GitHub Pages:「移転しました」のページ、login.html(全サイト共通のログイン中継)、privacy.html・terms.html(日英。legal.css/legal.js)、setup.html(かんたん設定。setup.css/setup.js。鍵はブラウザで作り保存しない。リポジトリ名・サブドメイン・チェックだけ localStorage)だけ。地図のデータは置かない。ログイン画面の下からポリシーと規約へリンク
-- Secrets:REALMS_CACHE_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、SHARE_PASSPHRASE(位置確認がサイトに送るときの合言葉)
+- Secrets:必須は REALMS_CACHE_KEY と CLOUDFLARE_API_TOKEN の2つだけ。CLOUDFLARE_ACCOUNT_ID は省略可(トークンのアカウントを tools/cloudflare.sh で調べる)。SHARE_PASSPHRASE も省略可(REALMS_CACHE_KEY から作る。私たちのリポジトリは設定済みのものを使い続ける)。workers.dev のサブドメインが未設定なら、GitHub の持ち主名から自動で決める
 - Realms の契約更新日は API の値が当てにならない。支払日・料金・通貨は管理者メニューで持ち主が入力する(Worker の /api/settings、D1 の kv 'settings'。選択はブラウザ標準のメニューを使わず、行の下に開く自作のリスト)。私たちの Realm は毎月26日・930円
 
 ## ほかの人に配る方針(決定済み)

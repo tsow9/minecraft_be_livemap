@@ -15,15 +15,17 @@ last_online=0
 last_stamp=""
 last_map=0
 site_url=$(bash tools/site_url.sh)
+live_pass=$(python3 tools/site_keys.py --live-pass)
+[ -n "$live_pass" ] && echo "::add-mask::$live_pass"
 [ -n "$site_url" ] || echo "::warning::$(t 'Cloudflare のサイトの住所がわからないので、位置はサイトに送りません' 'The Cloudflare site address is unknown, so positions are not sent to the site')"
 
 bash tools/vault.sh get live-data live
 
 publish() {
   # The site reads this copy every few seconds.
-  if [ -n "$site_url" ] && [ -n "${SHARE_PASSPHRASE:-}" ]; then
+  if [ -n "$site_url" ] && [ -n "$live_pass" ]; then
     curl -sS --max-time 20 -o /dev/null -w "$(t 'サイトへ送信' 'Sent to the site'): %{http_code}\n" -X POST "$site_url/api/live" \
-      -H "X-Passphrase: $SHARE_PASSPHRASE" -H 'Content-Type: application/json' --data-binary @live/live.json || true
+      -H "X-Passphrase: $live_pass" -H 'Content-Type: application/json' --data-binary @live/live.json || true
   fi
   # Kept (encrypted) for the next run and the map drawing.
   bash tools/vault.sh put live live-data || echo "$(t 'live-data への保存に失敗しました' 'Could not save to live-data')"

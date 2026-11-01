@@ -39,21 +39,21 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 
 ### 2. Cloudflare を準備する
 
-1. Cloudflare のダッシュボードで **Workers & Pages** を開きます。workers.dev のサブドメインを求められたら決めます。サイトのアドレスは `https://blockmap.<サブドメイン>.workers.dev` になります。
-2. **My Profile** → **API Tokens** → **Create Token** を開きます。
-3. **Edit Cloudflare Workers** テンプレートを選び、権限に **Account / D1 / Edit** を追加して作成します。表示されたトークンを控えます(一度しか表示されません)。
-4. **Workers & Pages** の画面に表示される **Account ID** を控えます。
+1. Cloudflare のダッシュボードで **My Profile** → **API Tokens** → **Create Token** を開きます。
+2. **Edit Cloudflare Workers** テンプレートを選び、権限に **Account / D1 / Edit** を追加して作成します。表示されたトークンを控えます(一度しか表示されません)。
+
+サイトのアドレスは `https://blockmap.<サブドメイン>.workers.dev` です。サブドメインは **Workers & Pages** の画面で決められます。決めていなければ、GitHub のユーザー名をもとに自動で決まります(実行結果に表示されます)。
 
 ### 3. Secrets を登録する
 
-作成したリポジトリの **Settings** → **Secrets and variables** → **Actions** → **New repository secret** で、次の 4 つを登録します。
+作成したリポジトリの **Settings** → **Secrets and variables** → **Actions** → **New repository secret** で、次の 2 つを登録します。
 
 | Name | 値 |
 |---|---|
-| `REALMS_CACHE_KEY` | 40 文字程度のランダムな文字列(パスワード生成機能などで作成) |
-| `SHARE_PASSPHRASE` | 上とは別の、40 文字程度のランダムな文字列 |
-| `CLOUDFLARE_API_TOKEN` | 手順 2-3 のトークン |
-| `CLOUDFLARE_ACCOUNT_ID` | 手順 2-4 の Account ID |
+| `REALMS_CACHE_KEY` | 40 文字程度のランダムな文字列(パスワード生成機能などで作成)。覚えておく必要はありません |
+| `CLOUDFLARE_API_TOKEN` | 手順 2 のトークン |
+
+Cloudflare のアカウントを複数持っている場合は、使うアカウントの ID を `CLOUDFLARE_ACCOUNT_ID` として追加します。
 
 同じ画面の **Variables** タブで、必要に応じて次を追加します(**New repository variable**)。
 
@@ -130,8 +130,8 @@ Actions の実行結果に表示されるメッセージで確認してくださ
 | まだ「Sign in to Realms」をしていない | 手順 4 を実行します |
 | ログイン情報がありません / ログインの有効期限が切れました | 手順 4 をもう一度実行します |
 | Realmが2個以上あります | `REALM_NAME` を追加します(手順 3) |
-| Cloudflare の Secrets がそろっていない | 手順 3 の 4 つの Secrets を確認します |
-| 公開先のアドレスがわかりませんでした | 手順 2-1 でサブドメインを決めてから、地図を更新し直します |
+| Cloudflare の Secrets がそろっていない / アカウントが見つかりませんでした | 手順 3 の Secrets と、トークンの権限を確認します |
+| 公開先のアドレスがわかりませんでした | Cloudflare の **Workers & Pages** でサブドメインを決めてから、地図を更新し直します |
 | ブランチをこの鍵で開けませんでした | `REALMS_CACHE_KEY` を変更した場合は元に戻します。戻せない場合はそのブランチを削除します(地図は最初から作り直されます) |
 | 自動更新が止まった | 公開リポジトリは、60 日間動きがないと定期実行が停止されることがあります。Actions の画面から再開します |
 

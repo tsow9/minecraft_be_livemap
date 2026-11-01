@@ -183,14 +183,13 @@ jobs:
     timeout-minutes: 15
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
+      SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}  # optional: made from REALMS_CACHE_KEY when not set
       CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
     steps:
       - name: Check the settings
         id: check
         run: |
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$SHARE_PASSPHRASE" ] && [ -n "$CACHE_KEY" ]; then
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CACHE_KEY" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$BLOCKMAP_LANG" = ja ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
@@ -199,6 +198,20 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.check.outputs.ready == 'true'
+      # CLOUDFLARE_ACCOUNT_ID may be left out: the token's account is used. A new account gets a workers.dev name
+      # (its GitHub owner's name) if it has none yet.
+      - name: Find the Cloudflare account
+        if: steps.check.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if ! bash tools/cloudflare.sh export >/dev/null; then
+            if [ "$BLOCKMAP_LANG" = ja ]; then echo "::error::Cloudflare のアカウントが見つかりませんでした。CLOUDFLARE_API_TOKEN を確かめてください"
+            else echo "::error::Could not find the Cloudflare account. Check CLOUDFLARE_API_TOKEN"; fi
+            exit 1
+          fi
+          sub=$(bash tools/cloudflare.sh subdomain "$GITHUB_REPOSITORY_OWNER")
+          [ -n "$sub" ] && echo "workers.dev: $sub"
       - name: Make the keys (masked in the log)
         if: steps.check.outputs.ready == 'true'
         run: python3 tools/site_keys.py "$RUNNER_TEMP"

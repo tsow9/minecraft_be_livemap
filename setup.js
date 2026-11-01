@@ -39,7 +39,6 @@
     return out.join('');
   }
   $('#key1').textContent = randomKey();
-  $('#key2').textContent = randomKey();
   $('#v-tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
 
   // ---- the repository and the subdomain ----
@@ -68,9 +67,13 @@
     $('#repo-hint').innerHTML = repo
       ? T(`リポジトリ:<code>${repo}</code>(手順 3〜5 のボタンが、このリポジトリを開きます)`, `Repository: <code>${repo}</code> (the buttons in steps 3–5 open it)`)
       : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます', 'Once filled in, the buttons in steps 3–5 open it directly');
-    const sub = saved.sub || '';
+    // Without a chosen subdomain, the workflow makes one from the GitHub owner's name (tools/cloudflare.sh).
+    const sub = saved.sub || (repo ? repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-') : '');
     const site = sub ? `https://blockmap.${sub}.workers.dev` : '';
-    $('#site-hint').innerHTML = site ? T(`サイトの住所は <code>${site}</code> になります`, `Your site will be at <code>${site}</code>`) : '';
+    $('#site-hint').innerHTML = !site ? ''
+      : saved.sub ? T(`サイトの住所は <code>${site}</code> になります`, `Your site will be at <code>${site}</code>`)
+        : T(`サイトの住所は、おそらく <code>${site}</code> になります(手順 5 の実行結果に正しい住所が出ます)`,
+          `Your site will most likely be at <code>${site}</code> (step 5's run shows the exact address)`);
     $('#site-link').classList.toggle('off', !site);
     if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
   }

@@ -39,21 +39,21 @@ Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 
 ### 2. Prepare Cloudflare
 
-1. Open **Workers & Pages** in the Cloudflare dashboard. If asked for a workers.dev subdomain, choose one. The site will be at `https://blockmap.<subdomain>.workers.dev`.
-2. Go to **My Profile** → **API Tokens** → **Create Token**.
-3. Choose the **Edit Cloudflare Workers** template, add the permission **Account / D1 / Edit**, and create the token. Copy it (it is shown only once).
-4. Copy the **Account ID** shown on the **Workers & Pages** page.
+1. In the Cloudflare dashboard, go to **My Profile** → **API Tokens** → **Create Token**.
+2. Choose the **Edit Cloudflare Workers** template, add the permission **Account / D1 / Edit**, and create the token. Copy it (it is shown only once).
+
+The site will be at `https://blockmap.<subdomain>.workers.dev`. You can choose the subdomain on the **Workers & Pages** page; if you have not, one is chosen from your GitHub username (shown in the run's log).
 
 ### 3. Add the secrets
 
-In the new repository, go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret** and add these four.
+In the new repository, go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret** and add these two.
 
 | Name | Value |
 |---|---|
-| `REALMS_CACHE_KEY` | About 40 random characters (from a password generator) |
-| `SHARE_PASSPHRASE` | Another, different string of about 40 random characters |
-| `CLOUDFLARE_API_TOKEN` | The token from step 2-3 |
-| `CLOUDFLARE_ACCOUNT_ID` | The Account ID from step 2-4 |
+| `REALMS_CACHE_KEY` | About 40 random characters (from a password generator). You never need to remember it |
+| `CLOUDFLARE_API_TOKEN` | The token from step 2 |
+
+If you have more than one Cloudflare account, also add the ID of the one to use as `CLOUDFLARE_ACCOUNT_ID`.
 
 Optionally, add these under the **Variables** tab of the same page (**New repository variable**).
 
@@ -130,8 +130,8 @@ Check the message shown in the Actions run.
 | Not signed in to Realms yet | Run step 4 |
 | Not signed in / The sign-in has expired | Run step 4 again |
 | There are 2 Realms | Add `REALM_NAME` (step 3) |
-| The Cloudflare secrets are not all set | Check the four secrets from step 3 |
-| Could not find the site's address | Choose a subdomain (step 2-1), then update the map again |
+| The Cloudflare secrets are not all set / Could not find the Cloudflare account | Check the secrets from step 3 and the token's permissions |
+| Could not find the site's address | Choose a subdomain under **Workers & Pages** in Cloudflare, then update the map again |
 | The … branch cannot be opened with this key | If you changed `REALMS_CACHE_KEY`, put it back. Otherwise delete that branch (the map is rebuilt from scratch) |
 | Scheduled updates stopped | GitHub may pause scheduled runs in public repositories after 60 days without activity. Re-enable them in Actions |
 
