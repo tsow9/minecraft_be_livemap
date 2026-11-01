@@ -148,6 +148,10 @@ Live players(.github/workflows/live.yml)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c)(Google Fonts)
 - ペットの顔、アイテム・ブロックの名前は、地図の更新時に公式の [bedrock-samples](https://github.com/Mojang/bedrock-samples) から生成します。公式の画像やテキストはこのリポジトリに含めていません。
 
+## プライバシーポリシーと利用規約
+
+サイトの[プライバシーポリシー](https://tsow9.github.io/minecraft_be_livemap/privacy.html)と[利用規約](https://tsow9.github.io/minecraft_be_livemap/terms.html)は、ログイン画面からも開けます。
+
 ## ライセンス
 
 [MIT License](LICENSE)

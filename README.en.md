@@ -148,6 +148,10 @@ Live players (.github/workflows/live.yml)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c) (Google Fonts)
 - Pet faces and item/block names are generated from the official [bedrock-samples](https://github.com/Mojang/bedrock-samples) at each map update. No official images or text are included in this repository.
 
+## Privacy and terms
+
+The sites' [Privacy Policy](https://tsow9.github.io/minecraft_be_livemap/privacy.html) and [Terms of Use](https://tsow9.github.io/minecraft_be_livemap/terms.html) are also linked from the sign-in screen.
+
 ## License
 
 [MIT License](LICENSE)

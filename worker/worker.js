@@ -34,7 +34,7 @@ export default {
       const live = () => (liveP ??= readLive(env));
       const me = await whoIs(req, env, ip, live);
       if (url.pathname === '/' || url.pathname === '/index.html') {
-        if (!me) return gatePage();
+        if (!me) return gatePage(env);
         const page = await env.ASSETS.fetch(new Request(new URL('/index.html', url)));
         const html = (await page.text()).replace('<head>', `<head><script>window.BLOCKMAP_DATA=${JSON.stringify(`/d/${env.DATA_DIR}/`)};</script>`);
         return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
@@ -250,6 +250,8 @@ async function msFinish(env, code, signIn, live) {
     const info = liveInfo((await live()).data);
     if (xid !== info.ownerXid && !info.members.some((m) => m.xid === xid)) return { error: 'not member', gamertag: who.gtg };
     const session = randomHex(32), now = Date.now();
+    // Sign-ins unused for as long as the cookie lasts are gone for good.
+    await env.DB.prepare('DELETE FROM sessions WHERE COALESCE(seen, created) < ?').bind(now - COOKIE_DAYS * 86400 * 1000).run();
     await env.DB.prepare('INSERT INTO sessions (token, xid, name, created, seen) VALUES (?1, ?2, ?3, ?4, ?4)')
       .bind(await sha(session), xid, String(who.gtg).slice(0, 40), now).run();
     return { session, name: who.gtg };
@@ -391,7 +393,9 @@ async function keyOk(env, ip, given, keys) {
 
 // Shown to anyone not let in yet: sign in with Microsoft (the Realm's members get in). A sign-in comes back here
 // (#mscode=…).
-function gatePage() {
+function gatePage(env) {
+  // The privacy policy and terms sit next to the sign-in relay page.
+  const legal = String(env.MS_RELAY || '').replace(/login\.html$/, '');
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="format-detection" content="telephone=no,email=no,address=no">
 <meta name="robots" content="noindex"><title>Blockmap</title><link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
@@ -403,15 +407,17 @@ button{font:inherit}
 h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6;font-size:14px}
 #ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}
 #msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
+.legal{margin:16px 0 0;font-size:12px;color:#7d828c;text-align:center}.legal a{color:#7d828c}
 </style></head><body><div class="box"><h1>Blockmap</h1>
 <div id="start"><p id="intro"></p>
 <button id="ms"></button></div><p id="msg"></p>
+<p class="legal"><a id="privacy" href="${legal}privacy.html" target="_blank" rel="noopener"></a> · <a id="terms" href="${legal}terms.html" target="_blank" rel="noopener"></a></p>
 </div>
 <script>
 // Japanese or English, the same choice as the map (js/i18n.js): the viewer's pick, else the browser's language.
 let saved = null;
 try { saved = localStorage.getItem('blockmap.lang'); } catch { /* private mode */ }
-const ja = saved ? saved === 'ja' : /^ja\b/i.test(navigator.language || '');
+const ja = saved ? saved === 'ja' : /^ja(-|$)/i.test(navigator.language || '');
 document.documentElement.lang = ja ? 'ja' : 'en';
 const T = ja ? {
   intro: 'Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。',
@@ -430,6 +436,8 @@ const T = ja ? {
 };
 document.getElementById('intro').textContent = T.intro;
 document.getElementById('ms').textContent = T.button;
+document.getElementById('privacy').textContent = ja ? 'プライバシーポリシー' : 'Privacy Policy';
+document.getElementById('terms').textContent = ja ? '利用規約' : 'Terms of Use';
 const msg = document.getElementById('msg');
 document.getElementById('ms').onclick = async () => {
   msg.textContent = '';
