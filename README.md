@@ -66,7 +66,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 ### 4. Realms にログインする
 
 1. トークンを登録すると、1 分ほどで自動的にログインが始まります。すぐに始めるには、**Actions** タブの **Map site** → **Run workflow** → 緑の **Run workflow** を押します(What to do は **Sign in to Realms**)。
-2. 表示されるまで少し待ちます。[セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)にコードが出ます(Actions の実行中の **login** ジョブにも、枠で囲まれて出ます)。
+2. 最初はサイトを先に用意するので、2〜3 分待ちます。[セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)にコードが出ます(Actions の実行中の **login** ジョブにも、枠で囲まれて出ます)。
 3. コードを https://www.microsoft.com/link に入力します。
 4. Realm のオーナーのアカウントでログインします(15 分以内)。ログイン後に「Minecraft for Nintendo Switch」と表示されますが、正常です([理由](#セキュリティとプライバシー))。
 5. ログインが終わると、自動で地図の作成が始まります。数分後、実行結果の Summary に「サイト: https://blockmap.….workers.dev」と表示されます。
