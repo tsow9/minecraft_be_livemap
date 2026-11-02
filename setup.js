@@ -38,6 +38,16 @@
     });
   }
 
+  // ---- anonymous counts (GoatCounter): how far people get, each once per visit. Never the repository or any name. ----
+  const counted = new Set();
+  function count(what) {
+    if (counted.has(what)) return;
+    counted.add(what);
+    const send = () => window.goatcounter?.count?.({ path: `setup/${what}`, title: what, event: true });
+    if (window.goatcounter?.count) send(); else setTimeout(send, 3000);  // the counter loads after this script
+  }
+  document.addEventListener('click', (e) => { const a = e.target.closest('[data-count]'); if (a) count(a.dataset.count); });
+
   // ---- ⓘ buttons open their explanation ----
   for (const b of document.querySelectorAll('.info')) {
     b.addEventListener('click', () => { const box = document.getElementById(b.dataset.info); box.hidden = !box.hidden; });
@@ -54,7 +64,10 @@
     return m ? `${m[1]}/${m[2]}` : '';
   };
   $('#repo').value = saved.repo ? `https://github.com/${saved.repo}` : '';
-  $('#repo').addEventListener('input', () => { saved.repo = repoOf($('#repo').value); save(); refresh(); poll(true); });
+  $('#repo').addEventListener('input', () => {
+    saved.repo = repoOf($('#repo').value); save(); refresh(); poll(true);
+    if (saved.repo) count('repo-entered');
+  });
   // The address the workflow gives a new site (tools/cloudflare.sh): blockmap.<GitHub owner>.workers.dev.
   const siteOf = (repo) => `https://blockmap.${repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')}.workers.dev`;
 
@@ -154,6 +167,7 @@
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
+    if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
     box.innerHTML = html;
   }
   let timer = null;

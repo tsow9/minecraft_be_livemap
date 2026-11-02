@@ -24,7 +24,7 @@
 
 <section class="intro">
   <p data-en="Make a map site that only your Realm's members can see. Send its link to your members, and everyone can look at the map in a browser.">Realm のメンバーだけが見られる地図サイトを作ります。できたサイトのリンクを仲間に送れば、みんながブラウザで地図を見られます。</p>
-  <p class="sub" data-en="About 15 minutes. This page never asks for a password or token, and sends nothing anywhere.">所要時間は 15 分ほどです。このページでパスワードやトークンを入力することはなく、どこにも送信しません。</p>
+  <p class="sub" data-en="About 15 minutes. This page never asks for a password or token. What you type is sent nowhere; only how far people get is counted, anonymously (&lt;a href=&quot;privacy.html#setup-en&quot;&gt;details&lt;/a&gt;).">所要時間は 15 分ほどです。このページでパスワードやトークンを入力することはありません。入力した内容はどこにも送信しません。どこまで進んだかだけを、匿名で数えています(<a href="privacy.html#setup">詳しく</a>)。</p>
   <p class="sub" data-en="You need (all free): the Realm owner's Microsoft account, a &lt;a href=&quot;https://github.com/signup&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;GitHub&lt;/a&gt; account and a &lt;a href=&quot;https://dash.cloudflare.com/sign-up&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Cloudflare&lt;/a&gt; account.">必要なもの(すべて無料):Realm のオーナーの Microsoft アカウント、<a href="https://github.com/signup" target="_blank" rel="noopener">GitHub</a> アカウント、<a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">Cloudflare</a> アカウント</p>
 </section>
 
@@ -36,7 +36,7 @@
     <p data-en="Automatic updates run on GitHub Actions, which is free without limit only for public repositories. Private ones get 2,000 minutes a month; Blockmap needs about 4,000.">自動更新は GitHub Actions で動きます。Actions を無制限に無料で使えるのは、公開リポジトリだけです。非公開は月 2,000 分までで、Blockmap は月 4,000 分ほど使います。</p>
     <p data-en="Only the program and encrypted data become public. Gamertags and coordinates never appear, and only your Realm's members can sign in to the site.">公開されるのは、プログラムと暗号化したデータだけです。ゲーマータグや座標は表に出ず、サイトに入れるのは Realm のメンバーだけです。</p>
   </div>
-  <p><a class="btn" href="https://github.com/tsow9/minecraft_be_livemap/generate" target="_blank" rel="noopener" data-en="Create the repository on GitHub">GitHub でリポジトリを作る</a></p>
+  <p><a class="btn" href="https://github.com/tsow9/minecraft_be_livemap/generate" data-count="create-repo" target="_blank" rel="noopener" data-en="Create the repository on GitHub">GitHub でリポジトリを作る</a></p>
   <label class="field"><span data-en="Link to the repository you created">作ったリポジトリのリンク</span>
     <input id="repo" type="text" placeholder="https://github.com/yourname/blockmap" autocomplete="off" spellcheck="false"></label>
   <p class="hint" id="repo-hint"></p>
@@ -45,7 +45,7 @@
 <li class="step">
   <h2><span class="num">2</span><span data-en="Create a Cloudflare token">Cloudflare のトークンを作る</span></h2>
   <p data-en="Open the button below, check what is filled in, then press &lt;b&gt;Continue to summary&lt;/b&gt; → &lt;b&gt;Create Token&lt;/b&gt;. Copy the token shown; it is shown only once.">下のボタンを開き、内容を確認して <b>Continue to summary</b> → <b>Create Token</b> を押します。表示されたトークンをコピーします。トークンは一度しか表示されません。</p>
-  <p><a class="btn" id="token-link" target="_blank" rel="noopener" data-en="Create the token">トークンを作る</a></p>
+  <p><a class="btn" id="token-link" data-count="token" target="_blank" rel="noopener" data-en="Create the token">トークンを作る</a></p>
   <div class="expect">
     <p data-en="It should look like this. Add anything missing.">次のようになっていれば大丈夫です。足りないものは追加します。</p>
     <ul>
@@ -65,7 +65,7 @@
 <li class="step">
   <h2><span class="num">3</span><span data-en="Add the token to the repository">トークンをリポジトリに登録する</span></h2>
   <p data-en="Open the button below, fill in &lt;b&gt;Name&lt;/b&gt; and &lt;b&gt;Secret&lt;/b&gt;, then press &lt;b&gt;Add secret&lt;/b&gt;.">下のボタンを開き、<b>Name</b> と <b>Secret</b> を入れて <b>Add secret</b> を押します。</p>
-  <p><a class="btn repo-link" data-path="/settings/secrets/actions/new" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
+  <p><a class="btn repo-link" data-count="secret" data-path="/settings/secrets/actions/new" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
   <table class="kv">
     <tr><th>Name</th><th>Secret</th></tr>
     <tr><td><code>CLOUDFLARE_API_TOKEN</code><button class="copy" type="button" data-text="CLOUDFLARE_API_TOKEN"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
@@ -93,7 +93,7 @@
     <li data-en="&lt;b&gt;Run workflow&lt;/b&gt; → set &lt;b&gt;What to do&lt;/b&gt; to &lt;b&gt;Sign in to Realms&lt;/b&gt; → the green &lt;b&gt;Run workflow&lt;/b&gt;.">右の <b>Run workflow</b> を押し、<b>What to do</b> を <b>Sign in to Realms</b> にして、緑の <b>Run workflow</b> を押します。</li>
     <li data-en="Come back here: this page shows where the code is, and how the map is getting on. The map is made right after you sign in.">このページに戻ります。コードの場所と地図の進み具合が、ここに表示されます。ログインすると、続けて地図が作られます。</li>
   </ol>
-  <p><a class="btn repo-link" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener" data-en="Open “Map site”">「Map site」を開く</a></p>
+  <p><a class="btn repo-link" data-count="run" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener" data-en="Open “Map site”">「Map site」を開く</a></p>
   <div id="status" class="status" hidden></div>
   <p class="hint" data-en="After signing in, Microsoft shows “Minecraft for Nintendo Switch”. That is expected: Realms has no public way in, so Blockmap signs in the way Minecraft for Switch does. It reaches only Xbox Live and Realms, not your email, files or payments, and never handles your password.">ログイン後、Microsoft の画面に「Minecraft for Nintendo Switch」と表示されますが、正常です。Realms には公開された入り口がないため、Switch 版マイクラと同じ方法でログインしています。使えるのは Xbox Live と Realms だけで、メール・ファイル・支払いには届きません。パスワードも扱いません。</p>
 </li>
@@ -102,7 +102,7 @@
   <h2><span class="num">5</span><span data-en="Send the link to your members">仲間にリンクを送る</span></h2>
   <p data-en="Open your site and sign in with Microsoft; you are its admin. In the &lt;b&gt;Admin menu&lt;/b&gt; (the shield on the right), press &lt;b&gt;Copy site URL&lt;/b&gt; and send the link to your Realm's members.">サイトを開いて Microsoft でログインします。あなたが管理者です。右の<b>管理者メニュー</b>(盾のアイコン)で<b>サイトのURLをコピー</b>を押し、リンクを Realm のメンバーに送ります。</p>
   <p data-en="Members just open the link and sign in with the Microsoft account they play with.">メンバーは、リンクを開いて、マイクラで使っている Microsoft アカウントでログインするだけです。</p>
-  <p><a class="btn off" id="site-link" target="_blank" rel="noopener" data-en="Open my site">サイトを開く</a></p>
+  <p><a class="btn off" id="site-link" data-count="open-site" target="_blank" rel="noopener" data-en="Open my site">サイトを開く</a></p>
   <p class="hint" id="site-hint"></p>
 </li>
 </ol>
@@ -114,5 +114,7 @@
 </footer>
 <div id="toast" role="status"></div>
 <script src="setup.js"></script>
+<!-- Anonymous counts of how far people get (GoatCounter: no cookies, nothing personal; see privacy.html). -->
+<script data-goatcounter="https://blockmap.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
