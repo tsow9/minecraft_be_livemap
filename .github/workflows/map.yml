@@ -18,8 +18,10 @@ on:
 permissions:
   contents: read
 
+# GitHub keeps only one waiting run per group, so a push (publishing new site code) gets its own group: a map update
+# queued behind it can no longer drop it. Map updates still run one at a time.
 concurrency:
-  group: map-site
+  group: map-site-${{ github.event_name == 'push' && 'push' || 'map' }}
   cancel-in-progress: false
 
 env:
