@@ -111,9 +111,9 @@
   // Runs of "Map site" started by hand; a run's jobs say what it was (login, or update + cloudflare).
   let state = null;     // { kind, url } shown in #status
   const jobsCache = new Map();
-  async function getJSON(url) {
+  async function getJSON(url, accept = 'application/vnd.github+json') {
     // no-cache: the browser asks again with the ETag, and GitHub's "unchanged" answers don't count against its limit.
-    const res = await fetch(url, { cache: 'no-cache', headers: { Accept: 'application/vnd.github+json' } });
+    const res = await fetch(url, { cache: 'no-cache', headers: { Accept: accept } });
     if (!res.ok) throw new Error(String(res.status));
     return res.json();
   }
@@ -122,6 +122,7 @@
     if (!jobsCache.has(k)) jobsCache.set(k, (await getJSON(run.jobs_url)).jobs || []);
     return jobsCache.get(k);
   }
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const ran = (jobs, name) => jobs.find((j) => j.name === name && j.conclusion !== 'skipped');
   async function check() {
     const repo = saved.repo;
@@ -134,7 +135,14 @@
     }
     if (!login) { state = { kind: 'waiting' }; return; }
     const job = loginJobs.find((j) => j.name === 'login');
-    if (login.status !== 'completed') { state = { kind: 'code', url: job?.html_url || login.html_url }; return; }
+    if (login.status !== 'completed') {
+      // The code to enter, put by the sign-in on the "login-code" branch (tools/login_code.sh); then "signed in".
+      let info = null;
+      try { info = await getJSON(`https://api.github.com/repos/${repo}/contents/code.json?ref=login-code`, 'application/vnd.github.raw'); } catch { /* not there yet */ }
+      if (info?.state === 'signed-in') { state = { kind: 'building', url: login.html_url }; return; }
+      state = { kind: 'code', url: job?.html_url || login.html_url, code: info?.state === 'code' && info.expires > Date.now() ? info.code : '', uri: info?.uri };
+      return;
+    }
     if (login.conclusion !== 'success') { state = { kind: 'login-failed', url: job?.html_url || login.html_url }; return; }
     // The map run the sign-in started: the newest run after it that made the map.
     for (const run of runs) {
@@ -157,12 +165,15 @@
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
       waiting: `<b>${T('待っています', 'Waiting')}</b> ${T('「Sign in to Realms」を実行すると、ここに進み具合が出ます。', 'Once “Sign in to Realms” runs, its progress shows here.')}`,
-      code: `<b>${T('コードを入力してください', 'Enter the code')}</b> ${T('下のボタンを開くと、四角で囲まれたコードが出ています。', 'Open the button below: the code is shown in a box.')}
-        <p><a class="btn" href="${state?.url}" target="_blank" rel="noopener">${T('コードを開く', 'Show the code')}</a></p>
-        ${T('コードを <a href="https://www.microsoft.com/link" target="_blank" rel="noopener">microsoft.com/link</a> に入れて、Realm のオーナーのアカウントでログインします(15 分以内)。',
-          'Enter it at <a href="https://www.microsoft.com/link" target="_blank" rel="noopener">microsoft.com/link</a> and sign in with the Realm owner\'s account (within 15 minutes).')}`,
+      code: state?.code
+        ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
+          <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
+          <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
+          <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
+        : `<b>${T('コードを用意しています', 'Getting the code ready')}</b><span class="spin"></span> ${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+      building: `<b>${T('サイトを作っています', 'Building your site')}</b><span class="spin"></span> ${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
-      making: `<b>${T('地図を作っています', 'Making the map')}</b><span class="spin"></span> ${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes. You can leave this page open.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+      making: `<b>${T('サイトを作っています', 'Building your site')}</b><span class="spin"></span> ${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind] || '';
@@ -178,7 +189,7 @@
       renderStatus();
     } else { state = saved.repo ? { kind: 'waiting' } : null; renderStatus(); }
     if (now) { timer = setTimeout(() => poll(), 1500); return; }
-    const busy = state && (state.kind === 'code' || state.kind === 'making');
+    const busy = state && (state.kind === 'code' || state.kind === 'building' || state.kind === 'making');
     if (state?.kind !== 'done' || busy) timer = setTimeout(() => poll(), busy ? 15000 : 30000);
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });

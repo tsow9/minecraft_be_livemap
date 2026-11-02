@@ -6,6 +6,7 @@
 # after that. So a new site needs only one secret, CLOUDFLARE_API_TOKEN. The key never appears in a log (masked).
 #
 # With neither a secret nor a token there is no key yet: nothing is set, and the steps that need it say so.
+# With --required (signing in to Realms, which cannot go on without a key) that stops the run with a clear message.
 set -euo pipefail
 t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
 here=$(dirname "$0")
@@ -19,6 +20,10 @@ hand_over() {
 
 if [ -n "${REALMS_CACHE_KEY:-}" ]; then hand_over "$REALMS_CACHE_KEY"; exit 0; fi
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  if [ "${1:-}" = --required ]; then
+    echo "::error::$(t 'CLOUDFLARE_API_TOKEN が登録されていません。リポジトリの Settings → Secrets and variables → Actions の「Secrets」に、この名前で Cloudflare のトークンを登録してください(セットアップの手順 3)' 'CLOUDFLARE_API_TOKEN is not set. Add your Cloudflare token under this name in the repository: Settings → Secrets and variables → Actions → Secrets (setup step 3)')"
+    exit 1
+  fi
   echo "$(t 'CLOUDFLARE_API_TOKEN がまだ登録されていません' 'CLOUDFLARE_API_TOKEN is not set yet')"
   exit 0
 fi
