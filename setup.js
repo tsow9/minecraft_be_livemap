@@ -7,7 +7,10 @@
   const KEY = 'blockmap.setup';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ repo: saved.repo || '' })); } catch { /* private mode */ } };
+  // The repository, and once its site is made, that it is done and where (so coming back needs no question to GitHub).
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify({ repo: saved.repo || '', done: saved.done || '', site: saved.site || '' })); } catch { /* private mode */ }
+  };
 
   // ---- language: the map's choice, else the browser's ----
   let lang = null;
@@ -65,7 +68,9 @@
   };
   $('#repo').value = saved.repo ? `https://github.com/${saved.repo}` : '';
   $('#repo').addEventListener('input', () => {
-    saved.repo = repoOf($('#repo').value); save(); refresh(); poll(true);
+    const repo = repoOf($('#repo').value);
+    if (repo !== saved.repo) { saved = { repo }; siteUrl = ''; }
+    save(); refresh(); poll(true);
     if (saved.repo) count('repo-entered');
   });
   // The address the workflow gives a new site (tools/cloudflare.sh): blockmap.<GitHub owner>.workers.dev.
@@ -113,9 +118,14 @@
   // Runs of "Map site" started by hand; a run's jobs say what it was (login, or update + cloudflare).
   let state = null;     // { kind, url } shown in #status
   let siteUrl = '';     // the site's exact address once it is published (site-info branch)
+  // GitHub answers about 60 questions an hour to a browser that is not signed in (every answer counts). Spend them
+  // freely while many are left; with few left, spread the rest over the time until the limit resets.
+  let budget = { left: 60, reset: 0 };
   async function getJSON(url, accept = 'application/vnd.github+json') {
     // no-cache: the browser asks again with the ETag, and GitHub's "unchanged" answers don't count against its limit.
     const res = await fetch(url, { cache: 'no-cache', headers: { Accept: accept } });
+    const left = res.headers.get('x-ratelimit-remaining'), reset = res.headers.get('x-ratelimit-reset');
+    if (left !== null) budget = { left: Number(left), reset: Number(reset) * 1000 || 0 };
     if (!res.ok) {
       const err = new Error(String(res.status));
       if ((res.status === 403 || res.status === 429) && res.headers.get('x-ratelimit-remaining') === '0') {
@@ -130,14 +140,28 @@
   // (run-name: "Sign in to Realms", "Update map"), so no per-run questions are needed. GitHub answers about 60
   // questions an hour per browser without signing in; "unchanged" answers (ETag) do not count.
   let limited = 0;  // when GitHub's limit lifts (ms), while it is reached
+  const codeInfo = (repo) => getJSON(`https://api.github.com/repos/${repo}/contents/code.json?ref=login-code`, 'application/vnd.github.raw');
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
+    if (saved.done) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
+    // While the code is shown, only the code's file is asked about: it turns to "signed in", or goes when signing in ends.
+    if (state?.kind === 'code' && state.code) {
+      try {
+        const info = await codeInfo(repo);
+        limited = 0;
+        if (info?.state === 'signed-in') { state = { kind: 'building', url: state.url }; return; }
+        if (info?.state === 'code' && info.code === state.code) return;
+      } catch (e) {
+        if (e.reset) { limited = e.reset; return; }
+        // gone: signing in has ended; the runs tell how
+      }
+    }
     let data;
     try {
       data = await getJSON(`https://api.github.com/repos/${repo}/actions/workflows/map.yml/runs?per_page=10`);
     } catch (e) {
-      if (e.reset) { limited = e.reset; state = { kind: 'limited' }; }
+      if (e.reset) limited = e.reset;
       return;
     }
     limited = 0;
@@ -148,7 +172,7 @@
     if (login.status !== 'completed') {
       // The code to enter, put by the sign-in on the "login-code" branch (tools/login_code.sh); then "signed in".
       let info = null;
-      try { info = await getJSON(`https://api.github.com/repos/${repo}/contents/code.json?ref=login-code`, 'application/vnd.github.raw'); } catch { /* not there yet */ }
+      try { info = await codeInfo(repo); } catch { /* not there yet */ }
       if (info?.state === 'signed-in') { state = { kind: 'building', url: login.html_url }; return; }
       state = { kind: 'code', url: login.html_url, code: info?.state === 'code' && info.expires > Date.now() ? info.code : '', uri: info?.uri };
       return;
@@ -164,6 +188,7 @@
       try { siteUrl = (await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || ''; } catch { /* not yet */ }
     }
     state = { kind: 'done', url: map.html_url };
+    if (siteUrl) { saved.done = '1'; saved.site = siteUrl; save(); }
     refresh();
   }
   function renderStatus() {
@@ -180,7 +205,6 @@
           <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
           <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
         : `<b>${T('コードを用意しています', 'Getting the code ready')}<span class="spin"></span></b>${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
-      limited: `<b>${T('少し待っています', 'Pausing for a moment')}<span class="spin"></span></b>${T(`GitHub への問い合わせの上限に達したため、${Math.max(1, Math.ceil((limited - Date.now()) / 60000))} 分ほど後に表示を再開します。その間の進み具合は「Map site」で見られます。`, `GitHub's limit on questions was reached, so this resumes in about ${Math.max(1, Math.ceil((limited - Date.now()) / 60000))} minutes. Meanwhile, see progress under “Map site”.`)}`,
       building: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、もう一度「Sign in to Realms」を実行します。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If it timed out, run “Sign in to Realms” again. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
@@ -190,14 +214,16 @@
     box.className = `status ${state?.kind || ''}`;
     secretHint();
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
-    box.innerHTML = html;
+    const paused = limited > Date.now() && state?.kind !== 'done'
+      ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。最新の進み具合は、下の「Map site」で見られます。', 'GitHub limits how often this page may ask, so updates here are paused for a while. See the latest under “Map site” below.')}</p>` : '';
+    box.innerHTML = html + paused;
   }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
   function secretHint() {
     const hint = $('#secret-hint'), kind = state?.kind;
     if (kind !== 'waiting') waitingSince = 0; else if (!waitingSince) waitingSince = Date.now();
-    const late = kind === 'waiting' && Date.now() - waitingSince > 3 * 60000;
+    const late = kind === 'waiting' && limited <= Date.now() && Date.now() - waitingSince > 3 * 60000;
     hint.hidden = !(late || ['code', 'building', 'making', 'done', 'map-failed'].includes(kind));
     hint.className = `hint ${late ? 'warn' : 'ok'}`;
     hint.innerHTML = late
@@ -208,13 +234,15 @@
   let timer = null;
   async function poll(now = false) {
     clearTimeout(timer);
-    if (now) { state = saved.repo ? { kind: 'waiting' } : null; renderStatus(); timer = setTimeout(() => poll(), 1500); return; }
+    if (now) { state = saved.repo ? { kind: 'waiting' } : null; limited = 0; renderStatus(); timer = setTimeout(() => poll(), 1500); return; }
     try { await check(); } catch { /* offline: try again shortly */ }
     renderStatus();
     if (document.visibilityState !== 'visible') return;  // looks again when the page is shown
-    // Every 5 seconds while something is happening, every 15 while waiting; after GitHub's limit, when it lifts.
+    // Every 5 seconds while the code is shown, 10 while the site is made, 15 while waiting; slower near GitHub's limit.
     const moving = state && ['code', 'building', 'making'].includes(state.kind);
-    const wait = state?.kind === 'limited' ? Math.max(30000, limited - Date.now() + 2000) : moving ? 5000 : 15000;
+    let wait = state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
+    if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
+    else if (budget.left < 25 && budget.reset > Date.now()) wait = Math.max(wait, (budget.reset - Date.now()) / Math.max(1, budget.left - 3));
     if (state?.kind !== 'done') timer = setTimeout(() => poll(), wait);
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });

@@ -61,7 +61,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 | `LANGUAGE` | `en` にすると、Actions の実行結果のメッセージが英語になります(省略時は日本語) |
 | `TIMEZONE` | 地図の日付に使うタイムゾーン(省略時は `Asia/Tokyo`) |
 | `REALM_NAME` | Realm を 2 つ以上持っている場合:Realm の名前(マイクラの Realms の一覧に出ている名前) |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウントを 2 つ以上持っている場合:使うアカウントの ID |
+| `CLOUDFLARE_ACCOUNT_ID` | 1 つの Cloudflare のログインで、複数のアカウントに入れる場合(ほかの人のアカウントに招待されているなど):使うアカウントの ID。別々のメールアドレスで作ったアカウントなら不要です |
 
 ### 4. Realms にログインする
 

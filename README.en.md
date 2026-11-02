@@ -61,7 +61,7 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 | `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
 | `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
 | `REALM_NAME` | If you own two or more Realms: the Realm's name (as in Minecraft's list of Realms) |
-| `CLOUDFLARE_ACCOUNT_ID` | If you have two or more Cloudflare accounts: the ID of the one to use |
+| `CLOUDFLARE_ACCOUNT_ID` | If one Cloudflare sign-in reaches several accounts (for example, you were invited to someone else's): the ID of the one to use. Not needed for accounts made with separate email addresses |
 
 ### 4. Sign in to Realms
 

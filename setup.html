@@ -32,7 +32,7 @@
 <ol class="steps">
 <li class="step">
   <h2><span class="num">1</span><span data-en="Create the repository">リポジトリを作る</span></h2>
-  <p><span data-en="Open the button below and create the repository. Keep it &lt;b&gt;Public&lt;/b&gt;">下のボタンを開いて、リポジトリを作ります。公開範囲は <b>Public</b> のままにします</span><button class="info" type="button" data-info="why-public" aria-label="?">i</button><span data-en=", and leave &lt;b&gt;Include all branches&lt;/b&gt; unticked.">。<b>Include all branches</b> にはチェックを入れません。</span></p>
+  <p><span data-en="Open the button below and create the repository. Keep it &lt;b&gt;Public&lt;/b&gt;">下のボタンを開いて、リポジトリを作ります。公開範囲は <b>Public</b> のままにします</span><button class="info" type="button" data-info="why-public" aria-label="?">i</button><span data-en=".&lt;br&gt;Leave &lt;b&gt;Include all branches&lt;/b&gt; unticked.">。<br><b>Include all branches</b> にはチェックを入れません。</span></p>
   <div class="info-box" id="why-public" hidden>
     <p data-en="Automatic updates run on GitHub Actions, which is free without limit only for public repositories. Private ones get 2,000 minutes a month; Blockmap needs about 4,000.">自動更新は GitHub Actions で動きます。Actions を無制限に無料で使えるのは、公開リポジトリだけです。非公開は月 2,000 分までで、Blockmap は月 4,000 分ほど使います。</p>
     <p data-en="Only the program and encrypted data become public. Gamertags and coordinates never appear, and only your Realm's members can sign in to the site.">公開されるのは、プログラムと暗号化したデータだけです。ゲーマータグや座標は表に出ず、サイトに入れるのは Realm のメンバーだけです。</p>
@@ -71,32 +71,29 @@
   <h2><span class="num">3</span><span data-en="Add the token to the repository">トークンをリポジトリに登録する</span></h2>
   <ol>
     <li data-en="Open the button below. GitHub's “New secret” screen opens.">下のボタンを開きます。GitHub の「New secret」の画面が開きます。</li>
-    <li><span data-en="&lt;b&gt;Name&lt;/b&gt;: paste">「<b>Name</b>」に貼ります:</span> <code>CLOUDFLARE_API_TOKEN</code><button class="copy" type="button" data-text="CLOUDFLARE_API_TOKEN"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></li>
     <li data-en="&lt;b&gt;Secret&lt;/b&gt;: paste the token you copied in step 2.">「<b>Secret</b>」に、手順 2 でコピーしたトークンを貼ります。</li>
+    <li><span data-en="&lt;b&gt;Name&lt;/b&gt;: paste">「<b>Name</b>」に貼ります:</span> <code>CLOUDFLARE_API_TOKEN</code><button class="copy" type="button" data-text="CLOUDFLARE_API_TOKEN"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></li>
     <li data-en="Press &lt;b&gt;Add secret&lt;/b&gt;.">「<b>Add secret</b>」を押します。</li>
   </ol>
   <p><a class="btn repo-link" data-count="secret" data-path="/settings/secrets/actions/new" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
   <p class="hint" id="secret-hint" hidden></p>
-  <details class="more">
-    <summary data-en="Only if needed">必要な場合だけ</summary>
-    <table class="kv">
-      <tr><td><code>REALM_NAME</code><button class="copy" type="button" data-text="REALM_NAME"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button><span class="tab">Variables</span></td>
-        <td data-en="If you own two or more Realms: enter the Realm's name (e.g. “Steve's Realm”).">Realm を 2 つ以上持っている場合:Realm の名前を入力します(例:「〇〇のRealm」)。</td></tr>
-      <tr><td><code>CLOUDFLARE_ACCOUNT_ID</code><button class="copy" type="button" data-text="CLOUDFLARE_ACCOUNT_ID"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button><span class="tab">Secrets</span></td>
-        <td data-en="If you have two or more Cloudflare accounts: the ID of the one to use.">Cloudflare のアカウントを 2 つ以上持っている場合:使うアカウントの ID を入力します。</td></tr>
-      <tr><td><code>LANGUAGE</code><button class="copy" type="button" data-text="LANGUAGE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button><span class="tab">Variables</span></td>
+  <p class="extra" data-en="If you own two or more Realms, or want things in English, also add these with the button below (&lt;b&gt;Variables&lt;/b&gt;, not Secrets).">Realm を 2 つ以上持っている場合や、英語で使う場合などは、下のボタンから次を追加します(Secrets ではなく <b>Variables</b> です)。</p>
+  <table class="kv">
+    <tr><th>Name</th><th>Value</th></tr>
+    <tr><td><code>REALM_NAME</code><button class="copy" type="button" data-text="REALM_NAME"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
+      <td data-en="If you own two or more Realms: enter the Realm's name (e.g. “Steve's Realm”).">Realm を 2 つ以上持っている場合:Realm の名前を入力します(例:「〇〇のRealm」)。</td></tr>
+      <tr><td><code>LANGUAGE</code><button class="copy" type="button" data-text="LANGUAGE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
         <td data-en="&lt;code&gt;en&lt;/code&gt; for GitHub Actions messages in English (Japanese otherwise).">GitHub Actions のメッセージを英語にする場合:<code>en</code> を入力します。</td></tr>
-      <tr><td><code>TIMEZONE</code><button class="copy" type="button" data-text="TIMEZONE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button><span class="tab">Variables</span></td>
+      <tr><td><code>TIMEZONE</code><button class="copy" type="button" data-text="TIMEZONE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
         <td data-en="For a time zone other than Japan's: e.g. &lt;code&gt;America/New_York&lt;/code&gt;.">日本以外のタイムゾーンにする場合:<code>America/New_York</code> のように入力します。</td></tr>
-    </table>
-  </details>
+  </table>
+  <p><a class="btn ghost repo-link" data-path="/settings/variables/actions/new" target="_blank" rel="noopener" data-en="Open “New repository variable”">「New repository variable」を開く</a></p>
 </li>
 
 <li class="step">
   <h2><span class="num">4</span><span data-en="Sign in to Realms">Realms にログインする</span></h2>
   <p data-en="Once the token is added, signing in starts by itself in about a minute, and the code to enter appears below. Just wait on this page.">トークンを登録すると、1 分ほどで自動的にログインが始まり、入力するコードが下に表示されます。このページで待つだけです。</p>
   <div id="status" class="status" hidden></div>
-  <p data-en="To start right away, open the button below, press &lt;b&gt;Run workflow&lt;/b&gt; on the right, then the green &lt;b&gt;Run workflow&lt;/b&gt; (once).">すぐに始めたい場合は、下のボタンを開き、右の <b>Run workflow</b> を押して、続けて緑の <b>Run workflow</b> を押します(1 回だけ)。</p>
   <p><a class="btn ghost repo-link" data-count="run" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener" data-en="Open “Map site”">「Map site」を開く</a></p>
   <p class="hint" data-en="After signing in, Microsoft shows “Minecraft for Nintendo Switch”. That is expected.">ログイン後、Microsoft の画面に「Minecraft for Nintendo Switch」と表示されますが、正常です。</p>
 </li>
