@@ -80,12 +80,14 @@
     $('#repo-hint').innerHTML = repo
       ? T(`<code>${repo}</code> を使います。手順 3〜5 のボタンが、このリポジトリを開きます。`, `Using <code>${repo}</code>. The buttons in steps 3–5 open it.`)
       : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます。', 'Once filled in, the buttons in steps 3–5 open it directly.');
-    const site = repo ? siteOf(repo) : '';
+    const site = siteUrl || (repo ? siteOf(repo) : '');
     $('#site-link').classList.toggle('off', !site);
     if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
-    $('#site-hint').innerHTML = site
-      ? T(`サイトのアドレスは、おそらく <code>${site}</code> です。違う場合は、手順 4 の記録の Summary に正しいアドレスが表示されます。`,
-        `Your site is most likely at <code>${site}</code>. If not, step 4's run shows the address in its Summary.`) : '';
+    // The exact address once the site is published; until then (or for an older copy) the likely one.
+    $('#site-hint').innerHTML = !site ? ''
+      : siteUrl ? T(`サイトのアドレス:<code>${site}</code>`, `Your site: <code>${site}</code>`)
+        : T(`サイトのアドレスは、おそらく <code>${site}</code> です。違う場合は、手順 4 の記録の Summary に正しいアドレスが表示されます。`,
+          `Your site is most likely at <code>${site}</code>. If not, step 4's run shows the address in its Summary.`);
   }
 
   // ---- copy buttons ----
@@ -110,6 +112,7 @@
   // ---- step 4: how the sign-in and the first map are getting on ----
   // Runs of "Map site" started by hand; a run's jobs say what it was (login, or update + cloudflare).
   let state = null;     // { kind, url } shown in #status
+  let siteUrl = '';     // the site's exact address once it is published (site-info branch)
   const jobsCache = new Map();
   async function getJSON(url, accept = 'application/vnd.github+json') {
     // no-cache: the browser asks again with the ETag, and GitHub's "unchanged" answers don't count against its limit.
@@ -129,7 +132,9 @@
     if (!repo) { state = null; return; }
     const { workflow_runs: runs = [] } = await getJSON(`https://api.github.com/repos/${repo}/actions/workflows/map.yml/runs?event=workflow_dispatch&per_page=6`);
     let login = null, loginJobs = null;
-    for (const run of runs) {  // newest first
+    // A run cancelled before it started (pressing Run workflow twice queues two; GitHub drops one) counts for nothing.
+    const live = runs.filter((r) => r.conclusion !== 'cancelled');
+    for (const run of live) {  // newest first
       const jobs = await jobsOf(run);
       if (ran(jobs, 'login')) { login = run; loginJobs = jobs; break; }  // a login job that was not skipped (running or done)
     }
@@ -144,15 +149,18 @@
       return;
     }
     if (login.conclusion !== 'success') { state = { kind: 'login-failed', url: job?.html_url || login.html_url }; return; }
-    // The map run the sign-in started: the newest run after it that made the map.
-    for (const run of runs) {
+    // The map run the sign-in started: the newest run after it that made the map. It failed only if one of its
+    // jobs failed.
+    for (const run of live) {
       if (new Date(run.created_at) < new Date(login.created_at) || run.id === login.id) continue;
       const jobs = await jobsOf(run);
-      if (!jobs.some((j) => j.name === 'update')) continue;
-      const cf = jobs.find((j) => j.name === 'cloudflare');
+      if (!ran(jobs, 'update')) continue;
+      if (jobs.some((j) => j.conclusion === 'failure')) { state = { kind: 'map-failed', url: run.html_url }; return; }
       if (run.status !== 'completed') { state = { kind: 'making', url: run.html_url }; return; }
-      state = run.conclusion === 'success' && cf?.conclusion === 'success'
-        ? { kind: 'done', url: run.html_url } : { kind: 'map-failed', url: run.html_url };
+      // The site's exact address, put by the publishing step on the "site-info" branch.
+      try { siteUrl = (await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || ''; } catch { /* older copy */ }
+      state = { kind: 'done', url: run.html_url };
+      refresh();
       return;
     }
     state = { kind: 'making', url: login.html_url };
@@ -170,11 +178,11 @@
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
           <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
           <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
-        : `<b>${T('コードを用意しています', 'Getting the code ready')}</b><span class="spin"></span> ${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
-      building: `<b>${T('サイトを作っています', 'Building your site')}</b><span class="spin"></span> ${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
-      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
-      making: `<b>${T('サイトを作っています', 'Building your site')}</b><span class="spin"></span> ${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
-      'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')} ${link(state?.url, T('記録を見る', 'See the log'))}`,
+        : `<b>${T('コードを用意しています', 'Getting the code ready')}<span class="spin"></span></b>${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      building: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
+      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;

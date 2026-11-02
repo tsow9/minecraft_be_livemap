@@ -12,8 +12,9 @@ on:
       action:
         description: What to do
         type: choice
-        options: [Update map, Sign in to Realms, Publish site only, Diagnose]
-        default: Update map
+        # Signing in comes first when setting up, so it is the default; the map updates by itself after that.
+        options: [Sign in to Realms, Update map, Publish site only, Diagnose]
+        default: Sign in to Realms
 
 permissions:
   contents: read
@@ -208,6 +209,8 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write  # the "site-info" branch that tells the setup page the site's address
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}  # optional: made from the key when not set
@@ -277,6 +280,8 @@ jobs:
       - name: Publish to Cloudflare
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
+        env:
+          GITHUB_TOKEN_FOR_INFO: ${{ github.token }}
         run: |
           npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -n1)
@@ -286,6 +291,7 @@ jobs:
             exit 1
           fi
           if [ "$BLOCKMAP_LANG" != en ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
+          GH_TOKEN="$GITHUB_TOKEN_FOR_INFO" bash ../tools/info_branch.sh put site-info site.json "{\"url\":\"$url\"}"
           rm -f "$RUNNER_TEMP/secrets.json"
       - name: Remove the earlier sites
         # This site's earlier workers: the first pin server (blockmap-share) and the name the members-only site had

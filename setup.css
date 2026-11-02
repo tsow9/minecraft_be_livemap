@@ -85,3 +85,5 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .status .code { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
 .status .code span { font: 700 26px/1 ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .12em; color: var(--fg); }
 .status.building { border-color: rgba(62, 207, 142, .5); }
+/* A status: its title on a line of its own, then what to do. */
+.status > b:first-child { display: block; margin-bottom: 2px; }
