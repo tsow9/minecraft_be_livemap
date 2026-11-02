@@ -55,3 +55,10 @@ query "INSERT OR IGNORE INTO kv (k, v, at) VALUES ('realms_key', ?1, ?2)" "[\"$f
 key=$(query "SELECT v FROM kv WHERE k = 'realms_key'" | json 'print(d["result"][0]["results"][0]["v"])') || true
 [ -n "$key" ] || fail read
 hand_over "$key"
+# For runs started by hand, also the site's address, so they can tell the setup page how they are getting on
+# (tools/setup_status.sh). Empty until the site is first published.
+if [ -n "${GITHUB_ENV:-}" ] && [ "${GITHUB_EVENT_NAME:-}" = workflow_dispatch ]; then
+  site=$(bash "$here/site_url.sh" || true)
+  if [ -n "$site" ]; then echo "SITE_URL=$site" >> "$GITHUB_ENV"; fi
+fi
+exit 0

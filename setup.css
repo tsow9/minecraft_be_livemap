@@ -94,3 +94,11 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .trouble ul { margin: 8px 0 4px; padding-left: 1.2em; color: var(--sub); }
 .trouble li { margin: 4px 0; }
 .trouble code, .trouble b { color: var(--fg); }
+/* Building the site: each stage, as the runs report it. */
+.progress { list-style: none; padding: 0; margin: 10px 0 2px; }
+.progress li { position: relative; padding-left: 24px; margin: 4px 0; color: var(--sub); }
+.progress li::before { content: "○"; position: absolute; left: 3px; }
+.progress li.did { color: var(--fg); }
+.progress li.did::before { content: "✓"; color: var(--accent); font-weight: 700; }
+.progress li.now { color: var(--fg); font-weight: 700; }
+.progress li.now::before { content: "●"; color: var(--accent); }

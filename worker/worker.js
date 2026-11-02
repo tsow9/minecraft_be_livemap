@@ -28,6 +28,12 @@ export default {
     });
     const cookie = (name, value, days) => `${name}=${value}; Max-Age=${days * 86400}; Path=/; Secure; HttpOnly; SameSite=Lax`;
     try {
+      // How setting up is getting on, for the setup page (another site, hence open to any page). Nothing secret:
+      // the stage, the sign-in code while it is shown (also in the public run log), and links to the run.
+      if (url.pathname === '/api/setup' && req.method === 'GET') {
+        const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
+        return json(row ? JSON.parse(row.v) : {}, 200, { 'Access-Control-Allow-Origin': '*' });
+      }
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
       // The live check's latest data (who the members are, where players are): read once per request at most.
       let liveP = null;
@@ -133,6 +139,22 @@ export default {
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
 
       // Only the live check (with the passphrase) puts in player data.
+      // The runs say how setting up is getting on (tools/setup_status.sh).
+      if (path === '/setup' && req.method === 'POST' && admin && me.via === 'key') {
+        const b = await req.json().catch(() => null);
+        const str = (v, re) => (typeof v === 'string' && v.length <= 300 && re.test(v) ? v : undefined);
+        const state = str(b?.state, /^(starting|code|signed-in|downloading|drawing|publishing|done|login-failed|map-failed)$/);
+        if (!state) return json({ error: 'bad' }, 400);
+        const v = {
+          state, at: Date.now(), r: str(b.r, /^[0-9a-f]{16}$/),
+          code: str(b.code, /^[A-Z0-9-]{4,20}$/), uri: str(b.uri, /^https:\/\/[\w./-]+$/),
+          expires: Number.isFinite(b.expires) ? b.expires : undefined,
+          url: str(b.url, /^https:\/\/[\w.-]+\.workers\.dev\/?$/), log: str(b.log, /^https:\/\/github\.com\/[\w./-]+$/),
+        };
+        await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
+          .bind('setup', JSON.stringify(v), v.at).run();
+        return json({ ok: true });
+      }
       if (path === '/live' && admin && me.via === 'key') {
         const text = await req.text();
         if (text.length > 900 * 1024) return json({ error: 'too big' }, 413);

@@ -34,10 +34,15 @@ env:
   # (e.g. America/New_York; Asia/Tokyo if not set).
   BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'ja' }}
   TZ: ${{ vars.TIMEZONE || 'Asia/Tokyo' }}
+  # What a run started by hand does (empty otherwise): runs that tell the setup page how they are getting on.
+  BLOCKMAP_ACTION: ${{ inputs.action }}
 
 jobs:
   login:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms'
+    # After the site is put up (the "cloudflare" job, only the first time), so the setup page can follow the sign-in
+    # through it. Signing in goes ahead even if that did not work.
+    needs: [cloudflare]
+    if: always() && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -51,6 +56,8 @@ jobs:
           REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}  # optional: otherwise kept in the site's Cloudflare database
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Tell the setup page
+        run: bash tools/setup_status.sh starting
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -72,6 +79,9 @@ jobs:
           if [ "$BLOCKMAP_LANG" != en ]; then echo "地図を作り始めました。数分でサイトができます"; else echo "Started making the map. The site is ready in a few minutes"; fi
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Tell the setup page it did not work
+        if: failure()
+        run: bash tools/setup_status.sh login-failed
       - name: Clear the sign-in code
         if: always()
         run: bash tools/login_code.sh clear
@@ -156,6 +166,7 @@ jobs:
             exit 0
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
+          bash tools/setup_status.sh downloading
           node tools/realms/download.js world.mcworld members.json
         env:
           REALM_NAME: ${{ vars.REALM_NAME }}
@@ -178,6 +189,7 @@ jobs:
           if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "$(cat fingerprint.txt)" ]; then
             echo "No change since last time"
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            bash tools/setup_status.sh done
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -188,6 +200,7 @@ jobs:
       - name: Make the map
         if: steps.compare.outputs.changed == 'true'
         run: |
+          bash tools/setup_status.sh drawing
           pip install --quiet numpy pillow
           live=""
           bash tools/vault.sh get live-data live
@@ -200,6 +213,9 @@ jobs:
         run: bash tools/vault.sh put data map-data
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Tell the setup page it did not work
+        if: failure()
+        run: bash tools/setup_status.sh map-failed
 
   # The invite-only site on Cloudflare (worker/): the site, the map data in a hidden folder, and the shared pins.
   cloudflare:
@@ -208,6 +224,7 @@ jobs:
       always() && !cancelled() && (
         github.event_name == 'push' ||
         (github.event_name == 'workflow_dispatch' && inputs.action == 'Publish site only') ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms') ||
         needs.update.outputs.changed == 'true'
       )
     runs-on: ubuntu-latest
@@ -218,18 +235,31 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}  # optional: made from the key when not set
     steps:
+      - uses: actions/checkout@v4
       - name: Check the settings
         id: check
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
+            # Signing in puts the site up first (empty until the map is made) so the setup page can follow along
+            # through it; once there is a site, signing in leaves it as it is.
+            if [ "$BLOCKMAP_ACTION" = 'Sign in to Realms' ]; then
+              account=$(bash tools/cloudflare.sh account)
+              there=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                "https://api.cloudflare.com/client/v4/accounts/$account/workers/scripts/blockmap/settings" || true)
+              if [ "$there" = 200 ]; then
+                echo "ready=false" >> "$GITHUB_OUTPUT"
+                if [ "$BLOCKMAP_LANG" != en ]; then echo "サイトはもうあるので、そのままログインします"; else echo "The site is already there, so signing in goes ahead"; fi
+              elif [ "$BLOCKMAP_LANG" != en ]; then echo "先にサイトを用意します(地図は、ログインの後に作ります)"
+              else echo "Putting the site up first (the map is made after signing in)"; fi
+            fi
           else
             if [ "$BLOCKMAP_LANG" != en ]; then echo "::warning::Cloudflare の Secrets がそろっていないので、サイトは作りません"
             else echo "::warning::The Cloudflare secrets are not all set, so the site is not published"; fi
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
-        if: steps.check.outputs.ready == 'true'
       - name: Get the key
         if: steps.check.outputs.ready == 'true'
         run: bash tools/realms_key.sh
@@ -286,6 +316,7 @@ jobs:
         env:
           GITHUB_TOKEN_FOR_INFO: ${{ github.token }}
         run: |
+          if [ "$BLOCKMAP_ACTION" = 'Update map' ]; then bash ../tools/setup_status.sh publishing; fi
           npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log
           url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -n1)
           if [ -z "$url" ]; then
@@ -295,7 +326,11 @@ jobs:
           fi
           if [ "$BLOCKMAP_LANG" != en ]; then echo "サイト: $url" >> "$GITHUB_STEP_SUMMARY"; else echo "Site: $url" >> "$GITHUB_STEP_SUMMARY"; fi
           GH_TOKEN="$GITHUB_TOKEN_FOR_INFO" bash ../tools/info_branch.sh put site-info site.json "{\"url\":\"$url\"}"
+          if [ "$BLOCKMAP_ACTION" = 'Update map' ]; then SITE_URL="$url" bash ../tools/setup_status.sh "{\"state\":\"done\",\"url\":\"$url\"}"; fi
           rm -f "$RUNNER_TEMP/secrets.json"
+      - name: Tell the setup page it did not work
+        if: failure() && env.BLOCKMAP_ACTION == 'Update map'
+        run: bash tools/setup_status.sh map-failed
       - name: Remove the earlier sites
         # This site's earlier workers: the first pin server (blockmap-share) and the name the members-only site had
         # for a while (map.<subdomain>.workers.dev). Only the workers go; the database stays. Only for this repository,

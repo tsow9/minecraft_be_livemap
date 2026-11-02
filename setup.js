@@ -141,10 +141,43 @@
   // questions an hour per browser without signing in; "unchanged" answers (ETag) do not count.
   let limited = 0;  // when GitHub's limit lifts (ms), while it is reached
   const codeInfo = (repo) => getJSON(`https://api.github.com/repos/${repo}/contents/code.json?ref=login-code`, 'application/vnd.github.raw');
+  // Once the site is up (signing in puts it up first), it says how things are getting on (/api/setup): asked every few
+  // seconds, with no limit. Only what is about this repository counts (an earlier site may share the address).
+  let fromSite = false;  // the site answered last time
+  const repoTag = async (repo) => {
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(repo.toLowerCase()));
+    return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+  async function askSite(repo) {
+    const base = (siteUrl || siteOf(repo)).replace(/\/$/, '');
+    try {
+      const res = await fetch(`${base}/api/setup`, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const s = await res.json();
+      if (!s?.state || s.r !== await repoTag(repo)) return null;
+      return s;
+    } catch { return null; }
+  }
+  const STEPS = ['signed-in', 'downloading', 'drawing', 'publishing'];
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
     if (saved.done) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
+    const s = await askSite(repo);
+    fromSite = !!s;
+    if (s) {
+      const url = s.log;
+      if (s.state === 'starting') state = { kind: 'code', url, code: '' };
+      else if (s.state === 'code') state = { kind: 'code', url, code: s.expires > Date.now() ? s.code : '', uri: s.uri };
+      else if (STEPS.includes(s.state)) state = { kind: 'making', url, step: s.state };
+      else if (s.state === 'login-failed' || s.state === 'map-failed') state = { kind: s.state, url };
+      else if (s.state === 'done') {
+        siteUrl = s.url ? s.url.replace(/\/$/, '') : (siteUrl || siteOf(repo));
+        state = { kind: 'done', url };
+        saved.done = '1'; saved.site = siteUrl; save(); refresh();
+      }
+      return;
+    }
     // While the code is shown, only the code's file is asked about: it turns to "signed in", or goes when signing in ends.
     if (state?.kind === 'code' && state.code) {
       try {
@@ -193,6 +226,7 @@
   }
   function renderStatus() {
     const box = $('#status');
+    const pick = (v) => (typeof v === 'function' ? v() : v);
     if (!state) { box.hidden = true; return; }
     box.hidden = false;
     const site = saved.repo ? siteOf(saved.repo) : '';
@@ -204,19 +238,26 @@
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
           <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
           <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
-        : `<b>${T('コードを用意しています', 'Getting the code ready')}<span class="spin"></span></b>${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+        : `<b>${T('ログインの準備をしています', 'Getting signing in ready')}<span class="spin"></span></b>${T('サイトの入れ物を用意してから、ここにコードが出ます。最初は 2 分ほどかかります。', 'The site is put up first, then the code appears here. The first time takes about 2 minutes.')}`,
       building: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
+      progress: () => {
+        const names = { 'signed-in': T('Realms にログイン', 'Signed in to Realms'), downloading: T('ワールドをダウンロード', 'Downloading the world'),
+          drawing: T('地図を描く', 'Drawing the map'), publishing: T('サイトに公開', 'Publishing the site') };
+        const at = Math.max(1, STEPS.indexOf(state.step));  // just signed in: the download is next
+        return `<b>${T('サイトを作っています', 'Building your site')}</b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}
+          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="spin"></span>' : ''}</li>`).join('')}</ol>`;
+      },
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、もう一度「Sign in to Realms」を実行します。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If it timed out, run “Sign in to Realms” again. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
-    }[state?.kind] || '';
+    }[state?.kind === 'making' && state.step ? 'progress' : state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
     secretHint();
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
-    const paused = limited > Date.now() && state?.kind !== 'done'
+    const paused = !fromSite && limited > Date.now() && state?.kind !== 'done'
       ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。最新の進み具合は、下の「Map site」で見られます。', 'GitHub limits how often this page may ask, so updates here are paused for a while. See the latest under “Map site” below.')}</p>` : '';
-    box.innerHTML = html + paused;
+    box.innerHTML = pick(html) + paused;
   }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
@@ -240,8 +281,8 @@
     if (document.visibilityState !== 'visible') return;  // looks again when the page is shown
     // Every 5 seconds while the code is shown, 10 while the site is made, 15 while waiting; slower near GitHub's limit.
     const moving = state && ['code', 'building', 'making'].includes(state.kind);
-    let wait = state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
-    if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
+    let wait = fromSite ? 2000 : state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
+    if (fromSite) { /* no limit */ } else if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
     else if (budget.left < 25 && budget.reset > Date.now()) wait = Math.max(wait, (budget.reset - Date.now()) / Math.max(1, budget.left - 3));
     if (state?.kind !== 'done') timer = setTimeout(() => poll(), wait);
   }
