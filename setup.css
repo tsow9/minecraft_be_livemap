@@ -87,3 +87,12 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .status.building { border-color: rgba(62, 207, 142, .5); }
 /* A status: its title on a line of its own, then what to do. */
 .status > b:first-child { display: block; margin-bottom: 2px; }
+.hint.ok { color: var(--accent); }
+/* Troubleshooting: one question per line; open the one that applies. */
+.trouble { max-width: 680px; margin: 28px auto 0; }
+.trouble h2 { font-size: 16px; margin: 0 0 8px; }
+.trouble details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; margin: 8px 0; font-size: 13px; }
+.trouble summary { cursor: pointer; font-weight: 500; }
+.trouble ul { margin: 8px 0 4px; padding-left: 1.2em; color: var(--sub); }
+.trouble li { margin: 4px 0; }
+.trouble code, .trouble b { color: var(--fg); }

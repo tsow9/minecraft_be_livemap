@@ -182,14 +182,28 @@
         : `<b>${T('コードを用意しています', 'Getting the code ready')}<span class="spin"></span></b>${T('少し待つと、ここにコードが出ます。', 'The code appears here in a moment.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       limited: `<b>${T('少し待っています', 'Pausing for a moment')}<span class="spin"></span></b>${T(`GitHub への問い合わせの上限に達したため、${Math.max(1, Math.ceil((limited - Date.now()) / 60000))} 分ほど後に表示を再開します。その間の進み具合は「Map site」で見られます。`, `GitHub's limit on questions was reached, so this resumes in about ${Math.max(1, Math.ceil((limited - Date.now()) / 60000))} minutes. Meanwhile, see progress under “Map site”.`)}`,
       building: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
-      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b> ${T('時間切れの場合は、もう一度「Sign in to Realms」を実行します。', 'If it timed out, run “Sign in to Realms” again.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、もう一度「Sign in to Realms」を実行します。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If it timed out, run “Sign in to Realms” again. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
-      'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、説明書の「トラブルシューティング」を確認してください。', 'Check the message in the log against the README\'s Troubleshooting.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
+    secretHint();
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
     box.innerHTML = html;
+  }
+  // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
+  let waitingSince = 0;
+  function secretHint() {
+    const hint = $('#secret-hint'), kind = state?.kind;
+    if (kind !== 'waiting') waitingSince = 0; else if (!waitingSince) waitingSince = Date.now();
+    const late = kind === 'waiting' && Date.now() - waitingSince > 3 * 60000;
+    hint.hidden = !(late || ['code', 'building', 'making', 'done', 'map-failed'].includes(kind));
+    hint.className = `hint ${late ? 'warn' : 'ok'}`;
+    hint.innerHTML = late
+      ? T('まだトークンを確認できていません。Name が <code>CLOUDFLARE_API_TOKEN</code> になっているか確かめてください(<a href="#trouble">詳しく</a>)。',
+        'The token has not been found yet. Check that its Name is <code>CLOUDFLARE_API_TOKEN</code> (<a href="#trouble">more</a>).')
+      : T('✓ トークンを確認できました。', '✓ The token was found.');
   }
   let timer = null;
   async function poll(now = false) {
