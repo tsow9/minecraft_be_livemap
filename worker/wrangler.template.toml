@@ -1,5 +1,5 @@
-# Filled in by the 地図サイト workflow (database_id). The site and map data are built into ../_site first.
-name = "blockmap"
+# Filled in by the Map site workflow (the names from tools/site_name.sh, and database_id). The site and map data are built into ../_site first.
+name = "__NAME__"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 workers_dev = true
@@ -19,5 +19,5 @@ MS_RELAY = "https://tsow9.github.io/minecraft_be_livemap/login.html"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "blockmap-share"
+database_name = "__DB_NAME__"
 database_id = "__DB_ID__"

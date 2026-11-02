@@ -36,13 +36,14 @@ Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 1. Select **Use this template** → **Create a new repository** at the top of this page.
 2. Keep it **Public** ([why](#why-a-public-repository)).
 3. Leave **Include all branches** unchecked.
+4. The repository's name (e.g. `blockmap`) becomes the start of your site's address.
 
 ### 2. Prepare Cloudflare
 
 1. In the Cloudflare dashboard, go to **My Profile** → **API Tokens** → **Create Token**.
 2. Choose the **Edit Cloudflare Workers** template, add the permission **Account / D1 / Edit**, and create the token. Copy it (it is shown only once).
 
-The site will be at `https://blockmap.<subdomain>.workers.dev`. You can choose the subdomain on the **Workers & Pages** page; if you have not, one is chosen from your GitHub username (shown in the run's log).
+The site will be at `https://<repository name>.<subdomain>.workers.dev`. You can choose the subdomain on the **Workers & Pages** page; if you have not, one is chosen from your GitHub username (shown in the run's log).
 
 ### 3. Add the token
 
@@ -60,7 +61,7 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 |---|---|
 | `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
 | `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
-| `REALM_NAME` | If you own two or more Realms: the Realm's name (as in Minecraft's list of Realms) |
+| `REALM_NAME` | If you own two or more Realms: the name of the Realm this site maps (as in Minecraft's list of Realms) |
 | `CLOUDFLARE_ACCOUNT_ID` | If one Cloudflare sign-in reaches several accounts (for example, you were invited to someone else's): the ID of the one to use. Not needed for accounts made with separate email addresses |
 
 ### 4. Sign in to Realms
@@ -97,6 +98,10 @@ From then on it updates automatically.
 The secrets (keys), the Realms sign-in (Actions cache) and what is on the site are not public.
 
 ## Usage
+
+### Mapping two or more Realms
+
+Make one repository for each Realm, with different names (step 1), and give each its `REALM_NAME`. The same GitHub and Cloudflare accounts, and the same token, can be used. Each Realm gets its own site (`https://blockmap.….workers.dev`, `https://blockmap-survival.….workers.dev` and so on), with its own map, members and drawings.
 
 ### Inviting members
 

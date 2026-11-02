@@ -30,7 +30,7 @@
   - ログインの仕組み:このプロジェクトとして Azure にアプリを1つ登録(クライアント ID は worker/wrangler.template.toml の MS_CLIENT_ID、個人用 Microsoft アカウントのみ、モバイル/デスクトップのリダイレクト URI = GitHub Pages の login.html)。配った各サイトはこの1つを共通で使い、login.html(中継ページ)経由で戻る。PKCE の秘密は各サイトの Worker が持つ。Xbox の XSTS でゲーマータグと XUID を得て、トークンはすぐ捨てる。
   - メンバーの照合:tools/realms/common.js がメンバーごとに xid = HMAC(MEMBER_KEY, XUID) を live.json に入れ、Worker は同じ MEMBER_KEY で照合する(MEMBER_KEY は REALMS_CACHE_KEY から作る)。
   - ワールドのプレイヤーの記録とメンバーは、player_<id> の MsaId(XUID から作るゲーム内 ID)で確実に結びつける(tools/players.py)。
-  - 実装済み: `worker/`(Cloudflare Worker + D1、住所は https://blockmap.<Cloudflare のサブドメイン>.workers.dev。Worker 名は blockmap。持ち主は自分のサブドメインを blockmap から別の名前に変える(一時 map.blockmap… にしていた)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。SHARE_PASSPHRASE は位置確認が Worker に送るときだけ使う。
+  - 実装済み: `worker/`(Cloudflare Worker + D1、住所は https://<サイト名>.<Cloudflare のサブドメイン>.workers.dev。サイト名(Worker 名)はリポジトリ名から tools/site_name.sh で作り、D1 は「<サイト名>-share」。私たちのリポジトリだけは blockmap(D1 blockmap-share)。1つの Cloudflare アカウントに Realm ごとのサイトを置ける(Realm ごとに別名のリポジトリ+REALM_NAME)。持ち主は自分のサブドメインを blockmap から別の名前に変える(一時 map.blockmap… にしていた)。map.yml の cloudflare ジョブで公開。鍵は REALMS_CACHE_KEY から `tools/site_keys.py` で作り、公開ログでは伏せ字にする。SHARE_PASSPHRASE は位置確認が Worker に送るときだけ使う。
   - 「管理者メニュー」で、地図に出さないもの(チェスト全部/ほかの人のペット)を選べる。管理者も含め全員に効く。items.json は秘密のフォルダ(ITEMS_DIR、ページには教えない)に置き、Worker の /api/world が隠す分を抜いて渡す。チェストは置いた人が記録されないので「全部隠す」だけ。
   - Microsoft アカウントのログイン情報は持ち主の GitHub に暗号化したまま。リンクやデータには入れない。
 
@@ -38,4 +38,4 @@
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
 2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。
 3. (済)私たち専用の設定を外し、古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外した。
-4. 説明書・プライバシーポリシー・利用規約、セットアップページ。公開前に持ち主と手順を通しで確認する(別の Cloudflare アカウントで。同じアカウントだと Worker 名 map と D1 名が重なる)。
+4. 説明書・プライバシーポリシー・利用規約、セットアップページ。公開前に持ち主と手順を通しで確認する(リポジトリ名を blockmap 以外にすれば同じ Cloudflare アカウントでも試せる。blockmap にすると私たちのサイトと重なるので、別のアカウントで)。

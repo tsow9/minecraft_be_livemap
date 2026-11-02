@@ -37,6 +37,7 @@
     <p data-en="Automatic updates run on GitHub Actions, which is free without limit only for public repositories. Private ones get 2,000 minutes a month; Blockmap needs about 4,000.">自動更新は GitHub Actions で動きます。Actions を無制限に無料で使えるのは、公開リポジトリだけです。非公開は月 2,000 分までで、Blockmap は月 4,000 分ほど使います。</p>
     <p data-en="Only the program and encrypted data become public. Gamertags and coordinates never appear, and only your Realm's members can sign in to the site.">公開されるのは、プログラムと暗号化したデータだけです。ゲーマータグや座標は表に出ず、サイトに入れるのは Realm のメンバーだけです。</p>
   </div>
+  <p class="hint" data-en="The repository's name (e.g. &lt;code&gt;blockmap&lt;/code&gt;) becomes the start of your site's address. To map two or more Realms, make one repository for each, with different names.">リポジトリの名前(例:<code>blockmap</code>)が、サイトのアドレスの最初の部分になります。Realm を 2 つ以上地図にするときは、Realm ごとに別の名前でリポジトリを作ります。</p>
   <p><a class="btn" href="https://github.com/tsow9/minecraft_be_livemap/generate" data-count="create-repo" target="_blank" rel="noopener" data-en="Create the repository on GitHub">GitHub でリポジトリを作る</a></p>
   <label class="field"><span data-en="Link to the repository you created">作ったリポジトリのリンク</span>
     <input id="repo" type="text" placeholder="https://github.com/yourname/blockmap" autocomplete="off" spellcheck="false"></label>
@@ -81,7 +82,7 @@
   <table class="kv">
     <tr><th>Name</th><th>Value</th></tr>
     <tr><td><code>REALM_NAME</code><button class="copy" type="button" data-text="REALM_NAME"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
-      <td data-en="If you own two or more Realms: enter the Realm's name (e.g. “Steve's Realm”).">Realm を 2 つ以上持っている場合:Realm の名前を入力します(例:「〇〇のRealm」)。</td></tr>
+      <td data-en="If you own two or more Realms: the name of the Realm this site maps (e.g. “Steve's Realm”).">Realm を 2 つ以上持っている場合:このサイトで地図にする Realm の名前を入力します(例:「〇〇のRealm」)。</td></tr>
       <tr><td><code>LANGUAGE</code><button class="copy" type="button" data-text="LANGUAGE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>
         <td data-en="&lt;code&gt;en&lt;/code&gt; for GitHub Actions messages in English (Japanese otherwise).">GitHub Actions のメッセージを英語にする場合:<code>en</code> を入力します。</td></tr>
       <tr><td><code>TIMEZONE</code><button class="copy" type="button" data-text="TIMEZONE"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></td>

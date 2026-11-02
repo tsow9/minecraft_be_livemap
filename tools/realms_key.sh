@@ -2,7 +2,7 @@
 # The key that encrypts the Realms sign-in and the map data (CACHE_KEY), handed to the job's later steps.
 #
 # REALMS_CACHE_KEY (a repository secret) is used when it is set. Otherwise the key lives in the site's own Cloudflare
-# database (D1 "blockmap-share", table kv, row "realms_key"): made once, at random, on the first run, and read back
+# database (D1 "<site name>-share", table kv, row "realms_key"): made once, at random, on the first run, and read back
 # after that. So a new site needs only one secret, CLOUDFLARE_API_TOKEN. The key never appears in a log (masked).
 #
 # With neither a secret nor a token there is no key yet: nothing is set, and the steps that need it say so.
@@ -11,7 +11,7 @@ set -euo pipefail
 t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
 here=$(dirname "$0")
 API=${CF_API:-https://api.cloudflare.com/client/v4}  # CF_API: only for tests
-DB=blockmap-share
+DB=$(bash "$here/site_name.sh" --db)
 
 hand_over() {
   echo "::add-mask::$1"

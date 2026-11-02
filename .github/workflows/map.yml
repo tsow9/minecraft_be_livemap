@@ -248,7 +248,7 @@ jobs:
             if [ "$BLOCKMAP_ACTION" = 'Sign in to Realms' ]; then
               account=$(bash tools/cloudflare.sh account)
               there=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-                "https://api.cloudflare.com/client/v4/accounts/$account/workers/scripts/blockmap/settings" || true)
+                "https://api.cloudflare.com/client/v4/accounts/$account/workers/scripts/$(bash tools/site_name.sh)/settings" || true)
               if [ "$there" = 200 ]; then
                 echo "ready=false" >> "$GITHUB_OUTPUT"
                 if [ "$BLOCKMAP_LANG" != en ]; then echo "サイトはもうあるので、そのままログインします"; else echo "The site is already there, so signing in goes ahead"; fi
@@ -301,15 +301,16 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
         run: |
-          find_db() { npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="blockmap-share");process.stdout.write(d?d.uuid:"")})'; }
+          name=$(bash ../tools/site_name.sh); db=$(bash ../tools/site_name.sh --db)
+          find_db() { npx wrangler d1 list --json | DB="$db" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name===process.env.DB);process.stdout.write(d?d.uuid:"")})'; }
           id=$(find_db)
           if [ -z "$id" ]; then
-            npx wrangler d1 create blockmap-share
+            npx wrangler d1 create "$db"
             id=$(find_db)
           fi
           [ -n "$id" ] || { echo "::error::Could not create the database"; exit 1; }
-          sed -e "s/__DB_ID__/$id/" wrangler.template.toml > wrangler.toml
-          npx wrangler d1 execute blockmap-share --remote --file schema.sql --yes
+          sed -e "s/__DB_ID__/$id/; s/__DB_NAME__/$db/; s/__NAME__/$name/" wrangler.template.toml > wrangler.toml
+          npx wrangler d1 execute "$db" --remote --file schema.sql --yes
       - name: Publish to Cloudflare
         if: steps.check.outputs.ready == 'true'
         working-directory: worker
@@ -353,7 +354,7 @@ jobs:
         continue-on-error: true
         run: |
           # How many sign-ins were made each day, and how many devices stay signed in. Counts only, nobody's name or id.
-          npx wrangler d1 execute blockmap-share --remote --json --command \
+          npx wrangler d1 execute "$(bash ../tools/site_name.sh --db)" --remote --json --command \
             "SELECT date(created / 1000, 'unixepoch') AS day, COUNT(*) AS n FROM sessions GROUP BY day ORDER BY day DESC LIMIT 14" \
             | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s)[0].results;console.log("Sign-ins per day:");for(const x of r)console.log(`  ${x.day}: ${x.n}`)})'
 

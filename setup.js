@@ -73,8 +73,13 @@
     save(); refresh(); poll(true);
     if (saved.repo) count('repo-entered');
   });
-  // The address the workflow gives a new site (tools/cloudflare.sh): blockmap.<GitHub owner>.workers.dev.
-  const siteOf = (repo) => `https://blockmap.${repo.split('/')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')}.workers.dev`;
+  // The address the workflow gives a new site: <name from the repository's name>.<GitHub owner>.workers.dev
+  // (tools/site_name.sh, tools/cloudflare.sh).
+  const siteOf = (repo) => {
+    const [owner, name] = repo.split('/');
+    const site = (name || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+/, '').slice(0, 50).replace(/-+$/, '') || 'blockmap';
+    return `https://${site}.${owner.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.workers.dev`;
+  };
 
   function refresh() {
     const repo = saved.repo || '';

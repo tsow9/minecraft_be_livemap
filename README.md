@@ -36,13 +36,14 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 1. このページ上部の **Use this template** → **Create a new repository** を選びます。
 2. 公開範囲は **Public** のままにします([公開にする理由](#公開リポジトリにする理由))。
 3. **Include all branches** にはチェックを入れません。
+4. リポジトリの名前(例:`blockmap`)が、サイトのアドレスの最初の部分になります。
 
 ### 2. Cloudflare を準備する
 
 1. Cloudflare のダッシュボードで **My Profile** → **API Tokens** → **Create Token** を開きます。
 2. **Edit Cloudflare Workers** テンプレートを選び、権限に **Account / D1 / Edit** を追加して作成します。表示されたトークンを控えます(一度しか表示されません)。
 
-サイトのアドレスは `https://blockmap.<サブドメイン>.workers.dev` です。サブドメインは **Workers & Pages** の画面で決められます。決めていなければ、GitHub のユーザー名をもとに自動で決まります(実行結果に表示されます)。
+サイトのアドレスは `https://<リポジトリの名前>.<サブドメイン>.workers.dev` です。サブドメインは **Workers & Pages** の画面で決められます。決めていなければ、GitHub のユーザー名をもとに自動で決まります(実行結果に表示されます)。
 
 ### 3. トークンを登録する
 
@@ -60,7 +61,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 |---|---|
 | `LANGUAGE` | `en` にすると、Actions の実行結果のメッセージが英語になります(省略時は日本語) |
 | `TIMEZONE` | 地図の日付に使うタイムゾーン(省略時は `Asia/Tokyo`) |
-| `REALM_NAME` | Realm を 2 つ以上持っている場合:Realm の名前(マイクラの Realms の一覧に出ている名前) |
+| `REALM_NAME` | Realm を 2 つ以上持っている場合:このサイトで地図にする Realm の名前(マイクラの Realms の一覧に出ている名前) |
 | `CLOUDFLARE_ACCOUNT_ID` | 1 つの Cloudflare のログインで、複数のアカウントに入れる場合(ほかの人のアカウントに招待されているなど):使うアカウントの ID。別々のメールアドレスで作ったアカウントなら不要です |
 
 ### 4. Realms にログインする
@@ -97,6 +98,10 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 Secrets(鍵)、Realms のログイン情報(Actions キャッシュ)、サイトの中身は公開されません。
 
 ## 使い方
+
+### 2 つ以上の Realm を地図にする
+
+Realm ごとに、別の名前でリポジトリを作り(手順 1)、それぞれに `REALM_NAME` を入れます。GitHub と Cloudflare のアカウントは同じものを使えます。トークンも同じものを登録できます。サイトは Realm ごとに分かれ(`https://blockmap.….workers.dev`、`https://blockmap-survival.….workers.dev` など)、地図・メンバー・書き込みもそれぞれ別になります。
 
 ### メンバーを招く
 
