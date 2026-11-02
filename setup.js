@@ -172,7 +172,7 @@
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
-      waiting: `<b>${T('待っています', 'Waiting')}</b> ${T('「Sign in to Realms」を実行すると、ここに進み具合が出ます。', 'Once “Sign in to Realms” runs, its progress shows here.')}`,
+      waiting: `<b>${T('ログインが始まるのを待っています', 'Waiting for signing in to start')}<span class="spin"></span></b>${T('トークンを登録してから、10 分ほどで始まります。', 'It starts within about 10 minutes of adding the token.')}`,
       code: state?.code
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>

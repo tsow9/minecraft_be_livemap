@@ -1,4 +1,7 @@
 name: Map site
+# A run started by hand is titled by what it does ("Sign in to Realms", "Update map"), which also lets the live check
+# and the setup page tell a sign-in apart. Other runs keep GitHub's usual title.
+run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.action || '' }}
 
 # Runs only on this repository's own main branch, schedule, or manual start.
 # There is deliberately no pull_request trigger, so outside contributions never see the login secret.

@@ -65,9 +65,9 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 
 ### 4. Sign in to Realms
 
-1. Open the **Actions** tab (enable workflows the first time).
-2. Select **Map site** → **Run workflow**, choose **Sign in to Realms** under **What to do** and run it.
-3. Open the running **login** job and enter the boxed code at https://www.microsoft.com/link.
+1. Once the token is added, signing in starts by itself within about 10 minutes. To start at once: **Actions** tab → **Map site** → **Run workflow** → the green **Run workflow** (What to do: **Sign in to Realms**).
+2. Wait a moment: the [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows the code (so does the running **login** job in Actions, in a box).
+3. Enter the code at https://www.microsoft.com/link.
 4. Sign in with the Realm owner's account (within 15 minutes). Afterwards Microsoft says "Minecraft for Nintendo Switch"; that is expected ([why](#security-and-privacy)).
 5. Once signed in, making the map starts by itself. A few minutes later the run's Summary shows "Site: https://blockmap.….workers.dev".
 6. Open that address and sign in with Microsoft. The person who set it up is the admin.
