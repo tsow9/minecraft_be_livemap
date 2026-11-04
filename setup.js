@@ -96,14 +96,12 @@
     $('#repo-hint').innerHTML = repo
       ? T(`<code>${repo}</code> を使います。手順 3〜5 のボタンが、このリポジトリを開きます。`, `Using <code>${repo}</code>. The buttons in steps 3–5 open it.`)
       : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます。', 'Once filled in, the buttons in steps 3–5 open it directly.');
-    const site = siteUrl || (repo ? siteOf(repo) : '');
+    // Only the exact address: from the site itself, or from what publishing it wrote (site-info branch).
+    const site = siteUrl;
     $('#site-link').classList.toggle('off', !site);
     if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
-    // The exact address once the site is published; until then (or for an older copy) the likely one.
-    $('#site-hint').innerHTML = !site ? ''
-      : siteUrl ? T(`サイトのアドレス:<code>${site}</code>`, `Your site: <code>${site}</code>`)
-        : T(`サイトのアドレスは、おそらく <code>${site}</code> です。違う場合は、手順 4 の記録の Summary に正しいアドレスが表示されます。`,
-          `Your site is most likely at <code>${site}</code>. If not, step 4's run shows the address in its Summary.`);
+    $('#site-hint').innerHTML = site ? T(`サイトのアドレス:<code>${site}</code>`, `Your site: <code>${site}</code>`)
+      : repo ? T('サイトができると、ここにアドレスが出ます。', 'Your site\'s address appears here once it is made.') : '';
   }
 
   // ---- copy buttons ----
@@ -166,9 +164,11 @@
       if (!res.ok) return null;
       const s = await res.json();
       if (!s?.state || s.r !== await repoTag(repo)) return null;
+      if (siteUrl !== base) { siteUrl = base; refresh(); }  // it answered about this repository: the address is sure
       return s;
     } catch { return null; }
   }
+  let lastSiteLook = 0;
   const STEPS = ['signed-in', 'downloading', 'drawing', 'publishing'];
   async function check() {
     const repo = saved.repo;
@@ -215,6 +215,13 @@
     const runs = (data.workflow_runs || []).filter((r) => r.conclusion !== 'cancelled');
     const login = runs.find((r) => r.display_title === 'Sign in to Realms');  // newest first
     if (!login) { state = { kind: 'waiting' }; return; }
+    // Signing in puts the site up first and notes its exact address (site-info branch): with it, the site itself is
+    // asked from then on (no limit). Looked for at most every 20 seconds.
+    if (!siteUrl && Date.now() - lastSiteLook > 20000) {
+      lastSiteLook = Date.now();
+      try { siteUrl = ((await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || '').replace(/\/$/, ''); } catch { /* not yet */ }
+      if (siteUrl) refresh();
+    }
     if (login.status !== 'completed') {
       // The code to enter, put by the sign-in on the "login-code" branch (tools/login_code.sh); then "signed in".
       let info = null;
@@ -246,7 +253,7 @@
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
-      waiting: `<b>${T('ログインが始まるのを待っています', 'Waiting for signing in to start')}<span class="spin"></span></b>${T('トークンを登録してから、1 分ほどで始まります。', 'It starts about a minute after the token is added.')}`,
+      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="spin"></span></b>${T('登録されると、自動でログインの準備が始まります。', 'Once it is added, signing in gets ready by itself.')}`,
       code: state?.code
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
