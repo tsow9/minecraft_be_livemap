@@ -263,13 +263,13 @@
       building: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
       progress: () => {
         const names = { 'signed-in': T('Realms にログイン', 'Signed in to Realms'), downloading: T('ワールドをダウンロード', 'Downloading the world'),
-          drawing: T('地図を描く', 'Drawing the map'), publishing: T('サイトに公開', 'Publishing the site') };
+          drawing: T('地図を作る', 'Making the map'), publishing: T('サイトに反映', 'Putting it on your site') };
         const at = Math.max(1, STEPS.indexOf(state.step));  // just signed in: the download is next
         // What the drawing is doing right now (render_map.py says so as it goes).
         const detail = state.step === 'drawing' && {
           read: T('ワールドを読み込んでいます', 'Reading the world'), items: T('チェストや村人を調べています', 'Looking at chests and villagers'),
-          overworld: T('地上を描いています', 'Drawing the Overworld'), nether: T('ネザーを描いています', 'Drawing the Nether'),
-          end: T('エンドを描いています', 'Drawing the End'), save: T('保存しています', 'Saving'),
+          overworld: T('地上の地図を作っています', 'Making the Overworld map'), nether: T('ネザーの地図を作っています', 'Making the Nether map'),
+          end: T('エンドの地図を作っています', 'Making the End map'), save: T('保存しています', 'Saving'),
         }[state.detail];
         return `<b>${T('サイトを作っています', 'Building your site')}</b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}
           <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
