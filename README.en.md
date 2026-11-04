@@ -17,6 +17,7 @@ A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in
 - **Search**: coordinates, villagers (profession, level, trades), Wandering Traders, chest contents, signs, pets and biomes.
 - **Drawing**: pins, text, lines, polygons, rectangles, circles and ellipses, snapped to blocks and shared with members.
 - **Past maps**: go back to any saved day, or play the changes in order.
+- **Worlds**: if the Realm switches between worlds (slots), each keeps its own map; switch from the date in the corner. Pins and drawings belong to their world.
 - **Overlays**: contours, slime chunks, chunk lines, Nether coordinate converter, who explored where (estimated), Nether Portal links.
 - **Realms info**: server status, players online, difficulty, game rules and the next payment day.
 - **Languages**: Japanese and English (game terms use the official translations).

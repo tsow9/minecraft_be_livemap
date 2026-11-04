@@ -180,13 +180,22 @@ jobs:
       - name: Get the previous map data
         if: steps.download.outputs.ready == 'true'
         run: bash tools/vault.sh get map-data data
+      # Each of the Realm's worlds (slots) has its own map: the one being played is drawn into its own folder.
+      - name: Which world is being played
+        id: world
+        if: steps.download.outputs.ready == 'true'
+        run: python3 tools/worlds.py target data members.json
       - name: Check whether the world or the drawing code changed
         id: compare
         if: steps.download.outputs.ready == 'true'
-        # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played.
+        # Fingerprint = world + drawing code, so a color fix re-renders even if nobody played. Switching to another
+        # world always publishes, so the site opens on the world now played.
+        env:
+          DIR: ${{ steps.world.outputs.dir }}
+          SWITCHED: ${{ steps.world.outputs.switched }}
         run: |
           echo "${{ steps.download.outputs.world_hash }}-$(cat tools/*.py | sha256sum | cut -c1-64)" > fingerprint.txt
-          if [ -f data/world.sha256 ] && [ "$(cat data/world.sha256)" = "$(cat fingerprint.txt)" ]; then
+          if [ "$SWITCHED" != true ] && [ -f "$DIR/world.sha256" ] && [ "$(cat "$DIR/world.sha256")" = "$(cat fingerprint.txt)" ]; then
             echo "No change since last time"
             echo "changed=false" >> "$GITHUB_OUTPUT"
             bash tools/setup_status.sh done
@@ -199,14 +208,18 @@ jobs:
           python-version: '3.12'
       - name: Make the map
         if: steps.compare.outputs.changed == 'true'
+        env:
+          DIR: ${{ steps.world.outputs.dir }}
         run: |
           bash tools/setup_status.sh drawing
           pip install --quiet numpy pillow
           live=""
           bash tools/vault.sh get live-data live
           [ -f live/live.json ] && live=live/live.json
-          python tools/render_map.py --world world.mcworld --site data --snapshot "$(date +%F)" --live "$live"
-          cp fingerprint.txt data/world.sha256
+          mkdir -p "$DIR"
+          python tools/render_map.py --world world.mcworld --site "$DIR" --snapshot "$(date +%F)" --live "$live"
+          cp fingerprint.txt "$DIR/world.sha256"
+          python3 tools/worlds.py record data members.json
       - name: Save the map data (encrypted)
         if: steps.compare.outputs.changed == 'true'
         # map-data keeps a single commit so the repository does not grow with every hourly update.

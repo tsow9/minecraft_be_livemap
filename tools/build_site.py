@@ -19,6 +19,36 @@ SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'apple-touch-icon.png',
 MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 
 
+def load_json(path):
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def add_world(data, put, items_to, version):
+    """One world's map: its config.json (the site's settings plus its past maps), tiles and search data."""
+    with open(os.path.join(ROOT, 'config.json'), encoding='utf-8') as f:
+        cfg = json.load(f)
+    generated = load_json(os.path.join(data, 'config.json'))
+    if generated:
+        cfg.update({k: generated[k] for k in MAP_KEYS if k in generated})
+        for sub in ('tiles', 'manifests'):
+            if os.path.isdir(os.path.join(data, sub)):
+                shutil.copytree(os.path.join(data, sub), os.path.join(put, sub))
+    os.makedirs(put, exist_ok=True)
+    for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json', 'biomes.json'):
+        if os.path.exists(os.path.join(data, name)):
+            to = items_to if name == 'items.json' and items_to else put
+            os.makedirs(to, exist_ok=True)
+            shutil.copy2(os.path.join(data, name), to)
+    cfg['version'] = version  # open pages compare this with their own and switch to the new site
+    with open(os.path.join(put, 'config.json'), 'w', encoding='utf-8') as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    return cfg
+
+
 def main():
     data, out = sys.argv[1], sys.argv[2]
     folder = sys.argv[sys.argv.index('--data-folder') + 1] if '--data-folder' in sys.argv else ''
@@ -35,37 +65,30 @@ def main():
             shutil.copytree(src, os.path.join(out, item))
         else:
             shutil.copy2(src, out)
-    with open(os.path.join(ROOT, 'config.json'), encoding='utf-8') as f:
-        cfg = json.load(f)
-    data_cfg = os.path.join(data, 'config.json')
-    if os.path.exists(data_cfg):
-        with open(data_cfg, encoding='utf-8') as f:
-            generated = json.load(f)
-        cfg.update({k: generated[k] for k in MAP_KEYS if k in generated})
-        for sub in ('tiles', 'manifests'):
-            if os.path.isdir(os.path.join(data, sub)):
-                shutil.copytree(os.path.join(data, sub), os.path.join(put, sub))
-    os.makedirs(put, exist_ok=True)
-    for name in ('explore.json', 'blocks.json', 'portals.json', 'items.json', 'biomes.json'):
-        if os.path.exists(os.path.join(data, name)):
-            to = os.path.join(out, 'x', items_folder) if name == 'items.json' and items_folder else put
-            os.makedirs(to, exist_ok=True)
-            shutil.copy2(os.path.join(data, name), to)
     version = (os.environ.get('GITHUB_SHA') or str(int(time.time())))[:12]
+    items_root = os.path.join(out, 'x', items_folder) if items_folder else ''
+    cfg = add_world(data, put, items_root, version)
+    # The Realm's other worlds (tools/worlds.py): each in worlds/<slot>/, the same way.
+    worlds = load_json(os.path.join(data, 'worlds.json'))
+    for e in (worlds or {}).get('list', []):
+        sub = e.get('dir') if isinstance(e, dict) else None
+        if sub and re.fullmatch(r'worlds/\d{1,2}/', sub) and os.path.isdir(os.path.join(data, sub)):
+            add_world(os.path.join(data, sub), os.path.join(put, sub), os.path.join(items_root, sub) if items_root else '', version)
+    if worlds:
+        with open(os.path.join(put, 'worlds.json'), 'w', encoding='utf-8') as f:
+            json.dump(worlds, f, ensure_ascii=False)
     page = os.path.join(out, 'index.html')
     with open(page, encoding='utf-8') as f:
         html = f.read()
     html = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)"', rf'\1?v={version}"', html)
     with open(page, 'w', encoding='utf-8') as f:
         f.write(html)
-    cfg['version'] = version  # open pages compare this with their own and switch to the new site
-    with open(os.path.join(put, 'config.json'), 'w', encoding='utf-8') as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
     if folder:
         # Map pictures never change at an address (a new picture gets a new ?v=), so browsers may keep them; otherwise
         # Cloudflare has them asked for again at every zoom.
         with open(os.path.join(out, '_headers'), 'w', encoding='utf-8') as f:
-            f.write('/d/:dir/tiles/*\n  Cache-Control: public, max-age=31536000, immutable\n')
+            f.write('/d/:dir/tiles/*\n  Cache-Control: public, max-age=31536000, immutable\n'
+                    '/d/:dir/worlds/:w/tiles/*\n  Cache-Control: public, max-age=31536000, immutable\n')
     if folder:  # the open part of the site says nothing about the map
         with open(os.path.join(out, 'config.json'), 'w', encoding='utf-8') as f:
             json.dump({k: v for k, v in cfg.items() if k not in MAP_KEYS}, f, ensure_ascii=False, indent=2)

@@ -42,7 +42,11 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         if (!me) return gatePage(env);
         const page = await env.ASSETS.fetch(new Request(new URL('/index.html', url)));
-        const html = (await page.text()).replace('<head>', `<head><script>window.BLOCKMAP_DATA=${JSON.stringify(`/d/${env.DATA_DIR}/`)};</script>`);
+        // The Realm's worlds (tools/worlds.py), when it has had more than one: the page opens on the one played.
+        const w = await env.ASSETS.fetch(new Request(new URL(`/d/${env.DATA_DIR}/worlds.json`, url)));
+        const worlds = w.ok ? await w.text().catch(() => '') : '';
+        const extra = /^\{[\s\S]{0,20000}\}$/.test(worlds.trim()) ? `window.BLOCKMAP_WORLDS=${worlds.trim().replace(/</g, '\\u003c')};` : '';
+        const html = (await page.text()).replace('<head>', () => `<head><script>window.BLOCKMAP_DATA=${JSON.stringify(`/d/${env.DATA_DIR}/`)};${extra}</script>`);
         return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
       }
       if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
@@ -79,7 +83,10 @@ export default {
       // the owner too).
       if (req.method === 'GET' && path === '/world') {
         if (!env.ITEMS_DIR) return json({ error: 'none' }, 404);
-        const file = await env.ASSETS.fetch(new Request(new URL(`/x/${env.ITEMS_DIR}/items.json`, url)));
+        // ?w=<slot>: another of the Realm's worlds (tools/worlds.py), kept in worlds/<slot>/.
+        const w = url.searchParams.get('w');
+        const sub = /^\d{1,2}$/.test(w || '') ? `worlds/${w}/` : '';
+        const file = await env.ASSETS.fetch(new Request(new URL(`/x/${env.ITEMS_DIR}/${sub}items.json`, url)));
         if (!file.ok) return json({ error: 'none' }, 404);
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
         const hide = await privacy(env);

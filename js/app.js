@@ -23,7 +23,25 @@ const DEMO_SNAPSHOTS = [
 const MAX_ZOOM = 5;
 const ll = (x, z) => L.latLng(-z, x);
 // On Cloudflare the map data sits in a folder whose name only invited visitors are given (set by the page).
-const DATA = typeof window.BLOCKMAP_DATA === 'string' ? window.BLOCKMAP_DATA : '';
+const DATA_ROOT = typeof window.BLOCKMAP_DATA === 'string' ? window.BLOCKMAP_DATA : '';
+// The Realm's worlds (its slots; tools/worlds.py), each with its own map: the first one mapped in the folder itself,
+// the others in worlds/<slot>/. The page opens on the world being played, or the one picked in the corner this visit.
+const WORLDS = (() => {
+  const w = window.BLOCKMAP_WORLDS;
+  const list = (Array.isArray(w?.list) ? w.list : [])
+    .filter((e) => Number.isInteger(e?.slot) && (e.dir === '' || /^worlds\/\d{1,2}\/$/.test(e.dir)));
+  return { active: Number.isInteger(w?.active) ? w.active : null, list };
+})();
+const WORLD = (() => {
+  let picked = null;
+  try { picked = Number(sessionStorage.getItem('blockmap.world')) || null; } catch { /* private mode */ }
+  return WORLDS.list.find((e) => e.slot === picked) || WORLDS.list.find((e) => e.slot === WORLDS.active)
+    || WORLDS.list.find((e) => e.dir === '') || null;
+})();
+const DATA = DATA_ROOT + (WORLD?.dir || '');
+// Pins and drawings belong to a world: those made in another world than the first one carry its slot (w).
+const HOME_WORLD = !WORLD || WORLD.dir === '';
+const inWorld = (a) => (HOME_WORLD ? !a.w : a.w === WORLD.slot);
 let noTapAbove = 0;  // phones: screen y where the search box, the dimension switch and the chips end
 const block = (latlng) => ({ x: Math.floor(latlng.lng), z: Math.floor(-latlng.lat) });
 const round1 = (v) => Math.round(v * 10) / 10;
@@ -433,6 +451,7 @@ function sanitize(a) {
     updatedAt: num(a.updatedAt) ?? Date.now(),
   };
   if (typeof a.by === 'string' && a.by) out.by = a.by.slice(0, 40);  // who made it (set by the server)
+  if (Number.isInteger(a.w) && a.w > 0 && a.w < 100) out.w = a.w;  // made in another of the Realm's worlds
   if (a.type === 'waypoint' || a.type === 'text') {
     out.x = num(a.x); out.z = num(a.z);
     if (out.x === null || out.z === null) return null;
@@ -677,7 +696,7 @@ function makeBaseLayer() {
     ...opts, tileSize: 256 >> hi, zoomOffset: hi, manifest: manifests.get(snap.id), dim: state.dim,
     minNativeZoom: state.config.minNativeZoom - hi, maxNativeZoom: opts.maxZoom, detailZoom: state.config.maxNativeZoom - hi,
     backdropZoom: Math.min(state.config.maxNativeZoom, Math.max(state.config.minNativeZoom, BACKDROP_ZOOM)),
-    attribution: esc(snapText(snap)),
+    attribution: cornerHtml(snap),
   });
 }
 
@@ -846,6 +865,47 @@ function snapText(snap) {
   return `${dayText(t)} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
 }
 
+// With two or more worlds in the Realm, the corner also names the world shown, and opens the list of worlds.
+const GLOBE_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>';
+const worldName = (e) => (e.name || tl('ワールド{n}', { n: e.slot }));
+function cornerHtml(snap) {
+  if (WORLDS.list.length < 2 || !WORLD) return esc(snapText(snap));
+  return `<button type="button" class="world-btn" aria-haspopup="true">${GLOBE_SVG}<span>${esc(worldName(WORLD))}${DOT}${esc(snapText(snap))}</span><span class="caret"></span></button>`;
+}
+function showWorldMenu(btn) {
+  let menu = $('#world-menu');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.id = 'world-menu';
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+    document.body.append(menu);
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-slot]');
+      if (!b) return;
+      try { sessionStorage.setItem('blockmap.world', b.dataset.slot); } catch { /* private mode */ }
+      if (Number(b.dataset.slot) !== WORLD.slot) location.reload(); else menu.hidden = true;
+    });
+  }
+  if (!menu.hidden) { menu.hidden = true; return; }
+  menu.innerHTML = [...WORLDS.list].sort((a, b) => a.slot - b.slot).map((e) => {
+    const sub = e.slot === WORLDS.active ? `<span class="dot"></span>${tl('遊んでいるワールド')}`
+      : e.at ? tl('{day}まで', { day: esc(dayText(new Date(e.at))) }) : '';
+    return `<button type="button" role="menuitem" data-slot="${e.slot}" class="${e.slot === WORLD.slot ? 'on' : ''}"><span>${esc(worldName(e))}</span><small>${sub}</small></button>`;
+  }).join('');
+  const r = btn.getBoundingClientRect();
+  menu.style.right = `${Math.max(8, innerWidth - r.right)}px`;
+  menu.style.bottom = `${innerHeight - r.top + 6}px`;
+  menu.hidden = false;
+}
+// The corner sits in a Leaflet control, which keeps clicks to itself: listen before it does.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest?.('.world-btn');
+  if (btn) { e.preventDefault(); showWorldMenu(btn); return; }
+  const menu = $('#world-menu');
+  if (menu && !menu.hidden && !e.target.closest?.('#world-menu')) menu.hidden = true;
+}, true);
+
 async function loadManifest(id) {
   const v = encodeURIComponent(state.config.updatedAt || '');
   if (!manifests.has(id)) manifests.set(id, (await fetchJson(`${DATA}manifests/${encodeURIComponent(id)}.json?v=${v}`))?.tiles || null);
@@ -917,7 +977,7 @@ function makeLayer(a) {
 
 function renderAnn(a) {
   removeAnnLayer(a.id);
-  if (a.dim !== state.dim) return;
+  if (a.dim !== state.dim || !inWorld(a)) return;
   const layer = makeLayer(a);
   if (!layer) return;
   layer._annId = a.id;
@@ -993,7 +1053,7 @@ function updateGeometry(id, layer) {
 }
 
 function addAnn(a) {
-  const clean = sanitize(a);
+  const clean = sanitize(HOME_WORLD ? a : { ...a, w: WORLD.slot });
   if (!clean) return null;
   state.annotations.push(clean);
   store.save();
@@ -1127,7 +1187,7 @@ editor.addEventListener('close', () => {
 // Every pin has its own name, so it can be found by searching.
 function pinNameTaken(name, exceptId) {
   const key = name.trim().toLowerCase();
-  return state.annotations.some((v) => v.type === 'waypoint' && v.id !== exceptId && (v.name || '').trim().toLowerCase() === key);
+  return state.annotations.some((v) => v.type === 'waypoint' && v.id !== exceptId && inWorld(v) && (v.name || '').trim().toLowerCase() === key);
 }
 function nextPinName() {
   let n = 1;
@@ -1933,6 +1993,7 @@ function setupSearch() {
     const out = [];
     for (const b of findIndex.beings) out.push({ ...b, kind: 'find', go: () => showFinds(b.type, b.key) });
     for (const a of state.annotations) {
+      if (!inWorld(a)) continue;
       const c = annCenter(a);
       const shape = { line: tl('線'), draw: tl('手書き'), polygon: tl('多角形'), rect: tl('四角'), circle: tl('円'), ellipse: tl('楕円') }[a.type];
       out.push({
@@ -2279,7 +2340,7 @@ function villagerTitle(v) {
 
 async function loadItems() {
   // On Cloudflare it comes through the worker, without what the owner hides from members.
-  state.items = await fetchJson(DATA ? `${location.origin}/api/world` : `items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  state.items = await fetchJson(DATA ? `${location.origin}/api/world${HOME_WORLD ? '' : `?w=${WORLD.slot}`}` : `items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   const hidden = new Set(state.items?.hidden || []);
   if (hidden.has('chests')) thingsOn.chests = false;
   document.querySelector('#chips [data-layer="chests"]').hidden = hidden.has('chests');
@@ -2815,7 +2876,7 @@ async function travelEstimate(f, t) {
 function routePlaces(dim) {
   const out = [];
   for (const a of state.annotations) {
-    if (a.type === 'waypoint' && a.dim === dim) out.push({ id: a.id, name: a.name || tl('ピン'), x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
+    if (a.type === 'waypoint' && a.dim === dim && inWorld(a)) out.push({ id: a.id, name: a.name || tl('ピン'), x: a.x, z: a.z, dim, icon: flagSvg(a.color) });
   }
   for (const p of state.players) {
     const c = playerColor(p.key);
@@ -3114,7 +3175,7 @@ function renderPlayers() {
     const li = document.createElement('li');
     li.className = 'click';
     const status = p.online === true ? tl('現在地') : p.online === false ? tl('ログアウト位置') : tl('記録');
-    li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)};opacity:${p.online === true ? 1 : 0.5}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${status} ${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}</span>`;
+    li.innerHTML = `<span class="dot" style="background:${playerColor(p.key)};opacity:${p.online === true ? 1 : 0.5}"></span><span class="grow">${esc(p.name)}</span><span class="sub">${status} ${Number.isFinite(p.x) ? `${DIMS[p.dim]?.name || ''} ${p.x}, ${p.z}` : ''}</span>`;
     li.addEventListener('click', () => { goTo(p.x, p.z, p.dim, 0); });
     list.append(li);
   }
@@ -3229,7 +3290,12 @@ async function refreshLive() {
 
   renderRealm(data.realm, online.length, members.length);
 
-  const players = Array.isArray(data.players) ? data.players : [];
+  let players = Array.isArray(data.players) ? data.players : [];
+  // Looking at another of the Realm's worlds than the one played: the players are not in it, so where they are (and
+  // their beds, deaths and footprints) is left out; their names still name the pets they own.
+  if (WORLD && Number.isInteger(data.realm?.slot) && data.realm.slot !== WORLD.slot) {
+    players = players.map((p) => ({ ...p, dim: null, x: null, y: null, z: null, bed: null, death: null, trail: [] }));
+  }
   const json = JSON.stringify(players);
   state.worldAt = data.worldAt;
   state.world = data.world && typeof data.world.time === 'number' ? data.world : null;
