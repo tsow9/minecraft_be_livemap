@@ -2,7 +2,8 @@
 # Starts "Sign in to Realms" by itself when a new site has its Cloudflare token but has never signed in, so setting up
 # needs no Run workflow press: the code then shows on the setup page. Runs from the 10-minute live check.
 #
-# Not again while a sign-in is running or started within the last hour, and at most 24 times in all (a setup left
+# Not again while a sign-in is running or started within the last 10 minutes (so an expired code or a token put
+# right is retried by itself), and at most 24 times in all (a setup left
 # half-done does not keep starting sign-ins). After that, only "Run workflow" starts one.
 # Needs GH_TOKEN (actions: write) and CLOUDFLARE_API_TOKEN. Never fails the run.
 set -uo pipefail
@@ -17,7 +18,7 @@ now = datetime.datetime.now(datetime.timezone.utc)
 def age(r):
     return (now - datetime.datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))).total_seconds()
 if len(runs) >= 24: print("enough")
-elif any(r.get("status") != "completed" or age(r) < 3600 for r in runs): print("wait")
+elif any(r.get("status") != "completed" or age(r) < 600 for r in runs): print("wait")
 else: print("start")') || exit 0
 case "$verdict" in
   start)
