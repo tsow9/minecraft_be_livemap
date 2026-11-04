@@ -174,7 +174,7 @@
       const url = s.log;
       if (s.state === 'starting') state = { kind: 'code', url, code: '' };
       else if (s.state === 'code') state = { kind: 'code', url, code: s.expires > Date.now() ? s.code : '', uri: s.uri };
-      else if (STEPS.includes(s.state)) state = { kind: 'making', url, step: s.state };
+      else if (STEPS.includes(s.state)) state = { kind: 'making', url, step: s.state, detail: s.detail };
       else if (s.state === 'login-failed' || s.state === 'map-failed') state = { kind: s.state, url };
       else if (s.state === 'done') {
         siteUrl = s.url ? s.url.replace(/\/$/, '') : (siteUrl || siteOf(repo));
@@ -249,8 +249,15 @@
         const names = { 'signed-in': T('Realms にログイン', 'Signed in to Realms'), downloading: T('ワールドをダウンロード', 'Downloading the world'),
           drawing: T('地図を描く', 'Drawing the map'), publishing: T('サイトに公開', 'Publishing the site') };
         const at = Math.max(1, STEPS.indexOf(state.step));  // just signed in: the download is next
+        // What the drawing is doing right now (render_map.py says so as it goes).
+        const detail = state.step === 'drawing' && {
+          read: T('ワールドを読み込んでいます', 'Reading the world'), items: T('チェストや村人を調べています', 'Looking at chests and villagers'),
+          overworld: T('地上を描いています', 'Drawing the Overworld'), nether: T('ネザーを描いています', 'Drawing the Nether'),
+          end: T('エンドを描いています', 'Drawing the End'), save: T('保存しています', 'Saving'),
+        }[state.detail];
         return `<b>${T('サイトを作っています', 'Building your site')}</b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}
-          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="spin"></span>' : ''}</li>`).join('')}</ol>`;
+          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="spin"></span>' : ''}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
+          ${state.url ? link(state.url, T('記録を見る', 'See the log')) : ''}`;
       },
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、もう一度「Sign in to Realms」を実行します。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If it timed out, run “Sign in to Realms” again. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
@@ -261,7 +268,7 @@
     secretHint();
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
     const paused = !fromSite && limited > Date.now() && state?.kind !== 'done'
-      ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。最新の進み具合は、下の「Map site」で見られます。', 'GitHub limits how often this page may ask, so updates here are paused for a while. See the latest under “Map site” below.')}</p>` : '';
+      ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。少しすると、また動き出します。', 'GitHub limits how often this page may ask, so updates here pause for a while, then carry on.')}</p>` : '';
     box.innerHTML = pick(html) + paused;
   }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.

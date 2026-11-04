@@ -52,20 +52,6 @@
     <li data-en="Press &lt;b&gt;Copy&lt;/b&gt; next to the token. It is shown only once, so go straight on to step 3.">表示されたトークンの横の <b>Copy</b> を押します。トークンは一度しか表示されないので、そのまま手順 3 に進みます。</li>
   </ol>
   <p><a class="btn" id="token-link" data-count="token" target="_blank" rel="noopener" data-en="Create the token">トークンを作る</a></p>
-  <div class="expect">
-    <p data-en="Before pressing Create Token, it should look like this.">Create Token の前に、次のようになっていれば大丈夫です。</p>
-    <ul>
-      <li><b>Permissions</b>
-        <ul>
-          <li><code>Account</code> · <code>Workers Scripts</code> · <code>Edit</code></li>
-          <li><code>Account</code> · <code>D1</code> · <code>Edit</code></li>
-          <li><code>Account</code> · <code>Account Settings</code> · <code>Read</code></li>
-        </ul></li>
-      <li><b>Account Resources</b>: <code>Include</code> · <code>All accounts</code></li>
-      <li><b>Token expiration</b>: <code>No expiration</code></li>
-      <li><b>Client IP Address Filtering</b>: <span data-en="leave empty">空のまま</span></li>
-    </ul>
-  </div>
 </li>
 
 <li class="step">
@@ -95,7 +81,6 @@
   <h2><span class="num">4</span><span data-en="Sign in to Realms">Realms にログインする</span></h2>
   <p data-en="Once the token is added, signing in gets ready by itself, and in about 3 minutes the code to enter appears below. Just wait on this page.">トークンを登録すると、自動的にログインの準備が始まり、3 分ほどで入力するコードが下に表示されます。このページで待つだけです。</p>
   <div id="status" class="status" hidden></div>
-  <p><a class="btn ghost repo-link" data-count="run" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener" data-en="Open “Map site”">「Map site」を開く</a></p>
   <p class="hint" data-en="After signing in, Microsoft shows “Minecraft for Nintendo Switch”. That is expected.">ログイン後、Microsoft の画面に「Minecraft for Nintendo Switch」と表示されますが、正常です。</p>
 </li>
 
@@ -115,14 +100,14 @@
     <ul>
       <li data-en="Check that step 1's box has the link to &lt;b&gt;your&lt;/b&gt; repository.">手順 1 の欄に、<b>自分が作った</b>リポジトリのリンクが入っているか確かめます。</li>
       <li data-en="Open step 3's button again. Under &lt;b&gt;Repository secrets&lt;/b&gt; there should be &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, spelled exactly so. (Not under Variables, and not under Environment secrets.)">手順 3 のボタンをもう一度開き、<b>Repository secrets</b> に <code>CLOUDFLARE_API_TOKEN</code> があるか確かめます(つづりが一字でも違うと動きません。Variables や Environment secrets ではありません)。</li>
-      <li data-en="If more than 45 minutes have passed since you made the repository, it can take up to 10 minutes. To start at once, use the “Map site” button in step 4.">リポジトリを作ってから 45 分以上たっている場合は、最大 10 分かかります。すぐに始めるには、手順 4 の「Map site」のボタンから始めます。</li>
+      <li data-en="If more than 45 minutes have passed since you made the repository, it can take up to 10 minutes. To start at once, see “Starting sign-in by hand” below.">リポジトリを作ってから 45 分以上たっている場合は、最大 10 分かかります。すぐに始めるには、下の「ログインを手で始める」を見てください。</li>
     </ul>
   </details>
   <details>
     <summary data-en="“Sign-in did not work”">「ログインできませんでした」と出た</summary>
     <ul>
-      <li data-en="The code works for 15 minutes. If it ran out, start “Sign in to Realms” again with step 4's “Map site” button.">コードの有効期限は 15 分です。過ぎた場合は、手順 4 の「Map site」のボタンから、もう一度「Sign in to Realms」を実行します。</li>
-      <li data-en="If the log says the key could not be got from Cloudflare, the token is wrong. Make a new one (step 2), and in step 3 press the pencil next to &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt; and paste it again. Then run “Sign in to Realms”.">記録に「鍵を Cloudflare から用意できませんでした」などと出ている場合は、トークンが違います。手順 2 でトークンを作り直し、手順 3 の画面で <code>CLOUDFLARE_API_TOKEN</code> の横の鉛筆マークを押して貼り直してから、「Sign in to Realms」を実行します。</li>
+      <li data-en="The code works for 15 minutes. If it ran out, start signing in again (see “Starting sign-in by hand” below).">コードの有効期限は 15 分です。過ぎた場合は、もう一度ログインを始めます(下の「ログインを手で始める」)。</li>
+      <li data-en="If the log says the key could not be got from Cloudflare, the token is wrong (see “The token's settings” below).">記録に「鍵を Cloudflare から用意できませんでした」などと出ている場合は、トークンが違います(下の「トークンの設定がちがう」)。</li>
       <li data-en="Sign in with the Microsoft account that &lt;b&gt;owns&lt;/b&gt; the Realm.">Realm の<b>オーナー</b>の Microsoft アカウントでログインします。</li>
     </ul>
   </details>
@@ -134,6 +119,30 @@
     </ul>
   </details>
   <details>
+    <summary data-en="The token's settings (step 2)">トークンの設定がちがう(手順 2)</summary>
+    <p data-en="Step 2's button fills these in. If one was changed, make the token again: before pressing &lt;b&gt;Create Token&lt;/b&gt;, it should look like this.">手順 2 のボタンから開くと、最初から入力されています。どこかが変わっていたら、トークンを作り直します。<b>Create Token</b> を押す前に、次のようになっていれば大丈夫です。</p>
+      <ul>
+        <li><b>Permissions</b>
+          <ul>
+            <li><code>Account</code> · <code>Workers Scripts</code> · <code>Edit</code></li>
+            <li><code>Account</code> · <code>D1</code> · <code>Edit</code></li>
+            <li><code>Account</code> · <code>Account Settings</code> · <code>Read</code></li>
+          </ul></li>
+        <li><b>Account Resources</b>: <code>Include</code> · <code>All accounts</code></li>
+        <li><b>Token expiration</b>: <code>No expiration</code></li>
+        <li><b>Client IP Address Filtering</b>: <span data-en="leave empty">空のまま</span></li>
+      </ul>
+    <p data-en="Then, in step 3's screen, press the pencil next to &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, paste the new token, and start signing in again (below).">そのあと、手順 3 の画面で <code>CLOUDFLARE_API_TOKEN</code> の横の鉛筆マークを押して新しいトークンを貼り直し、ログインをもう一度始めます(下)。</p>
+  </details>
+  <details>
+    <summary data-en="Starting sign-in by hand">ログインを手で始める</summary>
+    <ol>
+      <li data-en="Open &lt;a class=&quot;repo-link&quot; data-count=&quot;run&quot; data-path=&quot;/actions/workflows/map.yml&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Map site&lt;/a&gt; on GitHub.">GitHub の <a class="repo-link" data-count="run" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener">Map site</a> を開きます。</li>
+      <li data-en="Press &lt;b&gt;Run workflow&lt;/b&gt; on the right, then the green &lt;b&gt;Run workflow&lt;/b&gt; (once). What to do is &lt;b&gt;Sign in to Realms&lt;/b&gt;.">右の <b>Run workflow</b> を押し、続けて緑の <b>Run workflow</b> を押します(1 回だけ)。What to do は <b>Sign in to Realms</b> のままです。</li>
+      <li data-en="In a moment, the code appears in step 4.">少しすると、手順 4 にコードが出ます。</li>
+    </ol>
+  </details>
+  <details>
     <summary data-en="Microsoft shows “Minecraft for Nintendo Switch”">Microsoft の画面に「Minecraft for Nintendo Switch」と出た</summary>
     <ul><li data-en="That is expected. Blockmap signs in to Realms the same way the Switch edition does (&lt;a href=&quot;https://github.com/tsow9/minecraft_be_livemap/blob/main/README.en.md#security-and-privacy&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;why&lt;/a&gt;).">正常です。Blockmap は、Switch 版のマイクラと同じ方法で Realms にログインします(<a href="https://github.com/tsow9/minecraft_be_livemap#セキュリティとプライバシー" target="_blank" rel="noopener">理由</a>)。</li></ul>
   </details>
@@ -143,7 +152,7 @@
   </details>
   <details>
     <summary data-en="This page stops changing">このページの表示が変わらない</summary>
-    <ul><li data-en="Reload the page. You can also follow the progress with step 4's “Map site” button.">ページを再読み込みします。進み具合は、手順 4 の「Map site」のボタンからも見られます。</li></ul>
+    <ul><li data-en="Reload the page. You can also follow the progress under &lt;a class=&quot;repo-link&quot; data-count=&quot;run&quot; data-path=&quot;/actions/workflows/map.yml&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Map site&lt;/a&gt; on GitHub.">ページを再読み込みします。進み具合は、GitHub の <a class="repo-link" data-count="run" data-path="/actions/workflows/map.yml" target="_blank" rel="noopener">Map site</a> でも見られます。</li></ul>
   </details>
 </section>
 

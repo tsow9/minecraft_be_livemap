@@ -682,6 +682,8 @@ function snapshots() { return state.demo ? DEMO_SNAPSHOTS : state.config.snapsho
 function makeBaseLayer() {
   // Load tiles once the zoom settles (not at every step on the way), and keep a few extra around for panning.
   const opts = { minZoom: -6, maxZoom: MAX_ZOOM, noWrap: true, pmIgnore: true, updateWhenZooming: false, keepBuffer: 3 };
+  // A new site before its first map: nothing yet (the notice in the middle says the map is on its way).
+  if (state.demo && DATA) return L.gridLayer({ ...opts, attribution: '' });
   if (state.demo) {
     return new DemoLayer({ ...opts, dim: state.dim, week: state.snapshotIndex, maxNativeZoom: 2, attribution: tl('デモ地形(本物の地図はまだ未設定)') });
   }
@@ -3254,6 +3256,7 @@ async function refreshConfig() {
   state.config.updatedAt = cfg.updatedAt;
   if (!state.config.snapshots.length) return;
   state.demo = false;
+  $('#building').hidden = true;
   const latest = state.config.snapshots[state.config.snapshots.length - 1].id;
   manifests.delete(latest);
   const keep = state.config.snapshots.findIndex((x) => x.id === viewing);
@@ -3407,6 +3410,16 @@ async function setupPlayers() {
   every(refreshLive, 10000, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
   every(refreshConfig, 20000, 60000);
+  // A new site still making its first map: look every 5 seconds, so the map shows as soon as it is published.
+  if (state.demo && DATA) {
+    $('#building').hidden = false;
+    const soon = () => setTimeout(async () => {
+      if (!state.demo) return;
+      if (document.visibilityState === 'visible') { try { await refreshConfig(); } catch { /* next time */ } }
+      soon();
+    }, 5000);
+    soon();
+  }
   // Phones pause background tabs, so also check right away when the page comes back into view.
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshConfig(); });
 }

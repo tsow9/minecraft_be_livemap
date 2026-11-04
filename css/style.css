@@ -624,3 +624,12 @@ body.finding .pl-icon.off { opacity: .4; }
 #world-menu button.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 #world-menu small { display: inline-flex; align-items: center; gap: 5px; color: var(--sub); font-size: 12px; font-weight: 400; }
 #world-menu .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+/* A new site before its first map. */
+#building { position: absolute; z-index: 1060; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; justify-items: center;
+  gap: 6px; padding: 18px 24px; border-radius: var(--radius); background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow);
+  text-align: center; font-size: 14px; color: var(--sub); }
+#building b { color: var(--fg); font-size: 16px; }
+#building .spin { width: 18px; height: 18px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%;
+  animation: building-spin .8s linear infinite; }
+@keyframes building-spin { to { transform: rotate(360deg); } }
+body:has(#building:not([hidden])) #crosshair { display: none; }

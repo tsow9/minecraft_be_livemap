@@ -102,3 +102,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .progress li.did::before { content: "✓"; color: var(--accent); font-weight: 700; }
 .progress li.now { color: var(--fg); font-weight: 700; }
 .progress li.now::before { content: "●"; color: var(--accent); }
+.trouble ol { margin: 8px 0 4px; padding-left: 1.3em; color: var(--sub); }
+.trouble details > p { margin: 8px 0; color: var(--sub); }
+.trouble details ul ul { margin: 2px 0; }
+.progress li small { display: block; color: var(--sub); font-weight: 400; font-size: 12px; }

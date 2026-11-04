@@ -154,6 +154,7 @@ export default {
         if (!state) return json({ error: 'bad' }, 400);
         const v = {
           state, at: Date.now(), r: str(b.r, /^[0-9a-f]{16}$/),
+          detail: str(b.detail, /^[a-z]{1,12}$/),
           code: str(b.code, /^[A-Z0-9-]{4,20}$/), uri: str(b.uri, /^https:\/\/[\w./-]+$/),
           expires: Number.isFinite(b.expires) ? b.expires : undefined,
           url: str(b.url, /^https:\/\/[\w.-]+\.workers\.dev\/?$/), log: str(b.log, /^https:\/\/github\.com\/[\w./-]+$/),

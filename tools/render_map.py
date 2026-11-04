@@ -608,6 +608,19 @@ def update_config(site, snap_id, staging, world_saved=None):
         f.write('\n')
 
 
+def tell_setup(detail):
+    """What the drawing is doing, for the setup page (tools/setup_status.sh: only in runs started by hand)."""
+    if not os.environ.get('SITE_URL'):
+        return
+    import subprocess
+    try:
+        subprocess.run(['bash', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'setup_status.sh'),
+                        json.dumps({'state': 'drawing', 'detail': detail})],
+                       timeout=20, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:  # only a progress note
+        pass
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser(description='Makes map tiles from a Bedrock world')
@@ -640,7 +653,9 @@ def main():
     started = time.time()
     lang, lang_en = _official_lang(), _official_lang('en_US')
     try:
+        tell_setup('read')
         surfaces = read_surfaces(db_dir, dims)
+        tell_setup('items')
         try:
             import world_items
             n_box, n_vil, n_trade, n_sign, n_pet, n_owned = world_items.write(args.site, db_dir, lang, os.environ.get('CACHE_KEY') or '', lang_en)
@@ -676,6 +691,8 @@ def main():
         total = 0
         for name in dims:
             chunks = surfaces[DIM_IDS[name]]
+            if chunks:
+                tell_setup(name)
             if not chunks:
                 print(t(f'  {name}: データなし', f'  {name}: no data'))
                 continue
@@ -687,6 +704,7 @@ def main():
             sys.exit(t('地図にできるデータがありませんでした。', 'Nothing to make a map from.'))
         block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
         print(t(f'ネザーゲート: {write_portals(args.site)} か所', f'Nether Portals: {write_portals(args.site)}'))
+        tell_setup('save')
         update_config(args.site, snap_id, staging, world_saved)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

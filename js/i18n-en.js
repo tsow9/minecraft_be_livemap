@@ -133,5 +133,6 @@ Object.assign(I18N_EN, {
   'Microsoft アカウントでログインすると見られます。': 'They see the map by signing in with their Microsoft account.',
   '(メンバー以外は入れません)': '(Nobody else can get in.)',
   'ログアウトしますか?': 'Sign out?',
+  '地図を作っています': 'Making the map', '数分で、ここに自動で表示されます。': 'It appears here by itself in a few minutes.',
   'ワールド{n}': 'World {n}', '遊んでいるワールド': 'Being played', '{day}まで': 'Until {day}',
 });
