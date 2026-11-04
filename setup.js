@@ -58,8 +58,13 @@
 
   // The token page with its permissions filled in (Cloudflare's template links).
   const perms = [{ key: 'workers_scripts', type: 'edit' }, { key: 'd1', type: 'edit' }, { key: 'account_settings', type: 'read' }];
-  $('#token-link').href = `https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=${encodeURIComponent(JSON.stringify(perms))}`
-    + `&accountId=*&zoneId=all&name=${encodeURIComponent('Blockmap')}`;
+  // Named after the repository once it is known (blockmap-survival → "Blockmap blockmap-survival"), so a token can be
+  // told apart in Cloudflare's list when there is a site per Realm.
+  const tokenLink = () => {
+    const name = saved.repo ? `Blockmap ${saved.repo.split('/')[1]}` : 'Blockmap';
+    $('#token-link').href = `https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=${encodeURIComponent(JSON.stringify(perms))}`
+      + `&accountId=*&zoneId=all&name=${encodeURIComponent(name)}`;
+  };
 
   // ---- the repository ----
   const repoOf = (text) => {
@@ -83,6 +88,7 @@
 
   function refresh() {
     const repo = saved.repo || '';
+    tokenLink();
     for (const a of document.querySelectorAll('.repo-link')) {
       a.classList.toggle('off', !repo);
       if (repo) a.href = `https://github.com/${repo}${a.dataset.path}`; else a.removeAttribute('href');

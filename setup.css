@@ -113,3 +113,4 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .status .realm:hover { border-color: var(--accent); }
 .status .realm.on { border-color: var(--accent); background: rgba(62, 207, 142, .12); color: var(--accent); }
 .status .realm:disabled { cursor: default; }
+.nw { white-space: nowrap; }
