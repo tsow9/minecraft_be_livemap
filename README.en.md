@@ -62,7 +62,7 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 |---|---|
 | `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
 | `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
-| `REALM_NAME` | If you own two or more Realms: the name of the Realm this site maps (as in Minecraft's list of Realms) |
+| `REALM_NAME` | The name of the Realm this site maps (as in Minecraft's list of Realms). Even with two or more Realms it is usually not needed: you pick one on the setup page after signing in. Use it to change the choice later |
 | `CLOUDFLARE_ACCOUNT_ID` | If one Cloudflare sign-in reaches several accounts (for example, you were invited to someone else's): the ID of the one to use. Not needed for accounts made with separate email addresses |
 
 ### 4. Sign in to Realms
@@ -102,7 +102,7 @@ The secrets (keys), the Realms sign-in (Actions cache) and what is on the site a
 
 ### Mapping two or more Realms
 
-Make one repository for each Realm, with different names (step 1), and give each its `REALM_NAME`. The same GitHub and Cloudflare accounts, and the same token, can be used. Each Realm gets its own site (`https://blockmap.….workers.dev`, `https://blockmap-survival.….workers.dev` and so on), with its own map, members and drawings.
+Make one repository for each Realm, with different names (step 1). Which Realm each maps is picked on the setup page after signing in (or set with `REALM_NAME`). The same GitHub and Cloudflare accounts, and the same token, can be used. Each Realm gets its own site (`https://blockmap.….workers.dev`, `https://blockmap-survival.….workers.dev` and so on), with its own map, members and drawings.
 
 ### Inviting members
 
@@ -133,7 +133,7 @@ Check the message shown in the Actions run (in English when the `LANGUAGE` varia
 |---|---|
 | Not signed in to Realms yet | Run step 4 |
 | Not signed in / The sign-in has expired | Run step 4 again |
-| There are 2 Realms | Add `REALM_NAME` (step 3) |
+| There are 2 Realms | Pick one in step 4 of the setup page, or add `REALM_NAME` (step 3) |
 | The Cloudflare secrets are not all set / Could not find the Cloudflare account / Could not get the key from Cloudflare | Check the token (step 3) and its permissions (step 2) |
 | Could not find the site's address | Choose a subdomain under **Workers & Pages** in Cloudflare, then update the map again |
 | The … branch cannot be opened with this key | The key has changed (for example, the Cloudflare database was made again). Delete that branch and the map is rebuilt from scratch |

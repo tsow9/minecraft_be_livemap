@@ -44,7 +44,7 @@ jobs:
     needs: [cloudflare]
     if: always() && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.action == 'Sign in to Realms'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35  # up to 15 minutes to enter the code, and up to 15 more to pick a Realm when there are several
     permissions:
       contents: write  # the "login-code" branch the setup page reads the code from
       actions: write   # to start "Update map" once signed in
@@ -68,7 +68,9 @@ jobs:
           REALM_NAME: ${{ vars.REALM_NAME }}
           MC_VERSION: ${{ vars.MC_VERSION }}
           GH_TOKEN: ${{ github.token }}
+      # Kept even when no Realm could be chosen yet (REALM_NAME can be set afterwards without signing in again).
       - uses: actions/cache/save@v4
+        if: always() && hashFiles('.auth/token.enc') != ''
         with:
           path: .auth/token.enc
           key: realms-auth-${{ hashFiles('.auth/token.enc') }}

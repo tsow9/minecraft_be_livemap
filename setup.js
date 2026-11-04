@@ -174,6 +174,8 @@
       const url = s.log;
       if (s.state === 'starting') state = { kind: 'code', url, code: '' };
       else if (s.state === 'code') state = { kind: 'code', url, code: s.expires > Date.now() ? s.code : '', uri: s.uri };
+      else if (s.state === 'pick-realm') state = { kind: 'pick', url, realms: Array.isArray(s.realms) ? s.realms : [] };
+      else if (s.state === 'picked') state = { kind: 'making', url, step: 'signed-in' };
       else if (STEPS.includes(s.state)) state = { kind: 'making', url, step: s.state, detail: s.detail };
       else if (s.state === 'login-failed' || s.state === 'map-failed') state = { kind: s.state, url };
       else if (s.state === 'done') {
@@ -229,6 +231,7 @@
     if (siteUrl) { saved.done = '1'; saved.site = siteUrl; save(); }
     refresh();
   }
+  let lastBox = '';
   function renderStatus() {
     const box = $('#status');
     const pick = (v) => (typeof v === 'function' ? v() : v);
@@ -262,6 +265,9 @@
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、もう一度「Sign in to Realms」を実行します。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If it timed out, run “Sign in to Realms” again. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      pick: `<b>${T('どの Realm の地図を作りますか?', 'Which Realm should this site map?')}</b>${T('あなたの Realm が 2 つ以上見つかりました。地図にする Realm を選んでください(15 分以内)。', 'You own two or more Realms. Pick the one to map (within 15 minutes).')}
+        <div class="realms">${(state?.realms || []).map((n) => `<button type="button" class="realm" data-realm="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+        <span class="small">${T('ほかの Realm の地図は、別の名前でもう 1 つリポジトリを作ると作れます。', 'To map another Realm too, make one more repository with another name.')}</span>`,
       done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
     }[state?.kind === 'making' && state.step ? 'progress' : state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
@@ -269,7 +275,9 @@
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
     const paused = !fromSite && limited > Date.now() && state?.kind !== 'done'
       ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。少しすると、また動き出します。', 'GitHub limits how often this page may ask, so updates here pause for a while, then carry on.')}</p>` : '';
-    box.innerHTML = pick(html) + paused;
+    // Only when it changed: asked every 2 seconds, the box would otherwise be remade under a finger about to press.
+    const next = pick(html) + paused;
+    if (next !== lastBox) { box.innerHTML = next; lastBox = next; }
   }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
@@ -277,13 +285,30 @@
     const hint = $('#secret-hint'), kind = state?.kind;
     if (kind !== 'waiting') waitingSince = 0; else if (!waitingSince) waitingSince = Date.now();
     const late = kind === 'waiting' && limited <= Date.now() && Date.now() - waitingSince > 3 * 60000;
-    hint.hidden = !(late || ['code', 'building', 'making', 'done', 'map-failed'].includes(kind));
+    hint.hidden = !(late || ['code', 'pick', 'building', 'making', 'done', 'map-failed'].includes(kind));
     hint.className = `hint ${late ? 'warn' : 'ok'}`;
     hint.innerHTML = late
       ? T('まだトークンを確認できていません。Name が <code>CLOUDFLARE_API_TOKEN</code> になっているか確かめてください(<a href="#trouble">詳しく</a>)。',
         'The token has not been found yet. Check that its Name is <code>CLOUDFLARE_API_TOKEN</code> (<a href="#trouble">more</a>).')
       : T('✓ トークンを確認できました。', '✓ The token was found.');
   }
+  // Picking a Realm: sent to the site (plain text, so no preflight); the sign-in, waiting on the site, carries on.
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('.realm');
+    if (!b || !saved.repo) return;
+    for (const x of document.querySelectorAll('.realm')) x.disabled = true;
+    b.classList.add('on');
+    try {
+      const res = await fetch(`${(siteUrl || siteOf(saved.repo)).replace(/\/$/, '')}/api/setup/pick`, { method: 'POST', body: JSON.stringify({ name: b.dataset.realm }) });
+      if (!res.ok) throw new Error(String(res.status));
+      count('realm-picked');
+      poll();
+    } catch {
+      toast(T('選べませんでした。もう一度押してください。', 'That did not go through. Please try again.'));
+      for (const x of document.querySelectorAll('.realm')) x.disabled = false;
+      b.classList.remove('on');
+    }
+  });
   let timer = null;
   async function poll(now = false) {
     clearTimeout(timer);

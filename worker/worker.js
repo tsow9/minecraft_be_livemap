@@ -34,6 +34,21 @@ export default {
         const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
         return json(row ? JSON.parse(row.v) : {}, 200, { 'Access-Control-Allow-Origin': '*' });
       }
+      // The owner picks which of their Realms to map (only while the sign-in is asking, and only one it offered).
+      // Sent as plain text, so the setup page needs no preflight.
+      if (url.pathname === '/api/setup/pick' && req.method === 'POST') {
+        const open = { 'Access-Control-Allow-Origin': '*' };
+        const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
+        const cur = row ? JSON.parse(row.v) : {};
+        let name = '';
+        try { name = String(JSON.parse(await req.text())?.name || ''); } catch { /* not JSON */ }
+        if (cur.state !== 'pick-realm' || !Array.isArray(cur.realms) || !cur.realms.includes(name)) return json({ error: 'bad' }, 400, open);
+        const at = Date.now();
+        const put = (k, v) => env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3').bind(k, v, at).run();
+        await put('realm_pick', name);
+        await put('setup', JSON.stringify({ state: 'picked', pick: name, at, r: cur.r, log: cur.log }));
+        return json({ ok: true }, 200, open);
+      }
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
       // The live check's latest data (who the members are, where players are): read once per request at most.
       let liveP = null;
@@ -150,11 +165,14 @@ export default {
       if (path === '/setup' && req.method === 'POST' && admin && me.via === 'key') {
         const b = await req.json().catch(() => null);
         const str = (v, re) => (typeof v === 'string' && v.length <= 300 && re.test(v) ? v : undefined);
-        const state = str(b?.state, /^(starting|code|signed-in|downloading|drawing|publishing|done|login-failed|map-failed)$/);
+        const state = str(b?.state, /^(starting|code|pick-realm|signed-in|downloading|drawing|publishing|done|login-failed|map-failed)$/);
         if (!state) return json({ error: 'bad' }, 400);
         const v = {
           state, at: Date.now(), r: str(b.r, /^[0-9a-f]{16}$/),
           detail: str(b.detail, /^[a-z]{1,12}$/),
+          // The owner's Realms to pick from (shown on the setup page until one is picked).
+          realms: state === 'pick-realm' && Array.isArray(b.realms)
+            ? b.realms.filter((n) => typeof n === 'string' && n && n.length <= 100 && !/[\u0000-\u001f]/.test(n)).slice(0, 10) : undefined,
           code: str(b.code, /^[A-Z0-9-]{4,20}$/), uri: str(b.uri, /^https:\/\/[\w./-]+$/),
           expires: Number.isFinite(b.expires) ? b.expires : undefined,
           url: str(b.url, /^https:\/\/[\w.-]+\.workers\.dev\/?$/), log: str(b.log, /^https:\/\/github\.com\/[\w./-]+$/),

@@ -54,12 +54,19 @@ async function withSavedLogin (fn) {
 }
 
 // Picks the realm this account owns. REALM_NAME narrows it down when there are several.
-async function pickOwnedRealm (api, auth) {
+// The Realms this account owns (only an owner can download the world).
+async function ownedRealms (api, auth) {
   const realms = await api.getRealms()
   const xuid = (await auth.getXboxToken(REALMS_RELYING_PARTY)).userXUID
-  let owned = realms.filter(r => (xuid && r.ownerUUID === xuid) || r.member === false)
-  if (owned.length === 0) owned = realms
-  const wanted = (process.env.REALM_NAME || '').trim()
+  const owned = realms.filter(r => (xuid && r.ownerUUID === xuid) || r.member === false)
+  return owned.length ? owned : realms
+}
+
+// The Realm this site maps: the only one owned, else the one named in REALM_NAME (a repository variable), else the
+// one picked on the setup page (REALM_PICK, kept in the site's database; tools/realms_key.sh hands it over).
+async function pickOwnedRealm (api, auth) {
+  let owned = await ownedRealms(api, auth)
+  const wanted = (process.env.REALM_NAME || process.env.REALM_PICK || '').trim()
   if (wanted) owned = owned.filter(r => r.name === wanted)
   if (owned.length === 0) throw new Error(t('自分が持ち主のRealmが見つかりませんでした', 'No Realm owned by this account was found'))
   if (owned.length > 1) {
@@ -188,4 +195,4 @@ async function memberList (auth, realm) {
   })) }
 }
 
-module.exports = { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, withSavedLogin, pickOwnedRealm, realmMembers, realmStatus }
+module.exports = { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, withSavedLogin, ownedRealms, pickOwnedRealm, realmMembers, realmStatus }

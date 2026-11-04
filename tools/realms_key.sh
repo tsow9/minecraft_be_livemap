@@ -55,6 +55,12 @@ query "INSERT OR IGNORE INTO kv (k, v, at) VALUES ('realms_key', ?1, ?2)" "[\"$f
 key=$(query "SELECT v FROM kv WHERE k = 'realms_key'" | json 'print(d["result"][0]["results"][0]["v"])') || true
 [ -n "$key" ] || fail read
 hand_over "$key"
+# The Realm picked on the setup page when the owner has several (tools/realms/login.js), for the Realms steps
+# (REALM_NAME, a repository variable, comes first).
+pick=$(query "SELECT v FROM kv WHERE k = 'realm_pick'" | json 'print(d["result"][0]["results"][0]["v"])' || true)
+if [ -n "$pick" ] && [ -n "${GITHUB_ENV:-}" ]; then
+  printf 'REALM_PICK<<BLOCKMAP_EOF\n%s\nBLOCKMAP_EOF\n' "$(printf '%s' "$pick" | tr -d '\r\n')" >> "$GITHUB_ENV"
+fi
 # For runs started by hand, also the site's address, so they can tell the setup page how they are getting on
 # (tools/setup_status.sh). Empty until the site is first published.
 if [ -n "${GITHUB_ENV:-}" ] && [ "${GITHUB_EVENT_NAME:-}" = workflow_dispatch ]; then

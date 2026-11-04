@@ -5,11 +5,33 @@ const fs = require('fs')
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { pack } = require('./secure-cache')
-const { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, pickOwnedRealm } = require('./common')
+const { ENC_FILE, SECRET, REALMS_RELYING_PARTY, tempCacheDir, makeAuth, makeApi, ownedRealms, pickOwnedRealm } = require('./common')
 
 // Puts what the setup page should show on the "login-code" branch (tools/login_code.sh). Never stops the sign-in.
 function tellSetupPage (info) {
   try { execFileSync('bash', [path.join(__dirname, '..', 'login_code.sh'), 'put', JSON.stringify(info)], { stdio: 'ignore', timeout: 30000 }) } catch {}
+}
+
+// The owner has two or more Realms and has not said which to map: the setup page lists their names (through the site
+// only, never in the public log or branches) and the owner picks one there; the site keeps the choice.
+// Returns the name picked, or '' when there is no site to ask through or nobody picked within 15 minutes.
+async function askWhichRealm (names) {
+  const site = (process.env.SITE_URL || '').replace(/\/$/, '')
+  if (!site) return ''
+  try {
+    execFileSync('bash', [path.join(__dirname, '..', 'setup_status.sh'), JSON.stringify({ state: 'pick-realm', realms: names })], { stdio: 'ignore', timeout: 30000 })
+  } catch { return '' }
+  console.log(t(`Realm が ${names.length} 個あります。セットアップページで、地図にする Realm を選んでください(15 分以内)。`,
+    `There are ${names.length} Realms. Pick the one to map on the setup page (within 15 minutes).`))
+  const until = Date.now() + 15 * 60 * 1000
+  while (Date.now() < until) {
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      const s = await (await fetch(`${site}/api/setup`, { cache: 'no-store' })).json()
+      if (s.state === 'picked' && names.includes(s.pick)) return s.pick
+    } catch { /* try again */ }
+  }
+  return ''
 }
 
 async function main () {
@@ -30,7 +52,17 @@ async function main () {
     })
     await auth.getXboxToken(REALMS_RELYING_PARTY)
     tellSetupPage({ state: 'signed-in' })
-    const realm = await pickOwnedRealm(makeApi(auth), auth)
+    const api = makeApi(auth)
+    const owned = await ownedRealms(api, auth)
+    if (owned.length > 1 && !(process.env.REALM_NAME || process.env.REALM_PICK || '').trim()) {
+      pack(dir, ENC_FILE, SECRET)  // kept first: picking a Realm needs no second sign-in
+      const picked = await askWhichRealm(owned.map((r) => String(r.name || '').slice(0, 100)).filter(Boolean))
+      if (picked) {
+        process.env.REALM_PICK = picked
+        console.log(t('地図にする Realm が選ばれました。', 'The Realm to map was picked.'))
+      }
+    }
+    const realm = await pickOwnedRealm(api, auth)
     pack(dir, ENC_FILE, SECRET)
     console.log(t(`ログインできました。Realm を見つけました(スロット ${realm.activeSlot})。`, `Signed in. Found the Realm (slot ${realm.activeSlot}).`))
   } finally {

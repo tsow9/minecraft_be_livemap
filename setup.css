@@ -106,3 +106,10 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .trouble details > p { margin: 8px 0; color: var(--sub); }
 .trouble details ul ul { margin: 2px 0; }
 .progress li small { display: block; color: var(--sub); font-weight: 400; font-size: 12px; }
+/* Picking which Realm to map. */
+.status .realms { display: grid; gap: 8px; margin: 12px 0 8px; }
+.status .realm { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .05); color: var(--fg);
+  font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.status .realm:hover { border-color: var(--accent); }
+.status .realm.on { border-color: var(--accent); background: rgba(62, 207, 142, .12); color: var(--accent); }
+.status .realm:disabled { cursor: default; }
