@@ -100,7 +100,7 @@
     const site = siteUrl;
     $('#site-link').classList.toggle('off', !site);
     if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
-    $('#site-hint').innerHTML = site ? T(`サイトのアドレス:<code>${site}</code>`, `Your site: <code>${site}</code>`)
+    $('#site-hint').innerHTML = site ? `${T('サイトのアドレス:', 'Your site: ')}<code>${site}</code><button class="copy" type="button" data-text="${site}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button>`
       : repo ? T('サイトができると、ここにアドレスが出ます。', 'Your site\'s address appears here once it is made.') : '';
   }
 
