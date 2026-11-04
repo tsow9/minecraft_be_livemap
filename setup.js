@@ -253,14 +253,14 @@
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
-      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="spin"></span></b>${T('登録されると、自動でログインの準備が始まります。', 'Once it is added, signing in gets ready by itself.')}`,
+      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>${T('登録されると、自動でログインの準備が始まります。', 'Once it is added, signing in gets ready by itself.')}`,
       code: state?.code
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
           <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
           <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
-        : `<b>${T('ログインの準備をしています', 'Getting signing in ready')}<span class="spin"></span></b>${T('サイトの入れ物を用意してから、ここにコードが出ます。最初は 2 分ほどかかります。', 'The site is put up first, then the code appears here. The first time takes about 2 minutes.')}`,
-      building: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
+        : `<b>${T('ログインの準備をしています', 'Getting signing in ready')}<span class="dots"><i></i><i></i><i></i></span></b>${T('サイトの入れ物を用意してから、ここにコードが出ます。最初は 2 分ほどかかります。', 'The site is put up first, then the code appears here. The first time takes about 2 minutes.')}`,
+      building: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
       progress: () => {
         const names = { 'signed-in': T('Realms にログイン', 'Signed in to Realms'), downloading: T('ワールドをダウンロード', 'Downloading the world'),
           drawing: T('地図を描く', 'Drawing the map'), publishing: T('サイトに公開', 'Publishing the site') };
@@ -272,11 +272,11 @@
           end: T('エンドを描いています', 'Drawing the End'), save: T('保存しています', 'Saving'),
         }[state.detail];
         return `<b>${T('サイトを作っています', 'Building your site')}</b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}
-          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="spin"></span>' : ''}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
+          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="dots"><i></i><i></i><i></i></span>' : ''}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
           ${state.url ? link(state.url, T('記録を見る', 'See the log')) : ''}`;
       },
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、20 分ほどのうちに自動で新しいコードが出ます。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If the code ran out, a new one appears here by itself within about 20 minutes. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
-      making: `<b>${T('サイトを作っています', 'Building your site')}<span class="spin"></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      making: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       pick: `<b>${T('どの Realm の地図を作りますか?', 'Which Realm should this site map?')}</b>${T('あなたの Realm が 2 つ以上見つかりました。地図にする Realm を選んでください(15 分以内)。', 'You own two or more Realms. Pick the one to map (within 15 minutes).')}
         <div class="realms">${(state?.realms || []).map((n) => `<button type="button" class="realm" data-realm="${esc(n)}">${esc(n)}</button>`).join('')}</div>
