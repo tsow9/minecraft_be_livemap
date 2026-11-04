@@ -101,7 +101,9 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .progress li.did { color: var(--fg); }
 .progress li.did::before { content: "✓"; color: var(--accent); font-weight: 700; }
 .progress li.now { color: var(--fg); font-weight: 700; }
-.progress li.now::before { content: "●"; color: var(--accent); }
+/* The stage under way: a turning ring in place of its mark. */
+.progress li.now::before { content: ""; left: 3px; top: .45em; width: 10px; height: 10px; border: 2px solid var(--accent);
+  border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 .trouble ol { margin: 8px 0 4px; padding-left: 1.3em; color: var(--sub); }
 .trouble details > p { margin: 8px 0; color: var(--sub); }
 .trouble details ul ul { margin: 2px 0; }
@@ -115,8 +117,8 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .status .realm:disabled { cursor: default; }
 .nw { white-space: nowrap; }
 /* Something is under way: three dots rising in turn (slowly). */
-.dots { display: inline-flex; align-items: center; gap: 4px; margin: 0 8px; vertical-align: 1px; }
-.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: dots 1.8s ease-in-out infinite; }
-.dots i:nth-child(2) { animation-delay: .3s; }
-.dots i:nth-child(3) { animation-delay: .6s; }
+.dots { display: inline-flex; align-items: flex-end; gap: 4px; margin-left: 6px; vertical-align: baseline; height: 1em; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: dots 1.3s ease-in-out infinite; }
+.dots i:nth-child(2) { animation-delay: .2s; }
+.dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes dots { 0%, 70%, 100% { opacity: .25; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }

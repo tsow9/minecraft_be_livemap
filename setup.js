@@ -272,7 +272,7 @@
           end: T('エンドを描いています', 'Drawing the End'), save: T('保存しています', 'Saving'),
         }[state.detail];
         return `<b>${T('サイトを作っています', 'Building your site')}</b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}
-          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at ? '<span class="dots"><i></i><i></i><i></i></span>' : ''}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
+          <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
           ${state.url ? link(state.url, T('記録を見る', 'See the log')) : ''}`;
       },
       'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、20 分ほどのうちに自動で新しいコードが出ます。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If the code ran out, a new one appears here by itself within about 20 minutes. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
