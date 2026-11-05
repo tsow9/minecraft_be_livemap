@@ -1,6 +1,6 @@
 name: Map site
-# Everything this does is in tools/ci/run.sh: this file only fetches the repository and runs it, handing over all of
-# the repository's secrets and variables. It never needs to change, so a copy of Blockmap can update itself from the
+# Everything this does is in tools/ci/run.sh: this file only fetches the repository and runs it, handing over the
+# repository's secrets and variables. It never needs to change, so a copy of Blockmap can update itself from the
 # site's admin menu (GitHub does not let an automatic update change workflow files).
 #
 # A run started by hand is titled by what it does ("Sign in to Realms", "Update map"), which also lets the live check
@@ -37,10 +37,13 @@ jobs:
       - name: Run
         env:
           GH_TOKEN: ${{ github.token }}
-          SECRETS_JSON: ${{ toJSON(secrets) }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REALMS_CACHE_KEY: ${{ secrets.REALMS_CACHE_KEY }}
+          SHARE_PASSPHRASE: ${{ secrets.SHARE_PASSPHRASE }}
           VARS_JSON: ${{ toJSON(vars) }}
           ACTION: ${{ inputs.action }}
         run: |
-          git clone -q --depth 1 --branch "$GITHUB_REF_NAME" "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" blockmap
+          git clone -q --depth 1 --branch "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" blockmap
           cd blockmap
           bash tools/ci/run.sh map

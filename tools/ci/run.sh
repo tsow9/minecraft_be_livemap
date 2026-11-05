@@ -10,7 +10,7 @@
 #
 #   run.sh refresh after an update: the map and the site on the new version
 #
-# Needs (from the workflow): GH_TOKEN, SECRETS_JSON, VARS_JSON, ACTION, and GitHub's own GITHUB_* variables.
+# Needs (from the workflow): GH_TOKEN, the secrets by name, VARS_JSON, ACTION, and GitHub's own GITHUB_* variables.
 set -uo pipefail
 
 # An update replaces this very file while it runs: carry on from a copy.

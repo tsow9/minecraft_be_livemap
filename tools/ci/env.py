@@ -1,7 +1,7 @@
 """Shell `export` lines for tools/ci/run.sh.
 
-  env.py settings     the repository's secrets and variables (SECRETS_JSON, VARS_JSON: the workflow hands them all
-                      over, so a setting added in a later version needs no change to the workflow files)
+  env.py settings     the repository's secrets (each by name) and variables (VARS_JSON: the workflow hands them all
+                      over, so a variable added in a later version needs no change to the workflow files)
   env.py file PATH    what a step wrote to a GitHub-style env or output file (KEY=value, or KEY<<EOF … EOF)
 """
 import json
@@ -27,8 +27,8 @@ def settings():
         variables = json.loads(os.environ.get('VARS_JSON') or '{}') or {}
     except ValueError:
         variables = {}
-    for k in SECRETS:
-        export(k, secrets.get(k) or '')
+    for k in SECRETS:  # named one by one in the workflow files (GitHub holds runs that take all secrets at once)
+        export(k, secrets.get(k) or os.environ.get(k) or '')
     for k in VARIABLES:
         export(k, variables.get(k) or '')
     export('BLOCKMAP_LANG', variables.get('LANGUAGE') or 'ja')
