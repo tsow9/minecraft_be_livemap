@@ -4,7 +4,10 @@ body { margin: 0; padding: 28px 16px 64px; background: var(--bg); color: var(--f
   font-family: "M PLUS Rounded 1c", system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
 header, .intro, .steps, footer { max-width: 680px; margin-left: auto; margin-right: auto; }
 /* Japanese breaks between phrases, not inside words (Chrome and Edge; others break as usual). */
-p, li, td, summary, h2, label { word-break: auto-phrase; line-break: strict; text-wrap: pretty; }
+/* As Japanese pages usually do: running text fills each line and may break between any two characters (never before
+   。、 and the like); only headings and short labels break between phrases, so they never split a word. */
+p, li, td { line-break: strict; }
+h1, h2, summary, label, .btn, .status b { word-break: auto-phrase; text-wrap: balance; }
 code { word-break: normal; overflow-wrap: anywhere; }
 .intro p { margin: 6px 0; }
 .intro .sub { color: var(--sub); font-size: 13px; }
@@ -125,6 +128,5 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 @keyframes dots { 0%, 37%, 100% { opacity: .25; transform: translateY(0); } 18% { opacity: 1; transform: translateY(-3px); } }
 /* Phones: lines run the full width (breaking between any characters, as Japanese usually does). */
 @media (max-width: 600px) {
-  p, li, td, summary, h2, label { word-break: normal; text-wrap: wrap; }
   .step { padding: 16px; }
 }
