@@ -141,10 +141,22 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+      actions: write  # to keep the timers on (below)
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+      # GitHub turns off the timers of a public repository after 60 days without changes, and a copy of Blockmap may
+      # never change. Once a day, switching them on again keeps the map and the live check running.
+      - name: Keep the timers on
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%H)" = 03 ]; then
+            for wf in map.yml live.yml; do gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/enable" >/dev/null && echo "on: $wf"; done
+          fi
       - name: Get the key
         run: bash tools/realms_key.sh
         env:
