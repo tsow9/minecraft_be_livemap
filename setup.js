@@ -169,6 +169,14 @@
     } catch { return null; }
   }
   let lastSiteLook = 0;
+  // Signing in puts the site up first and notes its exact address (site-info branch): with it, the site itself is
+  // asked from then on (no limit, and it says at once when signing in is done). Looked for at most every 20 seconds.
+  async function lookForSite(repo) {
+    if (siteUrl || Date.now() - lastSiteLook < 20000) return;
+    lastSiteLook = Date.now();
+    try { siteUrl = ((await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || '').replace(/\/$/, ''); } catch { /* not yet */ }
+    if (siteUrl) refresh();
+  }
   const STEPS = ['signed-in', 'downloading', 'drawing', 'publishing'];
   async function check() {
     const repo = saved.repo;
@@ -193,6 +201,7 @@
     }
     // While the code is shown, only the code's file is asked about: it turns to "signed in", or goes when signing in ends.
     if (state?.kind === 'code' && state.code) {
+      await lookForSite(repo);
       try {
         const info = await codeInfo(repo);
         limited = 0;
@@ -215,13 +224,7 @@
     const runs = (data.workflow_runs || []).filter((r) => r.conclusion !== 'cancelled');
     const login = runs.find((r) => r.display_title === 'Sign in to Realms');  // newest first
     if (!login) { state = { kind: 'waiting' }; return; }
-    // Signing in puts the site up first and notes its exact address (site-info branch): with it, the site itself is
-    // asked from then on (no limit). Looked for at most every 20 seconds.
-    if (!siteUrl && Date.now() - lastSiteLook > 20000) {
-      lastSiteLook = Date.now();
-      try { siteUrl = ((await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || '').replace(/\/$/, ''); } catch { /* not yet */ }
-      if (siteUrl) refresh();
-    }
+    await lookForSite(repo);
     if (login.status !== 'completed') {
       // The code to enter, put by the sign-in on the "login-code" branch (tools/login_code.sh); then "signed in".
       let info = null;
@@ -253,7 +256,7 @@
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
-      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>${T('登録されると、自動でログインの準備が始まります。', 'Once it is added, signing in gets ready by itself.')}`,
+      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>${T('登録されると、1 分ほどで自動的にログインの準備が始まります。', 'Once it is added, signing in gets ready by itself within about a minute.')}`,
       code: state?.code
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>

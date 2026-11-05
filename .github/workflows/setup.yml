@@ -1,7 +1,7 @@
 name: Setup
 # Only for a new copy of Blockmap, while it is being set up (see tools/setup_wait.sh):
 #  - on its first commits, "wait" watches for the Cloudflare token for up to 45 minutes;
-#  - each minute it starts this workflow by hand ("probe"), which starts signing in once the token is there.
+#  - every 30 seconds it starts this workflow by hand ("probe"), which starts signing in once the token is there.
 on:
   push:
     branches: [main]
