@@ -259,7 +259,7 @@
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
     const html = {
-      waiting: `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>${T('登録されると、1 分ほどで自動的にログインの準備が始まります。', 'Once it is added, signing in gets ready by itself within about a minute.')}`,
+      waiting: `<b>${T('ログインを待っています', 'Waiting to sign in')}</b>${T('手順 3 のトークンが確認できると、自動でログインの準備が始まります。', 'Once the token from step 3 is found, signing in gets ready by itself.')}`,
       code: state?.code
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
@@ -300,16 +300,21 @@
   }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
+  // Step 3's box: waiting for the token, then found (once signing in has started, the token is surely there).
+  let lastToken = '';
   function secretHint() {
-    const hint = $('#secret-hint'), kind = state?.kind;
+    const box = $('#token-box'), kind = state?.kind;
     if (kind !== 'waiting') waitingSince = 0; else if (!waitingSince) waitingSince = Date.now();
     const late = kind === 'waiting' && limited <= Date.now() && Date.now() - waitingSince > 3 * 60000;
-    hint.hidden = !(late || ['code', 'pick', 'building', 'making', 'done', 'map-failed'].includes(kind));
-    hint.className = `hint ${late ? 'warn' : 'ok'}`;
-    hint.innerHTML = late
-      ? T('まだトークンを確認できていません。Name が <code>CLOUDFLARE_API_TOKEN</code> になっているか確かめてください(<a href="#trouble">詳しく</a>)。',
-        'The token has not been found yet. Check that its Name is <code>CLOUDFLARE_API_TOKEN</code> (<a href="#trouble">more</a>).')
-      : T('✓ トークンを確認できました。', '✓ The token was found.');
+    const found = ['code', 'pick', 'building', 'making', 'done', 'map-failed', 'login-failed'].includes(kind);
+    box.hidden = !(found || kind === 'waiting' || kind === 'limited');
+    box.className = `status ${found ? 'done' : 'code'}`;
+    const html = found ? `<b class="good">${T('✓ トークンを確認できました', '✓ The token was found')}</b>`
+      : `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>`
+        + (late ? `<span class="bad">${T('まだトークンを確認できていません。Name が <code>CLOUDFLARE_API_TOKEN</code> になっているか確かめてください(<a href="#trouble">詳しく</a>)。',
+          'The token has not been found yet. Check that its Name is <code>CLOUDFLARE_API_TOKEN</code> (<a href="#trouble">more</a>).')}</span>`
+          : T('登録すると、自動で確認します。', 'Once added, it is found by itself.'));
+    if (html !== lastToken) { box.innerHTML = html; lastToken = html; }
   }
   // Picking a Realm: sent to the site (plain text, so no preflight); the sign-in, waiting on the site, carries on.
   document.addEventListener('click', async (e) => {
