@@ -96,7 +96,7 @@ From then on it updates automatically.
 | Actions run history | Whether runs succeeded, and counts. Normal runs show no gamertags or coordinates. The site's address is shown, but only the Realm's members can sign in |
 | Your GitHub username | Shown as the repository's owner |
 
-The secrets (keys), the Realms sign-in (Actions cache) and what is on the site are not public.
+The secrets (keys), the Realms sign-in (encrypted, in Cloudflare) and what is on the site are not public.
 
 ## Usage
 
@@ -109,6 +109,10 @@ Make one repository for each Realm, with different names (step 1). Which Realm e
 1. In the **Admin menu** (the shield icon on the right), select **Copy site URL** and send it to your members.
 2. Members open the address and sign in with the Microsoft account they play Minecraft with.
 
+### Updating to a new version
+
+When a new version is out, the admin sees "Version … is out" at the bottom of the map site. Press it, and in the admin menu under **Blockmap version** press **Update**: the site moves to the new version in 10 to 20 minutes, with no GitHub screens.
+
 ### Admin menu
 
 | Item | What it does |
@@ -119,7 +123,7 @@ Make one repository for each Realm, with different names (step 1). Which Realm e
 
 ## Security and privacy
 
-- **Signing in to Realms**: Realms has no public API, so this tool uses [prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) to sign in as the official Minecraft app for Nintendo Switch, a method used by many unofficial tools. Sign-in uses a code, so no password is handled. Access is limited to Xbox Live and Realms; email, OneDrive and payment details are out of reach. The sign-in is encrypted with a key and kept only in the repository's Actions cache; the key is in the site's Cloudflare database (or the `REALMS_CACHE_KEY` secret).
+- **Signing in to Realms**: Realms has no public API, so this tool uses [prismarine-auth](https://github.com/PrismarineJS/prismarine-auth) to sign in as the official Minecraft app for Nintendo Switch, a method used by many unofficial tools. Sign-in uses a code, so no password is handled. Access is limited to Xbox Live and Realms; email, OneDrive and payment details are out of reach. The sign-in is encrypted with a key and kept only in the site's Cloudflare database; the key is in the site's Cloudflare database (or the `REALMS_CACHE_KEY` secret).
 - **Signing in to the site**: used only to check the gamertag; the Microsoft token is discarded right after. The site keeps the sign-in state, the gamertag and a hashed ID.
 - **Where data is stored**: the map, chests and positions are stored in Cloudflare. The `map-data` and `live-data` branches on GitHub hold them only in encrypted form.
 - **Recommended**: turn on two-step verification for your Microsoft and GitHub accounts. To revoke the Realms sign-in, use **Security** → **Sign out everywhere** in your Microsoft account (then repeat step 4 to resume).

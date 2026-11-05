@@ -1,0 +1,70 @@
+name: Project pages
+# Blockmap's own repository only (copies skip it): the GitHub Pages pages (the sign-in relay every site uses, the
+# setup page, the privacy policy and terms), and a release whenever VERSION changes, which copies are then offered to
+# update to.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: project-pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'tsow9/minecraft_be_livemap'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The workflow files of copies never change (they cannot be updated automatically): keep these three as they are.
+      - name: The workflow files copies run are unchanged
+        run: sha256sum -c tools/ci/frozen.sha256
+      - name: Release when VERSION changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(tr -d ' \n' < VERSION)
+          if gh release view "v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
+          gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --generate-notes
+          echo "Released v$v"
+
+  pages:
+    if: github.repository == 'tsow9/minecraft_be_livemap'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gather the site files
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir _site
+          cp login.html privacy.html terms.html legal.css legal.js setup.html setup.css setup.js favicon.svg _site/
+          # Browsers may keep GitHub Pages files for 10 minutes: name each script and style by this version.
+          v=${GITHUB_SHA::8}
+          sed -i -E "s/(href|src)=\"(setup|legal)\.(css|js)\"/\1=\"\2.\3?v=$v\"/g" _site/setup.html _site/privacy.html _site/terms.html
+          url=$(bash tools/site_url.sh)
+          sed "s#__SITE__#${url:-}#" tools/moved.html > _site/index.html
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      # Another deployment may still be finishing; wait a little and try again instead of failing.
+      - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Try publishing again
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4

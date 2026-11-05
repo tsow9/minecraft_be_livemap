@@ -1,7 +1,7 @@
 name: Setup
-# Only for a new copy of Blockmap, while it is being set up (see tools/setup_wait.sh):
-#  - on its first commits, "wait" watches for the Cloudflare token for up to 45 minutes;
-#  - every 30 seconds it starts this workflow by hand ("probe"), which starts signing in once the token is there.
+# Only for a new copy of Blockmap, while it is being set up: from its first commit it watches for the Cloudflare token
+# and starts signing in once it is there (tools/setup_wait.sh). Everything this does is in tools/ci/run.sh: this file
+# never needs to change (see map.yml).
 on:
   push:
     branches: [main]
@@ -11,39 +11,21 @@ permissions:
   contents: read
   actions: write
 
-env:
-  BLOCKMAP_LANG: ${{ vars.LANGUAGE || 'ja' }}
-
 concurrency:
   group: setup-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
-  wait:
-    # Not in this project's own repository, which is set up already.
-    if: github.event_name == 'push' && github.repository != 'tsow9/minecraft_be_livemap'
+  run:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - uses: actions/checkout@v4
-      - name: Wait for the Cloudflare token
-        run: bash tools/setup_wait.sh
+      - name: Run
         env:
           GH_TOKEN: ${{ github.token }}
-
-  probe:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache/restore@v4
-        with:
-          path: .auth/token.enc
-          key: realms-auth-restore-${{ github.run_id }}
-          restore-keys: realms-auth-
-      - name: Start signing in if the token is there
-        run: bash tools/auto_signin.sh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          git clone -q --depth 1 --branch "$GITHUB_REF_NAME" "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" blockmap
+          cd blockmap
+          bash tools/ci/run.sh setup

@@ -633,3 +633,11 @@ body.finding .pl-icon.off { opacity: .4; }
   animation: building-spin .8s linear infinite; }
 @keyframes building-spin { to { transform: rotate(360deg); } }
 body:has(#building:not([hidden])) #crosshair { display: none; }
+/* The admin's "a new version of Blockmap is out": opens the version part of the admin menu. */
+#release-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; padding: 9px 16px;
+  border-radius: 999px; border: 1px solid var(--accent); background: var(--glass); color: var(--accent); font: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
+#release-bar:hover { background: var(--accent-soft); }
+body.tools-open #release-bar { bottom: 160px; }
+#update-bar:not([hidden]) ~ #release-bar { display: none; }
+@media (max-width: 700px) { #release-bar { left: 10px; right: 10px; transform: none; bottom: calc(16px + env(safe-area-inset-bottom)); white-space: normal; } }

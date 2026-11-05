@@ -111,7 +111,7 @@ function showInvites(role) {
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
   $('#btn-site').hidden = !DATA || role !== 'admin';
-  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); }
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); }
   renderMe();
 }
 function renderMe() {
@@ -196,6 +196,47 @@ async function loadPrivacy() {
     }
   } catch { list.innerHTML = tl('<li class="sub">設定を読み込めませんでした</li>'); }
 }
+// Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
+// A bar tells the admin when a new version is out; it opens this part of the admin menu.
+let releaseTimer = null;
+async function loadRelease() {
+  const box = $('#version-box'), body = $('#version-body');
+  const r = await fetchJson(`${share.url}/release`);
+  if (!r) return;
+  box.hidden = false;
+  const rel = r.release || {}, up = r.update || {};
+  const current = rel.current || APP_VERSION || '';
+  const isNewer = (a, b) => { const x = String(a || '').split('.').map(Number), y = String(b || '').split('.').map(Number);
+    for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+  const fresh = rel.latest && isNewer(rel.latest, current);
+  const busy = ['requested', 'started', 'updating'].includes(up.state) && up.version === rel.latest;
+  const notes = rel.url ? ` <a href="${esc(rel.url)}" target="_blank" rel="noopener">${tl('変更内容')}</a>` : '';
+  let html = `<p class="help">${tl('いまのバージョン: {v}', { v: esc(current || '?') })}</p>`;
+  if (fresh && busy) {
+    html += `<p class="help"><b>${tl('{v} に更新しています', { v: esc(rel.latest) })}</b><br>${tl('10〜20 分ほどで終わります。終わると、ページを開き直したときに新しくなります。')}</p>`;
+  } else if (fresh) {
+    html += `<p class="help">${tl('新しいバージョン {v} があります。', { v: esc(rel.latest) })}${notes}</p>`
+      + `<div class="btns"><button class="mini primary" type="button" id="update-now">${tl('更新する')}</button></div>`;
+    if (up.state === 'failed') html += `<p class="help">${tl('前回の更新はうまくいきませんでした。もう一度押してください。')}</p>`;
+  } else {
+    html += `<p class="help">${tl('最新のバージョンです。')}</p>`;
+  }
+  body.innerHTML = html;
+  $('#update-now')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    const res = await fetch(`${share.url}/update`, { method: 'POST' }).catch(() => null);
+    if (!res?.ok) { e.target.disabled = false; toast(tl('更新を始められませんでした')); return; }
+    toast(tl('更新を始めます'));
+    loadRelease();
+  });
+  const bar = $('#release-bar');
+  bar.hidden = !(fresh && !busy);
+  bar.textContent = tl('新しいバージョン {v} があります', { v: rel.latest || '' });
+  // While updating, look again now and then.
+  clearTimeout(releaseTimer);
+  if (busy) releaseTimer = setTimeout(loadRelease, 60000);
+}
+
 // The Realm's payment day and price (the Realms API's own date is not reliable), typed in by the owner.
 async function loadSettings() {
   if (!DATA) return;
@@ -3475,6 +3516,11 @@ function setupMobileView() {
 
 function setupUpdates() {
   $('#update-go').addEventListener('click', applyUpdate);
+  // The admin's "a new version is out": opens the version part of the admin menu.
+  $('#release-bar').addEventListener('click', () => {
+    if ($('#panel-site').hidden) $('#btn-site').click();
+    setTimeout(() => $('#version-box').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  });
   if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
   let view = null, updated = false;
   try {

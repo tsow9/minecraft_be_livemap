@@ -135,5 +135,10 @@ Object.assign(I18N_EN, {
   'ログアウトしますか?': 'Sign out?',
   '地図を作っています': 'Making the map', '数分で、ここに自動で表示されます。': 'It appears here by itself in a few minutes.',
   '不明': 'Unknown',
+  'Blockmap のバージョン': 'Blockmap version', 'いまのバージョン: {v}': 'This version: {v}', '変更内容': 'What changed',
+  '{v} に更新しています': 'Updating to {v}', '10〜20 分ほどで終わります。終わると、ページを開き直したときに新しくなります。': 'It takes 10 to 20 minutes. Once done, reopening the page shows the new version.',
+  '新しいバージョン {v} があります。': 'Version {v} is out.', '前回の更新はうまくいきませんでした。もう一度押してください。': 'The last update did not work. Please press again.',
+  '最新のバージョンです。': 'This is the newest version.', '更新を始められませんでした': 'Could not start the update', '更新を始めます': 'Starting the update',
+  '新しいバージョン {v} があります': 'Version {v} is out',
   'ワールド{n}': 'World {n}', '遊んでいるワールド': 'Being played', '{day}まで': 'Until {day}',
 });

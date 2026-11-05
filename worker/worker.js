@@ -118,6 +118,17 @@ export default {
           .bind('settings', JSON.stringify(next), Date.now()).run();
         return json(next);
       }
+      // Blockmap's own version: the newest release (told by the live check) and an update the owner asked for.
+      if (path === '/release' && admin && me.via === 'microsoft' && req.method === 'GET') {
+        return json({ release: await kvGet(env, 'release'), update: await kvGet(env, 'update') });
+      }
+      if (path === '/update' && admin && me.via === 'microsoft' && req.method === 'POST') {
+        const rel = await kvGet(env, 'release');
+        if (!rel?.latest || !newer(rel.latest, rel.current)) return json({ error: 'up to date' }, 400);
+        const v = { state: 'requested', version: rel.latest, at: Date.now() };
+        await kvPut(env, 'update', v);
+        return json(v);
+      }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
       if (path === '/privacy' && admin && req.method === 'POST') {
         const body = await req.json().catch(() => null);
@@ -179,6 +190,29 @@ export default {
         };
         await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
           .bind('setup', JSON.stringify(v), v.at).run();
+        return json({ ok: true });
+      }
+      // The live check: the newest release, and whether the owner asked for it (then it starts the update).
+      if (path === '/release' && req.method === 'POST' && admin && me.via === 'key') {
+        const b = await req.json().catch(() => null);
+        const ver = (v) => (typeof v === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(v) ? v : null);
+        const rel = { current: ver(b?.current), latest: ver(b?.latest), at: Date.now(),
+          url: typeof b?.url === 'string' && /^https:\/\/github\.com\/[\w./-]+$/.test(b.url) ? b.url : null };
+        await kvPut(env, 'release', rel);
+        const up = await kvGet(env, 'update');
+        let start = false;
+        if (up?.state === 'requested') { start = true; await kvPut(env, 'update', { ...up, state: 'started', at: Date.now() }); }
+        // Done once this version runs (or given up after a day, so the owner can press again).
+        else if (up && (up.state === 'started' || up.state === 'updating') && (rel.current === up.version || Date.now() - up.at > 86400000)) {
+          await kvPut(env, 'update', { ...up, state: rel.current === up.version ? 'done' : 'failed', at: Date.now() });
+        }
+        return json({ start });
+      }
+      if (path === '/update/state' && req.method === 'POST' && admin && me.via === 'key') {
+        const b = await req.json().catch(() => null);
+        if (!['updating', 'done', 'failed'].includes(b?.state)) return json({ error: 'bad' }, 400);
+        const up = (await kvGet(env, 'update')) || {};
+        await kvPut(env, 'update', { ...up, state: b.state, at: Date.now() });
         return json({ ok: true });
       }
       if (path === '/live' && admin && me.via === 'key') {
@@ -336,6 +370,21 @@ async function readLive(env) {
   let data = {};
   try { data = JSON.parse(row?.v || '{}') || {}; } catch { /* none yet */ }
   return { v: row?.v || null, at: row?.at || 0, data };
+}
+
+async function kvGet(env, k) {
+  const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(k).first();
+  try { return row ? JSON.parse(row.v) : null; } catch { return null; }
+}
+async function kvPut(env, k, v) {
+  await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
+    .bind(k, JSON.stringify(v), Date.now()).run();
+}
+// "1.10.0" is newer than "1.9.2".
+function newer(a, b) {
+  const x = String(a || '').split('.').map(Number), y = String(b || '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
 }
 
 function liveInfo(live) {
