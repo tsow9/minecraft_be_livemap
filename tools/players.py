@@ -18,6 +18,7 @@ DIM_NAMES = {0: 'overworld', 1: 'nether', 2: 'end'}
 BEFORE = '_'
 UNKNOWN = '?'
 TRAIL_MAX = 600
+RECORDS = 2  # how player records are read: raise it when that changes, and the live check reads the world again
 
 
 def _hash(secret, value):
@@ -55,11 +56,14 @@ def read_records(db_dir, secret):
             'death': None,
             'identity': identities.get(key.decode('latin-1')),
         }
-        # The bed (or respawn anchor) the player last used; NaturalSpawn = 1 means "no bed, world spawn".
-        if root.get('NaturalSpawn') == 0 and 'SpawnBlockPositionX' in root and abs(root['SpawnBlockPositionX']) < 30_000_000:
+        # The bed (or respawn anchor) the player last used. Without one the game keeps -2147483648 there (and
+        # SpawnDimension 3); older worlds also said so with NaturalSpawn = 1.
+        spawn = [root.get(f'SpawnBlockPosition{a}') for a in 'XYZ']
+        if (all(isinstance(v, int) and abs(v) < 30_000_000 for v in spawn) and root.get('NaturalSpawn') != 1
+                and root.get('SpawnDimension') in (0, 1, 2)):
             rec['bed'] = {
                 'dim': DIM_NAMES.get(root.get('SpawnDimension', 0), 'overworld'),
-                'x': root['SpawnBlockPositionX'], 'y': root.get('SpawnBlockPositionY', 64), 'z': root['SpawnBlockPositionZ'],
+                'x': spawn[0], 'y': spawn[1], 'z': spawn[2],
             }
         if root.get('HasDiedBefore') and 'DeathPositionX' in root:
             rec['death'] = {

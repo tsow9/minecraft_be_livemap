@@ -57,7 +57,9 @@ def main():
     members = fetched.get('members', [])
     if cmd == 'need-world':
         # Also read the world once when the time of day has never been taken, so the clock shows up right away.
-        need = players.anyone_online(state, members) or not state.get('players') or 'world' not in state
+        # And once after the way player records are read changed (RECORDS), so beds and the like show up at once.
+        need = (players.anyone_online(state, members) or not state.get('players') or 'world' not in state
+                or state.get('records') != players.RECORDS)
         print('true' if need else 'false')
         return
     secret = os.environ.get('CACHE_KEY') or ''
@@ -90,6 +92,8 @@ def main():
                 realm[key] = state['realm'][key]
         state['realm'] = {**realm, 'at': now}
     state = players.update_live(state, members, records, now)
+    if records is not None:
+        state['records'] = players.RECORDS
     # The frequent check also starts the map update: every check while someone plays, hourly otherwise.
     gap = MAP_WHILE_PLAYING_MS if records is not None else MAP_EVERY_MS
     if now - (state.get('mapRequestedAt') or 0) >= gap:
