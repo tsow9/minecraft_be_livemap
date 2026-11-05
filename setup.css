@@ -123,3 +123,8 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .dots i:nth-child(3) { animation-delay: .36s; }
 /* Each dot rises over about 0.85 s; after the third, a rest before the next round (2.3 s a round). */
 @keyframes dots { 0%, 37%, 100% { opacity: .25; transform: translateY(0); } 18% { opacity: 1; transform: translateY(-3px); } }
+/* Phones: lines run the full width (breaking between any characters, as Japanese usually does). */
+@media (max-width: 600px) {
+  p, li, td, summary, h2, label { word-break: normal; text-wrap: wrap; }
+  .step { padding: 16px; }
+}

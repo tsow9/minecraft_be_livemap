@@ -78,6 +78,9 @@ jobs:
       - name: Start making the map
         run: |
           gh workflow run map.yml --ref "$GITHUB_REF_NAME" -f action='Update map'
+          # And the first live check now (GitHub's 10-minute timer can take a while to start in a new repository): it
+          # tells the site who the members are, so the owner and members can sign in to it.
+          gh workflow run live.yml --ref "$GITHUB_REF_NAME" || true
           if [ "$BLOCKMAP_LANG" != en ]; then echo "地図を作り始めました。数分でサイトができます"; else echo "Started making the map. The site is ready in a few minutes"; fi
         env:
           GH_TOKEN: ${{ github.token }}

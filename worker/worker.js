@@ -72,7 +72,7 @@ export default {
       if (path === '/ms/finish' && req.method === 'POST') {
         const body = await req.json().catch(() => null);
         const r = await msFinish(env, String(body?.code || ''), String(body?.ms || ''), live);
-        if (!r.session) return json(r, r.error === 'not member' ? 403 : 400);
+        if (!r.session) return json(r, r.error === 'not member' ? 403 : r.error === 'not ready' ? 503 : 400);
         return json({ ok: true, name: r.name }, 200, { 'Set-Cookie': cookie(SESSION, r.session, COOKIE_DAYS) });
       }
       if (path === '/logout' && req.method === 'POST') {
@@ -296,6 +296,8 @@ async function msFinish(env, code, signIn, live) {
     if (!who.gtg || !who.xid) return { error: 'no gamertag', step: 'claims' };
     const xid = await siteId(env, who.xid);
     const info = liveInfo((await live()).data);
+    // A new site before its first live check: nobody can be told apart yet (not even its owner).
+    if (!info.ownerXid && !info.members.length) return { error: 'not ready', gamertag: who.gtg };
     if (xid !== info.ownerXid && !info.members.some((m) => m.xid === xid)) return { error: 'not member', gamertag: who.gtg };
     const session = randomHex(32), now = Date.now();
     // Sign-ins unused for as long as the cookie lasts are gone for good.
@@ -472,6 +474,7 @@ const T = ja ? {
   button: 'Microsoft でログイン', cantStart: 'ログインを始められませんでした。もう一度ためしてください',
   checking: 'ゲーマータグを確かめています…', done: 'ログインできました。地図を開いています…',
   notMember: (g) => 'このアカウント(' + g + ')は、この Realm のメンバーではありません',
+  notReady: 'このサイトは、まだメンバーの一覧を受け取っていません。数分後にもう一度ログインしてください。',
   expired: '時間がたちすぎました。もう一度ログインしてください', failed: 'ログインを確かめられませんでした',
   offline: '通信できませんでした。もう一度ためしてください',
 } : {
@@ -479,6 +482,7 @@ const T = ja ? {
   button: 'Sign in with Microsoft', cantStart: 'Could not start signing in. Please try again',
   checking: 'Checking your gamertag…', done: 'Signed in. Opening the map…',
   notMember: (g) => 'This account (' + g + ') is not a member of this Realm',
+  notReady: 'This site has not received the member list yet. Please sign in again in a few minutes.',
   expired: 'That took too long. Please sign in again', failed: 'Could not check the sign-in',
   offline: 'No connection. Please try again',
 };
@@ -507,6 +511,7 @@ async function finish(code, ms) {
     busy(false);
     msg.style.color = '';
     msg.textContent = d.error === 'not member' ? T.notMember(d.gamertag)
+      : d.error === 'not ready' ? T.notReady
       : d.error === 'expired' ? T.expired
       : T.failed + ' (' + [d.step, d.status, d.error].filter(Boolean).join(' / ') + ')';
   } catch { busy(false); msg.style.color = ''; msg.textContent = T.offline; }
