@@ -103,7 +103,7 @@ Object.assign(I18N_EN, {
   '誰かがプレイ中のあいだは、Realms がワールドを保存するたび(1分くらいごと)に位置を更新します。ログアウトした人は、最後にいた場所を表示します。':
     'While someone is playing, places update each time Realms saves the world (about every minute). Players who logged out are shown where they last were.',
   '新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。近くの記録がないときは、ほかの時の足あと・今いる場所・ベッドから、その辺りにいた人を選びます。記録を始める前からあった場所は「不明」で、色は塗りません。':
-    'Newly mapped land is colored by who was nearby at the time. With no record nearby, whoever has been around there (other footprints, where they are now, their bed) is chosen. Land from before the records began is "Unknown" and left uncoloured.',
+    'Newly mapped land is colored by who was nearby at the time. With no record nearby, whoever has been around there (other footprints, where they are now, their bed) is chosen. Land from before the records began is "Unknown" and left uncolored.',
   // Realms information
   'Realms情報': 'Realms info', 'まだ情報がありません。少し待つと表示されます。': 'No information yet. It will show up shortly.',
   'ピース': 'Peaceful', 'イージー': 'Easy', 'ノーマル': 'Normal', 'ハード': 'Hard',
