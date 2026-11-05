@@ -3134,11 +3134,12 @@ function placeText(p) {
 }
 
 const TRAIL_HOURS = 24;
-const BED_SVG = (c) => `<svg class="gm-svg" viewBox="0 0 30 24" width="24" height="19"><ellipse class="gm-shadow" cx="15" cy="21.5" rx="11" ry="1.8"/>`
-  + `<g class="gm-body"><path d="M4 19V6M26 19v-5" stroke="#1b1d22" stroke-width="5" stroke-linecap="round"/>`
-  + `<path d="M3.5 11.5h23v5h-23z" fill="${c}" stroke="#1b1d22" stroke-width="2.4" stroke-linejoin="round"/>`
-  + `<path d="M5.5 9.5h6v2h-6z" fill="#f4f1ea" stroke="#1b1d22" stroke-width="2" stroke-linejoin="round"/>`
-  + `<path d="M4 19V6M26 19v-5" stroke="#b07a3f" stroke-width="2" stroke-linecap="round"/></g></svg>`;
+// A player's bed (respawn point): the game's bed seen from above, in pixels: wooden frame, white pillow, and the
+// blanket in the player's colour.
+const BED_SVG = (c) => `<svg class="gm-svg" viewBox="0 0 20 28" width="16" height="22" shape-rendering="crispEdges"><ellipse class="gm-shadow" cx="10" cy="26" rx="7" ry="1.6"/>`
+  + `<g class="gm-body"><rect x="2" y="1" width="16" height="23" fill="#1b1d22"/><rect x="3" y="2" width="14" height="21" fill="#9a6a3a"/>`
+  + `<rect x="4" y="3" width="12" height="5" fill="#f4f1ea"/><rect x="4" y="9" width="12" height="13" fill="${c}"/>`
+  + `<rect x="4" y="9" width="12" height="2" fill="#000" opacity=".22"/><rect x="4" y="20" width="12" height="2" fill="#000" opacity=".18"/></g></svg>`;
 
 function renderPlayers() {
   playerGroup.clearLayers();
@@ -3186,7 +3187,7 @@ function renderPlayers() {
       const m = L.marker(ll(b.x + 0.5, b.z + 0.5), {
         pmIgnore: true, zIndexOffset: 500,
         icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-          html: `<div class="bed-icon gm" style="transform:translate(-50%,-17px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
+          html: `<div class="bed-icon gm" style="transform:translate(-50%,-20px)">${BED_SVG(playerColor(b.who[0].key))}</div>` }),
       });
       const place = { id: `bed:${b.who[0].key}`, name: `${b.who[0].name}${DOT}${tl('ベッド')}`, x: b.x, z: b.z, dim: b.dim };
       m.bindPopup(popupWithRoute(`<h4>${tl('{names}のベッド', { names: esc(names) })}</h4><div class="sub">${tl('リスポーン地点')}</div><div class="xyz">X ${b.x} / Y ${b.y} / Z ${b.z}</div>`, place));
