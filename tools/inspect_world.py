@@ -172,6 +172,16 @@ def villages(db):
     for part, root in sample.items():
         print(f'  {part} shape: {outline(root)}')
     print('  POI names and types (times seen):', poi_names.most_common(30))
+    kinds_by_type = collections.Counter()
+    for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'VILLAGE_') and k.endswith(b'_POI')):
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except Exception:  # noqa: BLE001
+            continue
+        for v in root.get('POI') or []:
+            for i, inst in enumerate(v.get('instances') or []):
+                kinds_by_type[(i, inst.get('Name'), inst.get('Type'), inst.get('Capacity'))] += 1
+    print('  POI (slot, name, type, capacity):', sorted(kinds_by_type.items(), key=str))
     # Do the ids in the POI records match the villagers in the world (their UniqueID)?
     villagers = set()
     for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'actorprefix')):
