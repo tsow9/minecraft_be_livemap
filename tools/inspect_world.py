@@ -110,6 +110,7 @@ def main():
                     row = [names[idx[x - cx * 16, z0 - cz * 16, yy - y_sub * 16]].replace('minecraft:', '')
                            for x in range(max(x0 - 3, cx * 16), min(x0 + 4, cx * 16 + 16))]
                     print(f'    y={yy} z={z0} x={max(x0 - 3, cx * 16)}..: {row}')
+    villages(db)
     level = os.path.join(os.path.dirname(db), 'level.dat')
     if os.path.exists(level):
         with open(level, 'rb') as f:
@@ -121,6 +122,66 @@ def main():
             print('level.dat time and weather:', keep)
         except Exception as e:  # noqa: BLE001 - diagnostics only
             print('cannot read level.dat', e)
+
+
+def outline(v, depth=0):
+    """The shape of an NBT value: field names, list lengths and types; no values (but short type names)."""
+    if isinstance(v, dict):
+        if depth > 4:
+            return '{…}'
+        return {k: outline(x, depth + 1) for k, x in list(v.items())[:30]}
+    if isinstance(v, list):
+        return [f'{len(v)} items', outline(v[0], depth + 1)] if v else ['0 items']
+    if isinstance(v, str):
+        return f'str:{v}' if v.startswith('minecraft:') and len(v) < 60 else 'str'
+    return type(v).__name__
+
+
+def villages(db):
+    """Village records (VILLAGE_<id>_INFO / _DWELLERS / _POI / _PLAYERS): how many, their shape, and whether the
+    villagers they name are the villagers in the world. Counts and shapes only."""
+    kinds = collections.Counter()
+    sample = {}
+    ids_in_poi = set()
+    poi_names = collections.Counter()
+
+    def walk(v, path=''):
+        if isinstance(v, dict):
+            for k, x in v.items():
+                if isinstance(x, int) and re.search(r'id', k, re.I) and abs(x) > 1000:
+                    ids_in_poi.add(x)
+                if isinstance(x, str) and re.search(r'name|type', k, re.I):
+                    poi_names[f'{k}={x}' if len(x) < 50 else k] += 1
+                walk(x, path + '/' + k)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x, path)
+
+    for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'VILLAGE_')):
+        part = key.decode('latin-1').rsplit('_', 1)[-1]
+        kinds[part] += 1
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except Exception as e:  # noqa: BLE001 - diagnostics only
+            kinds[part + ' (unreadable)'] += 1
+            continue
+        sample.setdefault(part, root)
+        if part == 'POI':
+            walk(root)
+    print('Village records:', dict(kinds))
+    for part, root in sample.items():
+        print(f'  {part} shape: {outline(root)}')
+    print('  POI names and types (times seen):', poi_names.most_common(30))
+    # Do the ids in the POI records match the villagers in the world (their UniqueID)?
+    villagers = set()
+    for key, value in bedrock_db.scan(db, lambda k: k.startswith(b'actorprefix')):
+        try:
+            root, _ = nbt.root_compound(value, 0)
+        except Exception:  # noqa: BLE001
+            continue
+        if root.get('identifier') in ('minecraft:villager_v2', 'minecraft:villager') and isinstance(root.get('UniqueID'), int):
+            villagers.add(root['UniqueID'])
+    print(f'  villagers in the world: {len(villagers)}, ids in POI records: {len(ids_in_poi)}, matching: {len(villagers & ids_in_poi)}')
 
 
 def account_links(db):
