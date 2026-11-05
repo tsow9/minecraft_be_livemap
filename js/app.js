@@ -2517,7 +2517,13 @@ function villagerMark(dim, v, key) {
   const trader = v[3] === 'wandering_trader';
   return { dim, x: v[0], y: v[1], z: v[2], icon: trader ? TRADER_SVG : villagerIcon(v[3]), iconBig: trader ? TRADER_BIG : villagerIcon(v[3], true), name,
     popup: `<h4>${esc(name)}</h4>${levelText(v) ? `<div class="sub">${levelText(v)}</div>` : ''}`
-      + `<div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${tradesHtml(v[5], key)}` };
+      + `<div class="xyz">X ${v[0]} / Y ${v[1]} / Z ${v[2]}</div>${villagerPlaces(v)}${tradesHtml(v[5], key)}` };
+}
+// The job site block and the bed the villager has claimed (from the world's village records).
+function villagerPlaces(v) {
+  const at = (p) => (Array.isArray(p) ? `X ${p[0]} / Y ${p[1]} / Z ${p[2]}` : tl('なし'));
+  if (v[3] === 'wandering_trader' || (v[7] === undefined && v[8] === undefined)) return '';
+  return `<div class="v-places"><div><span>${tl('職業ブロック')}</span>${at(v[8])}</div><div><span>${tl('ベッド')}</span>${at(v[7])}</div></div>`;
 }
 function signMark(dim, g) {
   const lines = g[3].split('\n');

@@ -644,3 +644,6 @@ body.tools-open #release-bar { bottom: 160px; }
 #version-box a { color: var(--accent); }
 #version-box .btns { margin-top: 8px; }
 #version-box .mini.primary { background: var(--accent); border-color: var(--accent); color: #06130d; font-weight: 700; }
+/* A villager's job site block and bed, under its position. */
+.v-places { margin: 4px 0 2px; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.v-places span { display: inline-block; min-width: 6.5em; color: var(--fg); }

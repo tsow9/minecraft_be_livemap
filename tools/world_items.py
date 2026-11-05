@@ -152,15 +152,40 @@ def _villager(actor, dim):
     # The trading level the game shows on the villager's badge: 1 新米 … 5 達人 (only villagers with a trade).
     level = tier + 1 if tier is not None and job not in (None, 'wandering_trader', 'nitwit', 'unemployed') else None
     return {'dim': dim, 'x': int(pos[0] // 1), 'y': int(pos[1] // 1), 'z': int(pos[2] // 1), 'job': job,
-            'name': str(actor.get('CustomName') or '')[:40] or None, 'trades': trades, 'level': level}
+            'name': str(actor.get('CustomName') or '')[:40] or None, 'trades': trades, 'level': level,
+            'uid': actor.get('UniqueID')}
+
+
+def _village_places(value, places):
+    """A village's points of interest (VILLAGE_<dimension>_<id>_POI): for each villager (by the actor's UniqueID), the
+    bed (Type 0) and the job site block (Type 2) it has claimed. Type 1 is the village's meeting place (bell)."""
+    try:
+        root, _ = nbt.root_compound(value, 0)
+    except (ValueError, IndexError, struct.error):
+        return
+    for v in root.get('POI') or []:
+        if not isinstance(v, dict) or not isinstance(v.get('VillagerID'), int):
+            continue
+        mine = places.setdefault(v['VillagerID'], {})
+        for inst in v.get('instances') or []:
+            if isinstance(inst, dict) and all(isinstance(inst.get(k), int) for k in 'XYZ'):
+                where = [inst['X'], inst['Y'], inst['Z']]
+                if inst.get('Type') == 0:
+                    mine['bed'] = where
+                elif inst.get('Type') == 2:
+                    mine['site'] = where
 
 
 def scan(db_dir, secret=''):
     containers, villagers, signs, animals, actor_dims, actors = [], [], [], [], {}, {}
     owners = _owners(db_dir, secret)
 
+    places = {}
+
     def want(key):
         if key.startswith(b'actorprefix') or key.startswith(b'digp'):
+            return True
+        if key.startswith(b'VILLAGE_') and key.endswith(b'_POI'):
             return True
         return (len(key) == 9 and key[8] in (BLOCK_ENTITY, OLD_ENTITY)) or (len(key) == 13 and key[12] in (BLOCK_ENTITY, OLD_ENTITY))
 
@@ -169,6 +194,9 @@ def scan(db_dir, secret=''):
             dim = struct.unpack_from('<i', key, 12)[0] if len(key) == 16 else 0
             for i in range(0, len(value) - 7, 8):
                 actor_dims[value[i:i + 8]] = dim
+            continue
+        if key.startswith(b'VILLAGE_'):
+            _village_places(value, places)
             continue
         if key.startswith(b'actorprefix'):
             try:
@@ -213,6 +241,9 @@ def scan(db_dir, secret=''):
             if a:
                 animals.append(a)
     # Empty containers are left out (after joining double chests, so a half-empty double chest still shows).
+    for v in villagers:  # each villager's bed and job site block, from the village records
+        got = places.get(v.pop('uid', None)) or {}
+        v['bed'], v['site'] = got.get('bed'), got.get('site')
     return [c for c in _merge_pairs(containers) if c['items']], villagers, signs, animals
 
 
@@ -340,7 +371,7 @@ def write(site, db_dir, lang, secret='', lang_en=None):
     for c in containers:
         of(c['dim'])['containers'].append([c['x'], c['y'], c['z'], c['kind'], c['items']])
     for v in villagers:
-        of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades'], v['level']])
+        of(v['dim'])['villagers'].append([v['x'], v['y'], v['z'], v['job'], v['name'], v['trades'], v['level'], v['bed'], v['site']])
     for g in signs:
         of(g['dim'])['signs'].append([g['x'], g['y'], g['z'], g['text'], g['hanging']])
     for a in animals:
