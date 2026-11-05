@@ -3055,8 +3055,8 @@ function playerColor(key) {
   return colorCache.get(key);
 }
 function playerName(key) {
-  if (key === '_') return tl('記録を始める前');
-  if (key === '?') return tl('わからない');
+  // Land from before the records began, and land nobody could be placed near: both "unknown".
+  if (key === '_' || key === '?') return tl('不明');
   return state.players.find((p) => p.key === key)?.name || tl('(不明)');
 }
 function timeText(ms) {
@@ -3194,8 +3194,8 @@ const ExploreLayer = L.GridLayer.extend({
     const size = Math.max(1, 16 * scale);
     const owners = state.explore?.dims?.[state.dim] || {};
     for (const [key, chunks] of Object.entries(owners)) {
-      if (key === '_') continue;
-      ctx.fillStyle = key === '?' ? '#000000' : playerColor(key);
+      if (key === '_' || key === '?') continue;  // unknown: left uncoloured
+      ctx.fillStyle = playerColor(key);
       for (const [cx, cz] of chunks) {
         const x = cx * 16, z = cz * 16;
         if (x + 16 < bx || x > bx + span || z + 16 < bz || z > bz + span) continue;
@@ -3210,10 +3210,13 @@ function renderExploreLegend() {
   const list = $('#explore-legend');
   list.innerHTML = '';
   const owners = state.explore?.dims?.[state.dim] || {};
-  const rows = Object.entries(owners).map(([k, cs]) => [k, cs.length]).sort((a, b) => b[1] - a[1]);
+  // Before the records began and not placed: one "unknown" row.
+  const counts = {};
+  for (const [k, cs] of Object.entries(owners)) { const key = k === '_' ? '?' : k; counts[key] = (counts[key] || 0) + cs.length; }
+  const rows = Object.entries(counts).sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1] - a[1]);
   for (const [key, n] of rows) {
     const li = document.createElement('li');
-    const color = key === '_' ? 'transparent' : key === '?' ? '#000' : playerColor(key);
+    const color = key === '?' ? 'transparent' : playerColor(key);
     li.innerHTML = `<span class="dot" style="background:${color};border:1px solid #fff5"></span><span class="grow">${esc(playerName(key))}</span><span class="sub">${tl('{n} チャンク', { n })}</span>`;
     list.append(li);
   }

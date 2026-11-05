@@ -102,8 +102,8 @@ Object.assign(I18N_EN, {
   '死んだ場所を表示': 'Show death spots', 'ベッド(リスポーン地点)を表示': 'Show beds (respawn points)',
   '誰かがプレイ中のあいだは、Realms がワールドを保存するたび(1分くらいごと)に位置を更新します。ログアウトした人は、最後にいた場所を表示します。':
     'While someone is playing, places update each time Realms saves the world (about every minute). Players who logged out are shown where they last were.',
-  '新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。これは記録からの推定です。':
-    'New parts of the map are colored by who was nearby at the time. This is an estimate from the records.',
+  '新しく地図に増えた場所を、そのとき近くにいた人の色で塗っています。近くの記録がないときは、ほかの時の足あと・今いる場所・ベッドから、その辺りにいた人を選びます。記録を始める前からあった場所は「不明」で、色は塗りません。':
+    'Newly mapped land is colored by who was nearby at the time. With no record nearby, whoever has been around there (other footprints, where they are now, their bed) is chosen. Land from before the records began is "Unknown" and left uncoloured.',
   // Realms information
   'Realms情報': 'Realms info', 'まだ情報がありません。少し待つと表示されます。': 'No information yet. It will show up shortly.',
   'ピース': 'Peaceful', 'イージー': 'Easy', 'ノーマル': 'Normal', 'ハード': 'Hard',
@@ -134,5 +134,6 @@ Object.assign(I18N_EN, {
   '(メンバー以外は入れません)': '(Nobody else can get in.)',
   'ログアウトしますか?': 'Sign out?',
   '地図を作っています': 'Making the map', '数分で、ここに自動で表示されます。': 'It appears here by itself in a few minutes.',
+  '不明': 'Unknown',
   'ワールド{n}': 'World {n}', '遊んでいるワールド': 'Being played', '{day}まで': 'Until {day}',
 });

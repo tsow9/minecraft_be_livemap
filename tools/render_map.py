@@ -676,7 +676,13 @@ def main():
             explore = _load_json(explore_path)
             live_state = _load_json(args.live) if args.live else None
             chunk_sets = {name: set(surfaces[DIM_IDS[name]]) for name in dims}
-            explore, added = players.update_explore(explore, chunk_sets, live_state, int(time.time() * 1000))
+            # Where each player is in the world itself (and their bed and last death): a second clue when nobody's path
+            # was recorded near a new chunk.
+            try:
+                world_players = players.read_records(db_dir, os.environ.get('CACHE_KEY') or '')
+            except Exception:
+                world_players = []
+            explore, added = players.update_explore(explore, chunk_sets, live_state, int(time.time() * 1000), world_players)
             with open(explore_path, 'w', encoding='utf-8') as f:
                 json.dump(explore, f, separators=(',', ':'))
             print(t(f'新しく開拓されたチャンク: {added}', f'Newly explored chunks: {added}'))

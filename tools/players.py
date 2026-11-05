@@ -170,14 +170,39 @@ def _paths(players, dim, since):
     return out
 
 
-def attribute(new_chunks, dim, players, since):
-    """Give each newly appeared chunk to the player whose recent path passed closest to it."""
-    paths = _paths(players, dim, since)
-    if not paths:
-        paths = [(p['key'], [(p['x'], p['z'])]) for p in players if p.get('dim') == dim]
-    if not paths:
-        return {c: UNKNOWN for c in new_chunks}
+# A chunk this far (in blocks) from every path walked since the last map is more likely the work of whoever has been
+# around it at other times (their older footprints, where they are now, their bed or last death).
+NEAR = 192
+
+
+def _known_points(players, dim):
+    """Per player: every place known for them in this dimension, at any time."""
     out = {}
+    for p in players:
+        key = p.get('key')
+        if not key:
+            continue
+        pts = out.setdefault(key, set())
+        pts.update((t[2] // 16, t[3] // 16) for t in p.get('trail', []) if len(t) >= 4 and t[1] == dim)
+        if p.get('dim') == dim and isinstance(p.get('x'), int):
+            pts.add((p['x'] // 16, p['z'] // 16))
+        for k in ('bed', 'death'):
+            b = p.get(k)
+            if isinstance(b, dict) and b.get('dim') == dim and isinstance(b.get('x'), int):
+                pts.add((b['x'] // 16, b['z'] // 16))
+    return [(k, sorted(v)) for k, v in out.items() if v]
+
+
+def attribute(new_chunks, dim, players, since, others=()):
+    """Give each newly appeared chunk to the player whose recent path passed closest to it; failing that (no path
+    near it, as when the live check was not running), to whoever has otherwise been closest to it. `others` are more
+    player records (from the world itself) for the second look. Unknown only when nobody was ever seen in this
+    dimension."""
+    paths = _paths(players, dim, since)
+    wide = _known_points(list(players) + list(others), dim)
+    if not paths and not wide:
+        return {c: UNKNOWN for c in new_chunks}
+    out, far = {}, []
     for cx, cz in new_chunks:
         px, pz = cx * 16 + 8, cz * 16 + 8
         best, best_d = None, float('inf')
@@ -186,12 +211,32 @@ def attribute(new_chunks, dim, players, since):
             d = min(_seg_dist(px, pz, a, b) for a, b in segs)
             if d < best_d:
                 best, best_d = key, d
-        out[(cx, cz)] = best
+        out[(cx, cz)] = best or UNKNOWN
+        if best_d > NEAR:
+            far.append(((cx, cz), best_d))
+    if far and wide:
+        import numpy as np
+        cells = np.array([c for c, _ in far], dtype=np.float64)
+        best_d = np.array([d for _, d in far], dtype=np.float64)
+        best = [None] * len(far)
+        for key, pts in wide:
+            ref = np.array(pts, dtype=np.float64)
+            for i in range(0, len(cells), 2000):  # in parts, to keep memory small
+                part = cells[i:i + 2000]
+                d = np.sqrt(((part[:, None, :] - ref[None, :, :]) ** 2).sum(-1).min(1)) * 16
+                closer = d < best_d[i:i + 2000]
+                best_d[i:i + 2000][closer] = d[closer]
+                for j in np.nonzero(closer)[0]:
+                    best[i + j] = key
+        for (c, _), key in zip(far, best):
+            if key:
+                out[c] = key
     return out
 
 
-def update_explore(explore, chunk_sets, live_state, now):
-    """Add chunks that appeared since the last run; the very first run marks everything as BEFORE."""
+def update_explore(explore, chunk_sets, live_state, now, world_players=()):
+    """Add chunks that appeared since the last run; the very first run marks everything as BEFORE. Chunks left
+    unknown before are looked at again (more is known now)."""
     first = explore is None
     explore = explore or {'dims': {}}
     since = explore.get('updatedAt') or 0
@@ -199,9 +244,13 @@ def update_explore(explore, chunk_sets, live_state, now):
     added = 0
     for dim, chunks in chunk_sets.items():
         by_owner = explore['dims'].setdefault(dim, {})
+        unknown = {(c[0], c[1]) for c in by_owner.pop(UNKNOWN, [])}
         known = {(c[0], c[1]) for cs in by_owner.values() for c in cs}
-        new = chunks - known
-        owners = {c: BEFORE for c in new} if first else attribute(new, dim, players, since)
+        new = chunks - known - unknown
+        if first:
+            owners = {c: BEFORE for c in new}
+        else:
+            owners = attribute(new | (unknown & chunks), dim, players, since, world_players)
         for c, owner in owners.items():
             by_owner.setdefault(owner, []).append([c[0], c[1]])
         added += 0 if first else len(new)
