@@ -641,3 +641,6 @@ body:has(#building:not([hidden])) #crosshair { display: none; }
 body.tools-open #release-bar { bottom: 160px; }
 #update-bar:not([hidden]) ~ #release-bar { display: none; }
 @media (max-width: 700px) { #release-bar { left: 10px; right: 10px; transform: none; bottom: calc(16px + env(safe-area-inset-bottom)); white-space: normal; } }
+#version-box a { color: var(--accent); }
+#version-box .btns { margin-top: 8px; }
+#version-box .mini.primary { background: var(--accent); border-color: var(--accent); color: #06130d; font-weight: 700; }
