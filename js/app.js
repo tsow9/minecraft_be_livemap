@@ -3250,7 +3250,7 @@ async function fetchLive() {
 
 async function refreshConfig() {
   const cfg = await fetchJson(`${DATA}config.json?t=${Date.now()}`);
-  noteVersion(cfg?.version);
+  noteVersion(cfg?.release);
   if (!cfg || !Array.isArray(cfg.snapshots) || cfg.updatedAt === state.config.updatedAt) return;
   const before = snapshots();
   const wasLatest = state.snapshotIndex >= before.length - 1;
@@ -3428,8 +3428,9 @@ async function setupPlayers() {
 }
 
 // ---------- staying on the newest version of the site ----------
-// When a new version is published, a small bar offers to switch; the page comes back to the same spot.
-const APP_VERSION = (document.querySelector('script[src*="js/app.js"]')?.src.match(/[?&]v=([\w-]+)/) || [])[1] || '';
+// When a new release is published (VERSION: not every small change), a small bar offers to switch; the page comes
+// back to the same spot.
+const APP_VERSION = document.querySelector('meta[name="blockmap-release"]')?.content || '';
 let newVersion = null;
 
 function noteVersion(v) {

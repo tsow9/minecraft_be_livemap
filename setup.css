@@ -130,3 +130,9 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 @media (max-width: 600px) {
   .step { padding: 16px; }
 }
+/* Step 5: the site's address, in a box like step 4's. */
+.sitebox.ready { border-color: var(--accent); background: rgba(62, 207, 142, .06); }
+.sitebox .url { margin: 8px 0 10px; font-size: 16px; overflow-wrap: anywhere; }
+.sitebox .url code { font-size: 15px; color: var(--fg); }
+.sitebox .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
+.sitebox .row .copy { margin-left: 0; padding: 6px 12px; }

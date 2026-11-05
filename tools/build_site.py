@@ -19,6 +19,15 @@ SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'apple-touch-icon.png',
 MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 
 
+def release():
+    """The release number (VERSION at the top of the repository, e.g. 1.2.0)."""
+    try:
+        with open(os.path.join(ROOT, 'VERSION'), encoding='utf-8') as f:
+            return f.read().strip()[:20]
+    except OSError:
+        return ''
+
+
 def load_json(path):
     try:
         with open(path, encoding='utf-8') as f:
@@ -43,7 +52,8 @@ def add_world(data, put, items_to, version):
             to = items_to if name == 'items.json' and items_to else put
             os.makedirs(to, exist_ok=True)
             shutil.copy2(os.path.join(data, name), to)
-    cfg['version'] = version  # open pages compare this with their own and switch to the new site
+    cfg['version'] = version  # names the files of this build (so browsers fetch new ones)
+    cfg['release'] = release()  # open pages offer to switch only when this changes (VERSION, set at each release)
     with open(os.path.join(put, 'config.json'), 'w', encoding='utf-8') as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     return cfg
@@ -81,6 +91,7 @@ def main():
     with open(page, encoding='utf-8') as f:
         html = f.read()
     html = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)"', rf'\1?v={version}"', html)
+    html = html.replace('<meta charset="utf-8">', f'<meta charset="utf-8">\n<meta name="blockmap-release" content="{release()}">', 1)
     with open(page, 'w', encoding='utf-8') as f:
         f.write(html)
     if folder:

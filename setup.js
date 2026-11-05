@@ -98,10 +98,13 @@
       : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます。', 'Once filled in, the buttons in steps 3–5 open it directly.');
     // Only the exact address: from the site itself, or from what publishing it wrote (site-info branch).
     const site = siteUrl;
-    $('#site-link').classList.toggle('off', !site);
-    if (site) $('#site-link').href = site; else $('#site-link').removeAttribute('href');
-    $('#site-hint').innerHTML = site ? `${T('サイトのアドレス:', 'Your site: ')}<code>${site}</code><button class="copy" type="button" data-text="${site}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button>`
-      : repo ? T('サイトができると、ここにアドレスが出ます。', 'Your site\'s address appears here once it is made.') : '';
+    const box = $('#site-box');
+    box.classList.toggle('ready', !!site);
+    box.innerHTML = site
+      ? `<b>${T('サイトのアドレス', 'Your site')}</b>
+        <div class="url"><code>${esc(site)}</code></div>
+        <p class="row"><a class="btn" href="${esc(site)}" data-count="open-site" target="_blank" rel="noopener">${T('サイトを開く', 'Open my site')}</a><button class="copy" type="button" data-text="${esc(site)}"><svg class="ic"><use href="#i-copy"/></svg>${T('アドレスをコピー', 'Copy the address')}</button></p>`
+      : `<span class="small">${T('サイトができると、ここにアドレスが出ます。', 'Your site\'s address appears here once it is made.')}</span>`;
   }
 
   // ---- copy buttons ----
