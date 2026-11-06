@@ -263,15 +263,25 @@ async function loadTimer() {
   const state = !r.set ? `<p class="help">${tl('まだ設定されていません。')}</p>`
     : r.ok ? `<p class="help good">${tl('✓ 動いています(最後に起動: {time})', { time: esc(timeText(r.last)) })}</p>`
       : `<p class="help bad">${tl('✕ トークンが使えません(期限切れなど)。作り直して、もう一度貼ってください。')}</p>`;
-  body.innerHTML = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 10 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub のトークンを 1 つ登録します。このリポジトリの自動処理を起動する権限だけのトークンです。')}</p>${state}
-    <ol class="help timer-steps">
+  const pasteForm = `<form id="timer-form" class="timer-form"><input id="timer-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="${esc(tl('トークン'))}"><button class="mini primary" type="submit">${tl('保存')}</button></form>`;
+  const pasteSteps = `<ol class="help timer-steps">
       <li>${tl('下のボタンで GitHub を開きます。')}</li>
       <li>${tl('「Repository access」で「Only select repositories」を選び、{repo} を選びます。', { repo: `<b>${esc(r.repo || '')}</b>` })}</li>
       <li>${tl('いちばん下の「Generate token」を押し、表示されたトークンをコピーします。')}</li>
       <li>${tl('下の欄に貼って「保存」を押します。')}</li>
     </ol>
-    <p class="btns"><a class="mini" href="${esc(make)}" target="_blank" rel="noopener">${tl('GitHub でトークンを作る')}</a></p>
-    <form id="timer-form" class="timer-form"><input id="timer-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="${esc(tl('トークン'))}"><button class="mini primary" type="submit">${tl('保存')}</button></form>`;
+    <p class="btns"><a class="mini" href="${esc(make)}" target="_blank" rel="noopener">${tl('GitHub でトークンを作る')}</a></p>${pasteForm}`;
+  const intro = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 10 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub と連携します。このリポジトリの自動処理を起動する権限だけです。')}</p>`;
+  body.innerHTML = intro + state + (r.app
+    ? `<ol class="help timer-steps">
+        <li>${tl('「Blockmap を GitHub に入れる」を押し、{repo} を選んで「Install」を押します。', { repo: `<b>${esc(r.repo || '')}</b>` })}</li>
+        <li>${tl('「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。')}</li>
+      </ol>
+      <p class="btns"><a class="mini" href="https://github.com/apps/${encodeURIComponent(r.app)}/installations/new" target="_blank" rel="noopener">${tl('Blockmap を GitHub に入れる')}</a>
+        <button class="mini primary" type="button" id="timer-connect">${tl('GitHub と連携する')}</button></p>
+      <div id="timer-code"></div>
+      <details class="timer-alt"><summary>${tl('トークンを貼る方法(うまくいかないとき)')}</summary>${pasteSteps}</details>`
+    : pasteSteps);
   $('#timer-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const token = $('#timer-token').value.trim();
@@ -281,6 +291,29 @@ async function loadTimer() {
     toast(res?.ok && d?.ok ? tl('タイマーを設定しました') : tl('このトークンでは起動できませんでした'));
     loadTimer();
   });
+  $('#timer-connect')?.addEventListener('click', connectTimer);
+}
+// "GitHub と連携する": a code to enter on GitHub, then the site waits for the approval.
+async function connectTimer() {
+  const box = $('#timer-code');
+  const res = await fetch(`${share.url}/timer/connect`, { method: 'POST' }).catch(() => null);
+  const d = await res?.json().catch(() => null);
+  if (!d?.user_code) { toast(tl('GitHub と連携できませんでした')); return; }
+  box.innerHTML = `<div class="timer-codebox"><span>${esc(d.user_code)}</span><button class="mini" type="button" id="timer-copy">${tl('コピー')}</button></div>
+    <p class="btns"><a class="mini primary" href="${esc(d.uri || 'https://github.com/login/device')}" target="_blank" rel="noopener">${tl('GitHub を開いてコードを入れる')}</a></p>
+    <p class="help">${tl('許可すると、ここが自動で「動いています」に変わります。')}</p>`;
+  $('#timer-copy').addEventListener('click', () => copyText(d.user_code, tl('コピーしました')));
+  const until = Date.now() + (d.expires_in || 900) * 1000;
+  let wait = Math.max(5, d.interval || 5) * 1000;
+  const look = async () => {
+    if (Date.now() > until || !document.body.contains(box)) return;
+    const p = await fetch(`${share.url}/timer/poll`, { method: 'POST' }).then((x) => x.json()).catch(() => null);
+    if (p?.pending) { if (p.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
+    if (p?.ok) toast(tl('タイマーを設定しました'));
+    else toast(p?.error === 'access_denied' ? tl('許可されませんでした') : tl('GitHub と連携できませんでした'));
+    loadTimer();
+  };
+  setTimeout(look, wait);
 }
 
 // Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.

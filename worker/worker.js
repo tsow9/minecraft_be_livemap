@@ -154,7 +154,30 @@ export default {
       // The timer's GitHub token (admin only): saved, never shown again; the page sees only whether it works.
       if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'GET') {
         const t = await kvGet(env, 'timer');
-        return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.ok ?? null, last: t?.last || null, status: t?.status || null });
+        return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.ok ?? null, last: t?.last || null, status: t?.status || null,
+          app: env.GH_APP_SLUG && env.GH_APP_CLIENT_ID ? env.GH_APP_SLUG : null, via: t?.via || null });
+      }
+      // Connecting the GitHub App with a code (GitHub's device flow: the site needs no secret). Start: a code to enter
+      // at github.com/login/device; then the page asks every few seconds whether it was approved.
+      if (path === '/timer/connect' && admin && me.via === 'microsoft' && req.method === 'POST') {
+        if (!env.GH_APP_CLIENT_ID) return json({ error: 'no app' }, 400);
+        const r = await ghForm('https://github.com/login/device/code', { client_id: env.GH_APP_CLIENT_ID });
+        if (!r?.device_code) return json({ error: 'github', detail: r?.error || null }, 502);
+        await kvPut(env, 'timer_device', { code: r.device_code, until: Date.now() + (r.expires_in || 900) * 1000 });
+        return json({ user_code: r.user_code, uri: r.verification_uri, interval: r.interval || 5, expires_in: r.expires_in || 900 });
+      }
+      if (path === '/timer/poll' && admin && me.via === 'microsoft' && req.method === 'POST') {
+        const d = await kvGet(env, 'timer_device');
+        if (!d?.code || d.until < Date.now()) return json({ error: 'expired' });
+        const r = await ghForm('https://github.com/login/oauth/access_token', {
+          client_id: env.GH_APP_CLIENT_ID, device_code: d.code, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' });
+        if (r?.error === 'authorization_pending' || r?.error === 'slow_down') return json({ pending: true, interval: r.interval || null });
+        if (!r?.access_token) return json({ error: r?.error || 'github' });
+        await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('timer_device').run();
+        await kvPut(env, 'timer', { token: r.access_token, via: 'app', refresh: r.refresh_token || null,
+          expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null });
+        const status = await startLiveCheck(env);
+        return json({ ok: status === 204, status });
       }
       if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'POST') {
         const b = await req.json().catch(() => null);
@@ -416,9 +439,26 @@ async function kvPut(env, k, v) {
   await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
     .bind(k, JSON.stringify(v), Date.now()).run();
 }
+// A form post to GitHub's sign-in endpoints, answered in JSON.
+async function ghForm(url, body) {
+  try {
+    const res = await fetch(url, { method: 'POST', body: new URLSearchParams(body),
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Blockmap' } });
+    return await res.json();
+  } catch { return null; }
+}
+
 // Starts the repository's live check (GitHub's workflow_dispatch) with the admin's token; remembers how it went.
 async function startLiveCheck(env) {
-  const t = await kvGet(env, 'timer');
+  let t = await kvGet(env, 'timer');
+  // A token from the GitHub App that expires (if the app's tokens expire): renewed with its refresh token first.
+  if (t?.via === 'app' && t.refresh && t.expires && t.expires - Date.now() < 10 * 60000 && env.GH_APP_CLIENT_ID) {
+    const r = await ghForm('https://github.com/login/oauth/access_token', { client_id: env.GH_APP_CLIENT_ID, grant_type: 'refresh_token', refresh_token: t.refresh });
+    if (r?.access_token) {
+      t = { ...t, token: r.access_token, refresh: r.refresh_token || t.refresh, expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null };
+      await kvPut(env, 'timer', t);
+    }
+  }
   if (!t?.token || !/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return null;
   let status = 0;
   try {
