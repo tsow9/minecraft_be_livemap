@@ -42,6 +42,7 @@
   <label class="field"><span data-en="Link to the repository you created">作ったリポジトリのリンク</span>
     <input id="repo" type="text" placeholder="https://github.com/yourname/blockmap" autocomplete="off" spellcheck="false"></label>
   <p class="hint" id="repo-hint"></p>
+  <p class="hint" data-en="Closed the repository's page? &lt;a href=&quot;#lost-repo&quot;&gt;Finding the link&lt;/a&gt;">リポジトリの画面を閉じてしまった場合は、<a href="#lost-repo">リンクの探し方</a>を見てください。</p>
 </li>
 
 <li class="step">
@@ -86,6 +87,14 @@
 
 <section class="trouble" id="trouble">
   <h2 data-en="Troubleshooting">トラブルシューティング</h2>
+  <details id="lost-repo">
+    <summary data-en="I closed the repository's page (step 1's link)">リポジトリの画面を閉じてしまった(手順 1 のリンク)</summary>
+    <ol>
+      <li data-en="Open &lt;a href=&quot;https://github.com/settings/repositories&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;your repositories on GitHub&lt;/a&gt; (sign in if asked).">GitHub の<a href="https://github.com/settings/repositories" target="_blank" rel="noopener">自分のリポジトリの一覧</a>を開きます(ログインを求められたら、ログインします)。</li>
+      <li data-en="Press the one you made in step 1 (for example &lt;code&gt;yourname/blockmap&lt;/code&gt;).">手順 1 で作ったもの(例:<code>yourname/blockmap</code>)を押します。</li>
+      <li data-en="Copy the address at the top of the browser and paste it into step 1's box.">ブラウザの上に出ているアドレスをコピーして、手順 1 の欄に貼ります。</li>
+    </ol>
+  </details>
   <details>
     <summary data-en="The code does not appear in step 4">手順 4 にコードが出てこない</summary>
     <ul>

@@ -107,6 +107,13 @@
       : `<span class="small">${T('サイトができると、ここにアドレスが出ます。', 'Your site\'s address appears here once it is made.')}</span>`;
   }
 
+  // A link to a troubleshooting entry opens it.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    const d = a && document.getElementById(a.getAttribute('href').slice(1));
+    if (d && d.tagName === 'DETAILS') d.open = true;
+  });
+
   // ---- copy buttons ----
   let toastTimer = null;
   function toast(text) {
@@ -160,17 +167,29 @@
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(repo.toLowerCase()));
     return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
   };
+  // Until the address is known, the addresses the workflow would give it are all tried: a new Cloudflare account gets
+  // the GitHub owner's name, or that name with -2, -3 when it is taken (tools/cloudflare.sh).
+  function candidates(repo) {
+    if (siteUrl) return [siteUrl];
+    const one = siteOf(repo);
+    const [, name, sub] = one.match(/^https:\/\/([^.]+)\.([^.]+)\.workers\.dev$/) || [];
+    return name ? [one, `https://${name}.${sub}-2.workers.dev`, `https://${name}.${sub}-3.workers.dev`] : [one];
+  }
+  async function askOne(base, tag) {
+    const res = await fetch(`${base}/api/setup`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    const s = await res.json();
+    if (!s?.state || s.r !== tag) throw new Error('another site');
+    return [base, s];
+  }
   async function askSite(repo) {
-    const base = (siteUrl || siteOf(repo)).replace(/\/$/, '');
-    try {
-      const res = await fetch(`${base}/api/setup`, { cache: 'no-store' });
-      if (!res.ok) return null;
-      const s = await res.json();
-      if (!s?.state || s.r !== await repoTag(repo)) return null;
-      if (siteUrl !== base) { siteUrl = base; refresh(); }  // it answered about this repository: the address is sure
-      if (!prefsSent) sendPrefs(base);
-      return s;
-    } catch { return null; }
+    const tag = await repoTag(repo);
+    let hit;
+    try { hit = await Promise.any(candidates(repo).map((b) => askOne(b.replace(/\/$/, ''), tag))); } catch { return null; }
+    const [base, s] = hit;
+    if (siteUrl !== base) { siteUrl = base; refresh(); }  // it answered about this repository: the address is sure
+    if (!prefsSent) sendPrefs(base);
+    return s;
   }
   let lastSiteLook = 0;
   // This browser's language and time zone, for the runs' messages and the map's dates (until the admin's map page says).
@@ -301,8 +320,7 @@
     box.className = `status ${state?.kind || ''}`;
     secretHint();
     if (state?.kind && state.kind !== 'waiting') count(`status-${state.kind}`);  // code, login-failed, making, map-failed, done
-    const paused = !fromSite && limited > Date.now() && state?.kind !== 'done'
-      ? `<p class="small">${T('GitHub の決まりで、この表示の更新を少し休んでいます。少しすると、また動き出します。', 'GitHub limits how often this page may ask, so updates here pause for a while, then carry on.')}</p>` : '';
+    const paused = '';
     // Only when it changed: asked every 2 seconds, the box would otherwise be remade under a finger about to press.
     const next = pick(html) + paused;
     if (next !== lastBox) { box.innerHTML = next; lastBox = next; }
