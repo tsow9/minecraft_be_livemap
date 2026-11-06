@@ -351,7 +351,7 @@ def _link(g, dim, gates):
 
 
 def name_portals(gates, previous):
-    """Names Nether portals ポータル1, ポータル2…: a portal and the one on the other side share a name only when each leads
+    """Names Nether portals ゲート1, ゲート2…: a portal and the one on the other side share a name only when each leads
     to the other; every other portal gets its own number. Names from the last run are kept where they still fit."""
     def same(a, b):
         return abs(a['x'] - b['x']) <= 3 and abs(a['y'] - b['y']) <= 3 and abs(a['z'] - b['z']) <= 3
@@ -383,7 +383,7 @@ def name_portals(gates, previous):
             keep = counter
         taken.add(keep)
         for _, g in group:
-            g['name'] = f'ポータル{keep}'
+            g['name'] = f'ゲート{keep}'
     return gates
 
 
@@ -760,7 +760,7 @@ def main():
             sys.exit(t('地図にできるデータがありませんでした。', 'Nothing to make a map from.'))
         block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
         n_portals = write_portals(args.site)
-        print(t(f'ポータル: {n_portals} か所', f'Portals: {n_portals}'))
+        print(t(f'ゲート・ポータル: {n_portals} か所', f'Portals: {n_portals}'))
         tell_setup('save')
         update_config(args.site, snap_id, staging, world_saved)
     finally:

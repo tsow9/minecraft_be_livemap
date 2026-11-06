@@ -61,7 +61,7 @@ Object.assign(I18N_EN, {
   // search
   'ここで検索': 'Search here', '検索と強調を消す': 'Clear the search and highlights',
   'プレイヤー': 'Player', 'ベッド': 'Bed', '最終死亡地点': 'Last death point', '死亡': 'death', '死亡地点': 'Death point',
-  'ネザーポータル': 'Nether Portal',
+  'ネザーゲート': 'Nether Portal', 'ゲート': 'Portal',
   '{what} すべて': '{what} (all)', '{n}匹・地図にまとめて表示': '{n} · show all on the map', '{n}人・地図にまとめて表示': '{n} · show all on the map',
   'エンチャント': 'Enchantment ',
   '村人(無職)': 'Villager (unemployed)', '無職': 'unemployed', '行商人': 'Wandering Trader', '村人': 'Villager',
@@ -73,10 +73,10 @@ Object.assign(I18N_EN, {
   '空っぽ': 'Empty', '飼い主: {name}': 'Owner: {name}', 'わからない': 'unknown',
   '一覧に戻る': 'Back to the list', '複数の候補があります': 'Several things are here', '見つかりませんでした': 'Nothing found',
   // nether portals and routes
-  '{dim}側のポータルはまだ見つかっていません': 'No portal found in the {dim} yet',
-  '{dim}のポータル生成目安': 'A portal would appear in the {dim} around', 'その場所を見る': 'Show that place',
+  '{dim}側のゲートはまだ見つかっていません': 'No portal found in the {dim} yet',
+  '{dim}のゲート生成目安': 'A portal would appear in the {dim} around', 'その場所を見る': 'Show that place',
   'ネザー座標の換算': 'Nether coordinates', 'ネザーで1ブロック進むと、地上では8ブロック進みます。': '1 block in the Nether is 8 blocks in the Overworld.',
-  '地図で見る': 'Show on the map', '今の地図の中心を入れる': 'Use the center of the map', 'ネザーゲートを地図に表示': 'Show Nether Portals on the map', 'ポータルを地図に表示': 'Show portals on the map',
+  '地図で見る': 'Show on the map', '今の地図の中心を入れる': 'Use the center of the map', 'ネザーゲートを地図に表示': 'Show Nether Portals on the map', 'ゲートやポータルを地図に表示': 'Show portals on the map',
   '{s}秒': '{s}s', '{m}分': '{m}min ', '走って約{time}': 'About {time} sprinting', '・途中に溶岩あり': ' · lava on the way',
   '行き先を選ぶ': 'Choose destination', '行き先を一覧から選ぶか、地図でタップしてください': 'Pick a destination from the list or tap the map',
   '{n}ブロック': '{n} blocks', 'ネザー経由なら約{n}ブロック': 'About {n} blocks through the Nether', '走って…計算中': 'Sprinting… calculating',
@@ -123,7 +123,7 @@ Object.assign(I18N_EN, {
   'ゲームモード': 'Game Mode', 'チート': 'Cheats', '<h3>ルール</h3>': '<h3>Rules</h3>', '{time} 時点': 'as of {time}',
   // the page around the map
   '新しいバージョンがあります': 'A new version is available', '更新する': 'Update', '最新版に更新しました': 'Updated to the latest version',
-  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語設定': 'Language', '日付で選ぶ': 'Pick a date', 'スライダーを動かすと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。': 'Move the slider to see the map of that day. Maps are kept daily for the last 30 days, weekly for half a year, then monthly.', '白い点をドラッグで形を直す・図形やピンをドラッグで動かす': 'Drag the white points to reshape · drag a shape or pin to move it', '編集(形を直す・動かす)': 'Edit (reshape and move)', '楕円': 'Ellipse', '範囲で消す': 'Delete in an area', '始点をタップ → 終点をタップで完成': 'Tap the start → tap the end', 'ドラッグすると、その大きさの楕円になります': 'Drag to draw an ellipse of that size', '消したい範囲をドラッグで囲む': 'Drag a box around what to delete', '囲んだ範囲に消せるものはありません': 'Nothing to delete in that box', '{n}個を消しますか?': 'Delete {n} item(s)?', '{n}個を消しました': 'Deleted {n} item(s)', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ポータル{n}': 'Nether Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
+  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語設定': 'Language', '日付で選ぶ': 'Pick a date', 'スライダーを動かすと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。': 'Move the slider to see the map of that day. Maps are kept daily for the last 30 days, weekly for half a year, then monthly.', '白い点をドラッグで形を直す・図形やピンをドラッグで動かす': 'Drag the white points to reshape · drag a shape or pin to move it', '編集(形を直す・動かす)': 'Edit (reshape and move)', '楕円': 'Ellipse', '範囲で消す': 'Delete in an area', '始点をタップ → 終点をタップで完成': 'Tap the start → tap the end', 'ドラッグすると、その大きさの楕円になります': 'Drag to draw an ellipse of that size', '消したい範囲をドラッグで囲む': 'Drag a box around what to delete', '囲んだ範囲に消せるものはありません': 'Nothing to delete in that box', '{n}個を消しますか?': 'Delete {n} item(s)?', '{n}個を消しました': 'Deleted {n} item(s)', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Nether Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
   // 管理者メニュー: the Realm's payment
   'Realm の支払い': 'Realm payment', 'Realms情報に、次の支払い日と料金が出ます。': 'Realms info shows the next payment day and the price.',
   '支払日': 'Payment day', '保存しました': 'Saved', 'なし': 'None',

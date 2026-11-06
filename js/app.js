@@ -2213,13 +2213,13 @@ function setupSearch() {
       if (!DIMS[dim]) continue;
       for (const e of shownEnds(dim)) {
         out.push({ kind: 'gate', dim, x: e.x, z: e.z, title: endTitle(e), hay: `${endTitle(e)} ${tl('エンドポータル')} ${tl('ポータル')} end portal`,
-          icon: e.kind === 'end_gateway' ? GATEWAY_SVG : END_SVG, meta: `${endSub(e)}  ${where(dim, e.x, e.z)}`, go: () => goTo(e.x, e.z, dim, 1) });
+          icon: e.kind === 'end_gateway' ? GATEWAY_SVG : END_SVG, meta: `${endKind(e)}${endSub(e)}  ${where(dim, e.x, e.z)}`, go: () => goTo(e.x, e.z, dim, 1) });
       }
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
-        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーポータル'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーポータル')} ${tl('ポータル')} ゲート`,
-          icon: PORTAL_SVG, meta: `${tl('ネザーポータル')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーゲート'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーゲート')} ${tl('ゲート')} ネザーポータル`,
+          icon: PORTAL_SVG, meta: `${tl('ネザーゲート')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
     return out;
@@ -2910,10 +2910,10 @@ async function loadBiomes() {
 }
 const BIOME_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 9h-3.5l4.5 6H5l4.5-6H6z"/><path d="M12 18v3"/></svg>';
 
-// Portals the map maker named itself (ポータル1… or, from older maps, ゲート1…) read as Portal 1… in English and ポータル1… in Japanese.
+// Gates the map maker named itself (ゲート1, ゲート2…; ポータル1… for a few minutes on 2026-11-06) read as Nether Portal 1… in English.
 function gateName(g) {
   const m = /^(?:ゲート|ポータル)(\d+)$/.exec(g?.name || '');
-  return m ? tl('ポータル{n}', { n: m[1] }) : g?.name || '';
+  return m ? tl('ゲート{n}', { n: m[1] }) : g?.name || '';
 }
 
 async function loadPortals() {
@@ -2933,7 +2933,9 @@ const GATEWAY_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="19" height="
   + '<circle cx="11" cy="11" r="5" fill="none" stroke="#c39bff" stroke-width="1.6"/><path d="M9 9h1M12.5 12h1M11 7.5h1" stroke="#7ff0d8" stroke-width="1.4"/></g></svg>';
 // End portals only once someone has opened them (all the eyes in); End gateways always.
 const shownEnds = (dim) => (state.ends?.[dim] || []).filter((e) => e.kind === 'end_gateway' || e.active);
-const endTitle = (e) => (e.kind === 'end_gateway' ? tl('エンドゲートウェイ') : tl('エンドポータル'));
+// On the map an End portal reads ポータル (as a Nether portal reads ゲート1); the bubble says which kind.
+const endTitle = (e) => (e.kind === 'end_gateway' ? tl('エンドゲートウェイ') : LANG === 'en' ? tl('エンドポータル') : 'ポータル');
+const endKind = (e) => (e.kind === 'end_gateway' || LANG === 'en' ? '' : 'エンドポータル・');
 function endSub(e) {
   if (e.kind === 'end_gateway') return tl('エンドの外側の島へ');
   if (e.kind === 'end_exit') return tl('オーバーワールドへの帰り道');
@@ -2989,7 +2991,7 @@ function renderPortals() {
     const place = { id: `end:${state.dim}:${e.x}:${e.y}:${e.z}`, name: endTitle(e), x: e.x, z: e.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>${esc(endTitle(e))}</h4><div class="sub">${esc(endSub(e))}</div><div class="xyz">X ${e.x} / Y ${e.y} / Z ${e.z}</div>`;
+      el.innerHTML = `<h4>${esc(endTitle(e))}</h4><div class="sub">${esc(endKind(e) + endSub(e))}</div><div class="xyz">X ${e.x} / Y ${e.y} / Z ${e.z}</div>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       acts.append(routeButton(place));
       el.append(acts);
@@ -3001,12 +3003,12 @@ function renderPortals() {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(gateName(g) || tl('ポータル'))}</span></div>` }),
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(gateName(g) || tl('ゲート'))}</span></div>` }),
     });
-    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーポータル'), x: g.x, z: g.z, dim: state.dim };
+    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>${esc(gateName(g) || tl('ネザーポータル'))}</h4><div class="sub">${tl('ネザーポータル')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      el.innerHTML = `<h4>${esc(gateName(g) || tl('ネザーゲート'))}</h4><div class="sub">${tl('ネザーゲート')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       acts.append(routeButton(place));
       const link = portalLink(g, state.dim);
@@ -3019,9 +3021,9 @@ function renderPortals() {
           acts.append(button(tl('リンク先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
           // No gate on the other side yet: where the game will make one when someone goes through.
-          line.textContent = tl('{dim}側のポータルはまだ見つかっていません', { dim: name });
+          line.textContent = tl('{dim}側のゲートはまだ見つかっていません', { dim: name });
           const spot = document.createElement('div'); spot.className = 'sub';
-          spot.textContent = `${tl('{dim}のポータル生成目安', { dim: name })} X ${link.tx} Z ${link.tz}`;
+          spot.textContent = `${tl('{dim}のゲート生成目安', { dim: name })} X ${link.tx} Z ${link.tz}`;
           el.append(line, spot);
           acts.append(button(tl('その場所を見る'), () => goTo(link.tx, link.tz, link.other, 1)));
         }
@@ -3116,7 +3118,7 @@ function routePlaces(dim) {
     if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}${DOT}${tl('最終死亡地点')}`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーポータル'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }
