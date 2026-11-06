@@ -135,6 +135,7 @@ Object.assign(I18N_EN, {
   'ログアウトしますか?': 'Sign out?',
   '地図を作っています': 'Making the map', '数分で、ここに自動で表示されます。': 'It appears here by itself in a few minutes.',
   '不明': 'Unknown',
+  '設定': 'Settings', '言語': 'Language', 'タイムゾーン': 'Time zone', '端末に合わせる': 'Same as this device',
   'エンドポータル': 'End Portal', 'エンドゲートウェイ': 'End Gateway', 'エンドの外側の島へ': 'To the outer End islands',
   'オーバーワールドへの帰り道': 'The way back to the Overworld', '動いています': 'Active', 'エンダーアイ {n}/{all}': 'Eyes of Ender {n}/{all}', 'ポータル': 'portal',
   '職業ブロック': 'Job site', 'なし': 'None',

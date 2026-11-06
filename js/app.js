@@ -111,7 +111,7 @@ function showInvites(role) {
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
   $('#btn-site').hidden = !DATA || role !== 'admin';
-  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); sendPrefs(); }
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); }
   renderMe();
 }
 function renderMe() {
@@ -196,12 +196,58 @@ async function loadPrivacy() {
     }
   } catch { list.innerHTML = tl('<li class="sub">設定を読み込めませんでした</li>'); }
 }
-// The admin's language and time zone: the automatic runs write their messages and date the maps by them.
-function sendPrefs() {
-  let tz = '';
-  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* old browser */ }
-  if (!tz) return;
-  fetch(`${share.url}/prefs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: LANG === 'en' ? 'en' : 'ja', tz }) }).catch(() => {});
+// The admin's language and time zone also become the site's (the automatic runs write their messages and date the
+// maps by them), but only when the admin changes them in 設定, never just by opening the page.
+function sendPrefs(lang, tz) {
+  if (share.me?.role !== 'admin' || !share.url) return Promise.resolve();
+  return fetch(`${share.url}/prefs`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lang: lang === 'en' ? 'en' : 'ja', tz: tz || DEVICE_TZ }) }).catch(() => {});
+}
+
+// 設定 (each person's own): the language and the time zone. PC: top right; phones: bottom left.
+const TIME_ZONES = ['Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Taipei', 'Asia/Hong_Kong', 'Asia/Singapore',
+  'Asia/Bangkok', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Sao_Paulo', 'Pacific/Honolulu', 'UTC'];
+function tzLabel(tz) {
+  let off = '';
+  try { off = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value || ''; } catch { /* unknown */ }
+  return `${tz.replace(/_/g, ' ')}${off ? ` (${off.replace('GMT', 'UTC')})` : ''}`;
+}
+function setupSettings() {
+  const menu = $('#lang-menu'), btn = $('#lang-switch'), pick = $('#tz-pick'), list = $('#tz-list');
+  const show = (open) => { menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); if (!open) list.hidden = true; };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); show(menu.hidden); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#lang')) show(false); });
+  menu.querySelectorAll('[data-lang]').forEach((b) => {
+    b.classList.toggle('on', b.dataset.lang === LANG);
+    b.addEventListener('click', async () => {
+      if (b.dataset.lang === LANG) return;
+      await sendPrefs(b.dataset.lang, TZ);
+      setLang(b.dataset.lang);
+    });
+  });
+  const label = () => { pick.textContent = TZ ? tzLabel(TZ) : `${tl('端末に合わせる')}${DEVICE_TZ ? `(${DEVICE_TZ.replace(/_/g, ' ')})` : ''}`; };
+  label();
+  pick.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!list.hidden) { list.hidden = true; return; }
+    const zones = [...new Set([DEVICE_TZ, ...TIME_ZONES].filter(Boolean))];
+    list.innerHTML = `<button type="button" data-tz="" class="${TZ ? '' : 'on'}">${esc(tl('端末に合わせる'))}</button>`
+      + zones.map((z) => `<button type="button" data-tz="${esc(z)}" class="${z === TZ ? 'on' : ''}">${esc(tzLabel(z))}</button>`).join('');
+    list.hidden = false;
+    list.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  });
+  list.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tz]');
+    if (!b) return;
+    TZ = b.dataset.tz || null;
+    try { if (TZ) localStorage.setItem('blockmap.tz', TZ); else localStorage.removeItem('blockmap.tz'); } catch { /* private mode */ }
+    sendPrefs(LANG, TZ);
+    list.hidden = true;
+    label();
+    // Times on the page follow at once.
+    renderTimeline?.(); refreshBase?.(); refreshLive?.();
+  });
 }
 
 // Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
@@ -901,9 +947,23 @@ const DOT = LANG === 'en' ? ' · ' : '・';
 const paren = (s) => (LANG === 'en' ? ` (${s})` : `(${s})`);
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 // 10月30日 / Oct 30
-const dayText = (d) => (LANG === 'en' ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}` : `${d.getMonth() + 1}月${d.getDate()}日`);
+// Each person's time zone (設定): times and days shown in it; the device's own when not chosen.
+let TZ = null;
+try { TZ = localStorage.getItem('blockmap.tz') || null; } catch { /* private mode */ }
+const DEVICE_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } })();
+function tzParts(d) {
+  if (!TZ) return { y: d.getFullYear(), mo: d.getMonth(), d: d.getDate(), h: d.getHours(), mi: d.getMinutes() };
+  const o = {};
+  try {
+    for (const p of new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(d)) o[p.type] = p.value;
+  } catch { TZ = null; return tzParts(d); }
+  return { y: +o.year, mo: +o.month - 1, d: +o.day, h: +o.hour % 24, mi: +o.minute };
+}
+const dayLabel = (mo, d) => (LANG === 'en' ? `${MONTHS_EN[mo]} ${d}` : `${mo + 1}月${d}日`);
+const dayText = (d) => { const p = tzParts(d); return dayLabel(p.mo, p.d); };
 // A saved map's day (its id is the date; the label the map maker wrote is Japanese).
-const snapDay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s.id) ? dayText(new Date(`${s.id}T00:00`)) : (s.label || s.id));
+const snapDay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s.id) ? dayLabel(+s.id.slice(5, 7) - 1, +s.id.slice(8, 10)) : (s.label || s.id));
 // Game words in the page's language: items.json and blocks.json carry the game's own Japanese and English names.
 const gameNames = (kind) => (LANG === 'en' && state.items?.en?.[kind]) || state.items?.[kind] || {};
 // oak_log → Oak Log, for a block or item the language files do not name.
@@ -913,7 +973,8 @@ const readableId = (id) => String(id).split(':')[0].replace(/_/g, ' ').replace(/
 function snapText(snap) {
   const t = new Date(snap.savedAt);
   if (!snap.savedAt || Number.isNaN(t.getTime())) return snapDay(snap);
-  return `${dayText(t)} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+  const p = tzParts(t);
+  return `${dayLabel(p.mo, p.d)} ${String(p.h).padStart(2, '0')}:${String(p.mi).padStart(2, '0')}`;
 }
 
 // With two or more worlds in the Realm, the corner also names the world shown, and opens the list of worlds.
@@ -1887,7 +1948,7 @@ function labelTimeline() {
   const s = snapshots()[state.snapshotIndex];
   const t = s?.savedAt ? new Date(s.savedAt) : null;
   $('#time-label').textContent = t && !Number.isNaN(t.getTime())
-    ? tl('{time} 時点', { time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}` }) : '';
+    ? tl('{time} 時点', { time: `${String(tzParts(t).h).padStart(2, '0')}:${String(tzParts(t).mi).padStart(2, '0')}` }) : '';
   if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.id)) $('#time-date').value = s.id;
 }
 
@@ -3159,9 +3220,9 @@ function playerName(key) {
 }
 function timeText(ms) {
   if (!ms) return '';
-  const t = new Date(ms);
+  const t = tzParts(new Date(ms));
   const pad = (n) => String(n).padStart(2, '0');
-  return `${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  return `${t.mo + 1}/${t.d} ${pad(t.h)}:${pad(t.mi)}`;
 }
 function agoText(ms) {
   if (!ms) return tl('未ログイン');
@@ -3604,15 +3665,7 @@ async function loadConfig() {
 
 async function main() {
   translatePage();
-  // 言語設定: opens a small list of the languages, each written in itself; the current one is marked.
-  const langMenu = $('#lang-menu'), langBtn = $('#lang-switch');
-  const showLang = (open) => { langMenu.hidden = !open; langBtn.setAttribute('aria-expanded', String(open)); };
-  langBtn.addEventListener('click', (e) => { e.stopPropagation(); showLang(langMenu.hidden); });
-  langMenu.querySelectorAll('button').forEach((b) => {
-    b.classList.toggle('on', b.dataset.lang === LANG);
-    b.addEventListener('click', () => (b.dataset.lang === LANG ? showLang(false) : setLang(b.dataset.lang)));
-  });
-  document.addEventListener('click', (e) => { if (!e.target.closest('#lang')) showLang(false); });
+  setupSettings();
   const cfg = await loadConfig();
   state.config = {
     title: cfg.title || 'Blockmap',
