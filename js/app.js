@@ -2218,8 +2218,8 @@ function setupSearch() {
     }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
-        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーゲート'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーゲート')} ${tl('ゲート')}`,
-          icon: PORTAL_SVG, meta: `${tl('ネザーゲート')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
+        out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーポータル'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーポータル')} ${tl('ポータル')} ゲート`,
+          icon: PORTAL_SVG, meta: `${tl('ネザーポータル')}  ${where(dim, g.x, g.z)}`, go: () => goTo(g.x, g.z, dim, 1) });
       }
     }
     return out;
@@ -2910,10 +2910,10 @@ async function loadBiomes() {
 }
 const BIOME_SVG = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 9h-3.5l4.5 6H5l4.5-6H6z"/><path d="M12 18v3"/></svg>';
 
-// Gates the map maker named itself (ゲート1, ゲート2…) read as Portal 1… in English; names people gave stay as they are.
+// Portals the map maker named itself (ポータル1… or, from older maps, ゲート1…) read as Portal 1… in English and ポータル1… in Japanese.
 function gateName(g) {
-  const m = /^ゲート(\d+)$/.exec(g?.name || '');
-  return m ? tl('ゲート{n}', { n: m[1] }) : g?.name || '';
+  const m = /^(?:ゲート|ポータル)(\d+)$/.exec(g?.name || '');
+  return m ? tl('ポータル{n}', { n: m[1] }) : g?.name || '';
 }
 
 async function loadPortals() {
@@ -3001,12 +3001,12 @@ function renderPortals() {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
-        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(gateName(g) || tl('ゲート'))}</span></div>` }),
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-22px)">${PORTAL_SVG}<span class="nm">${esc(gateName(g) || tl('ポータル'))}</span></div>` }),
     });
-    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim: state.dim };
+    const place = { id: `gate:${state.dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーポータル'), x: g.x, z: g.z, dim: state.dim };
     m.bindPopup(() => {
       const el = document.createElement('div'); el.className = 'pop';
-      el.innerHTML = `<h4>${esc(gateName(g) || tl('ネザーゲート'))}</h4><div class="sub">${tl('ネザーゲート')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
+      el.innerHTML = `<h4>${esc(gateName(g) || tl('ネザーポータル'))}</h4><div class="sub">${tl('ネザーポータル')}</div><div class="xyz">X ${g.x} / Y ${g.y} / Z ${g.z}</div>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       acts.append(routeButton(place));
       const link = portalLink(g, state.dim);
@@ -3019,9 +3019,9 @@ function renderPortals() {
           acts.append(button(tl('リンク先を見る'), () => goTo(link.gate.x, link.gate.z, link.other, 1)));
         } else {
           // No gate on the other side yet: where the game will make one when someone goes through.
-          line.textContent = tl('{dim}側のゲートはまだ見つかっていません', { dim: name });
+          line.textContent = tl('{dim}側のポータルはまだ見つかっていません', { dim: name });
           const spot = document.createElement('div'); spot.className = 'sub';
-          spot.textContent = `${tl('{dim}のゲート生成目安', { dim: name })} X ${link.tx} Z ${link.tz}`;
+          spot.textContent = `${tl('{dim}のポータル生成目安', { dim: name })} X ${link.tx} Z ${link.tz}`;
           el.append(line, spot);
           acts.append(button(tl('その場所を見る'), () => goTo(link.tx, link.tz, link.other, 1)));
         }
@@ -3116,7 +3116,7 @@ function routePlaces(dim) {
     if (p.death?.dim === dim) out.push({ id: `death:${p.key}`, name: `${p.name}${DOT}${tl('最終死亡地点')}`, x: p.death.x, z: p.death.z, dim, icon: DEATH_SVG });
   }
   for (const g of shownGates(dim)) {
-    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーゲート'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
+    out.push({ id: `gate:${dim}:${g.x}:${g.y}:${g.z}`, name: gateName(g) || tl('ネザーポータル'), x: g.x, z: g.z, dim, icon: PORTAL_SVG });
   }
   return out;
 }

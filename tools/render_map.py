@@ -351,32 +351,39 @@ def _link(g, dim, gates):
 
 
 def name_portals(gates, previous):
-    """Keeps each gate's name from the last run; gates that lead to each other share one name (ゲート1, ゲート2…)."""
+    """Names Nether portals ポータル1, ポータル2…: a portal and the one on the other side share a name only when each leads
+    to the other; every other portal gets its own number. Names from the last run are kept where they still fit."""
     def same(a, b):
         return abs(a['x'] - b['x']) <= 3 and abs(a['y'] - b['y']) <= 3 and abs(a['z'] - b['z']) <= 3
-    for dim, list_ in gates.items():
-        for g in list_:
-            old = next((o for o in previous.get(dim, []) if o.get('name') and same(o, g)), None)
-            if old:
-                g['name'] = old['name']
-    used = [int(m.group(1)) for list_ in previous.values() for o in list_
-            if (m := re.fullmatch(r'ゲート(\d+)', str(o.get('name', ''))))]
+
+    def number(name):
+        m = re.fullmatch(r'(?:ゲート|ポータル)(\d+)', str(name or ''))
+        return int(m.group(1)) if m else None
+
+    # Pairs: the overworld portal and the Nether portal that lead to each other.
+    groups, paired = [], set()
+    for g in gates.get('overworld', []):
+        n = _link(g, 'overworld', gates)
+        if n is not None and id(n) not in paired and _link(n, 'nether', gates) is g:
+            groups.append([('overworld', g), ('nether', n)])
+            paired.add(id(n))
+        else:
+            groups.append([('overworld', g)])
+    groups += [[('nether', n)] for n in gates.get('nether', []) if id(n) not in paired]
+    groups += [[('end', g)] for g in gates.get('end', [])]
+
+    used = {number(o.get('name')) for list_ in previous.values() for o in list_} - {None}
     counter = max(used, default=0)
-    for dim in ('overworld', 'nether'):
-        for g in gates.get(dim, []):
-            partner = _link(g, dim, gates) if dim in ('overworld', 'nether') else None
-            if not g.get('name'):
-                if partner is not None and partner.get('name'):
-                    g['name'] = partner['name']
-                else:
-                    counter += 1
-                    g['name'] = f'ゲート{counter}'
-            if partner is not None and not partner.get('name'):
-                partner['name'] = g['name']
-    for g in gates.get('end', []):
-        if not g.get('name'):
+    taken = set()
+    for group in groups:
+        olds = [number(o.get('name')) for dim, g in group for o in previous.get(dim, []) if same(o, g)]
+        keep = next((k for k in olds if k is not None and k not in taken), None)
+        if keep is None:
             counter += 1
-            g['name'] = f'ゲート{counter}'
+            keep = counter
+        taken.add(keep)
+        for _, g in group:
+            g['name'] = f'ポータル{keep}'
     return gates
 
 
@@ -753,7 +760,7 @@ def main():
             sys.exit(t('地図にできるデータがありませんでした。', 'Nothing to make a map from.'))
         block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
         n_portals = write_portals(args.site)
-        print(t(f'ゲート・ポータル: {n_portals} か所', f'Portals: {n_portals}'))
+        print(t(f'ポータル: {n_portals} か所', f'Portals: {n_portals}'))
         tell_setup('save')
         update_config(args.site, snap_id, staging, world_saved)
     finally:
