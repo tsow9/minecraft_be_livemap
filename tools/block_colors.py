@@ -47,6 +47,8 @@ EXACT = {
     'quartz_ore': (117, 65, 62), 'nether_bricks': (44, 21, 26), 'nether_brick': (44, 21, 26),
     'red_nether_brick': (69, 7, 9), 'ancient_debris': (94, 66, 58),
     'end_stone': (219, 222, 158), 'end_bricks': (218, 224, 162), 'purpur_block': (169, 125, 169),
+    'end_portal': (12, 16, 22), 'end_gateway': (12, 16, 22), 'dragon_egg': (34, 14, 44), 'dragon_head': (36, 36, 40),
+    'undyed_shulker_box': (150, 108, 150), 'frog_spawn': (104, 96, 84), 'nether_sprouts': (19, 151, 133), 'soul_campfire': (80, 196, 206),
     'chorus_plant': (93, 57, 93), 'chorus_flower': (151, 120, 151), 'end_rod': (220, 220, 220),
     'cactus': (85, 127, 43), 'pumpkin': (198, 118, 24), 'carved_pumpkin': (198, 118, 24), 'lit_pumpkin': (198, 118, 24),
     'melon_block': (111, 145, 30), 'hay_block': (166, 136, 38), 'reeds': (148, 192, 101), 'sugar_cane': (148, 192, 101),

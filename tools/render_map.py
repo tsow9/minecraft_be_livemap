@@ -752,7 +752,8 @@ def main():
         if total == 0:
             sys.exit(t('地図にできるデータがありませんでした。', 'Nothing to make a map from.'))
         block_ids.save(args.site, _official_japanese(lang), _official_japanese(lang_en, english=True))
-        print(t(f'ネザーゲート: {write_portals(args.site)} か所', f'Nether Portals: {write_portals(args.site)}'))
+        n_portals = write_portals(args.site)
+        print(t(f'ゲート・ポータル: {n_portals} か所', f'Portals: {n_portals}'))
         tell_setup('save')
         update_config(args.site, snap_id, staging, world_saved)
     finally:
