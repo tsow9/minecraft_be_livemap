@@ -36,7 +36,19 @@ export default {
       // the stage, the sign-in code while it is shown (also in the public run log), and links to the run.
       if (url.pathname === '/api/setup' && req.method === 'GET') {
         const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
-        return json(row ? JSON.parse(row.v) : {}, 200, { 'Access-Control-Allow-Origin': '*' });
+        const t = await kvGet(env, 'timer');
+        return json({ ...(row ? JSON.parse(row.v) : {}), timer: !!t?.ok, app: appSlug(env) }, 200, { 'Access-Control-Allow-Origin': '*' });
+      }
+      // Setting up the timer from the setup page, before anyone can sign in to the site: only while no working timer
+      // is set, and a token is kept only if it really can start this repository's runs (so only someone who may run
+      // them can set it). Plain text bodies, so the setup page needs no preflight.
+      if ((url.pathname === '/api/setup/timer/connect' || url.pathname === '/api/setup/timer/poll') && req.method === 'POST') {
+        const open = { 'Access-Control-Allow-Origin': '*' };
+        if ((await kvGet(env, 'timer'))?.ok) return json({ error: 'set' }, 409, open);
+        if (url.pathname.endsWith('/connect')) return json(...(await timerConnect(env)), open);
+        let handle = '';
+        try { handle = String(JSON.parse(await req.text())?.handle || ''); } catch { /* not JSON */ }
+        return json(await timerPoll(env, handle), 200, open);
       }
       // The language and time zone of the runs' messages and the map's dates, from the setup page's browser (only
       // until the admin's own map page sets them, below). Nothing but a language code and a zone name.
@@ -155,29 +167,13 @@ export default {
       if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'GET') {
         const t = await kvGet(env, 'timer');
         return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.ok ?? null, last: t?.last || null, status: t?.status || null,
-          app: env.GH_APP_SLUG && env.GH_APP_CLIENT_ID ? env.GH_APP_SLUG : null, via: t?.via || null });
+          app: appSlug(env), via: t?.via || null });
       }
-      // Connecting the GitHub App with a code (GitHub's device flow: the site needs no secret). Start: a code to enter
-      // at github.com/login/device; then the page asks every few seconds whether it was approved.
-      if (path === '/timer/connect' && admin && me.via === 'microsoft' && req.method === 'POST') {
-        if (!env.GH_APP_CLIENT_ID) return json({ error: 'no app' }, 400);
-        const r = await ghForm('https://github.com/login/device/code', { client_id: env.GH_APP_CLIENT_ID });
-        if (!r?.device_code) return json({ error: 'github', detail: r?.error || null }, 502);
-        await kvPut(env, 'timer_device', { code: r.device_code, until: Date.now() + (r.expires_in || 900) * 1000 });
-        return json({ user_code: r.user_code, uri: r.verification_uri, interval: r.interval || 5, expires_in: r.expires_in || 900 });
-      }
+      // Connecting the Blockmap Connect GitHub App with a code (GitHub's device flow: the site needs no secret).
+      if (path === '/timer/connect' && admin && me.via === 'microsoft' && req.method === 'POST') return json(...(await timerConnect(env)));
       if (path === '/timer/poll' && admin && me.via === 'microsoft' && req.method === 'POST') {
-        const d = await kvGet(env, 'timer_device');
-        if (!d?.code || d.until < Date.now()) return json({ error: 'expired' });
-        const r = await ghForm('https://github.com/login/oauth/access_token', {
-          client_id: env.GH_APP_CLIENT_ID, device_code: d.code, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' });
-        if (r?.error === 'authorization_pending' || r?.error === 'slow_down') return json({ pending: true, interval: r.interval || null });
-        if (!r?.access_token) return json({ error: r?.error || 'github' });
-        await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('timer_device').run();
-        await kvPut(env, 'timer', { token: r.access_token, via: 'app', refresh: r.refresh_token || null,
-          expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null });
-        const status = await startLiveCheck(env);
-        return json({ ok: status === 204, status });
+        const b = await req.json().catch(() => null);
+        return json(await timerPoll(env, String(b?.handle || '')));
       }
       if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'POST') {
         const b = await req.json().catch(() => null);
@@ -439,6 +435,39 @@ async function kvPut(env, k, v) {
   await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
     .bind(k, JSON.stringify(v), Date.now()).run();
 }
+const appSlug = (env) => (env.GH_APP_SLUG && env.GH_APP_CLIENT_ID ? env.GH_APP_SLUG : null);
+// Start: a code to enter at github.com/login/device. The page keeps GitHub's device code (its own request's) and asks
+// with it every few seconds; the token itself stays here. Returns [body, status].
+async function timerConnect(env) {
+  if (!env.GH_APP_CLIENT_ID) return [{ error: 'no app' }, 400];
+  const r = await ghForm('https://github.com/login/device/code', { client_id: env.GH_APP_CLIENT_ID });
+  if (!r?.device_code) return [{ error: 'github' }, 502];
+  return [{ user_code: r.user_code, uri: r.verification_uri, interval: r.interval || 5, expires_in: r.expires_in || 900, handle: r.device_code }, 200];
+}
+// Approved yet? Once it is, the token is kept only if it starts this repository's live check (which it does at once);
+// otherwise most likely the app is not on the repository yet.
+async function timerPoll(env, handle) {
+  if (!env.GH_APP_CLIENT_ID || !/^[\w-]{10,100}$/.test(handle)) return { error: 'bad' };
+  const r = await ghForm('https://github.com/login/oauth/access_token', {
+    client_id: env.GH_APP_CLIENT_ID, device_code: handle, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' });
+  if (r?.error === 'authorization_pending' || r?.error === 'slow_down') return { pending: true, interval: r.interval || null };
+  if (!r?.access_token) return { error: r?.error || 'github' };
+  const t = { token: r.access_token, via: 'app', refresh: r.refresh_token || null, expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null };
+  const status = await dispatchLive(env, t.token);
+  if (status !== 204) return { error: status === 404 || status === 403 ? 'not-installed' : 'github', status };
+  await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now() });
+  return { ok: true };
+}
+async function dispatchLive(env, token) {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return 0;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/dispatches`, {
+      method: 'POST', body: JSON.stringify({ ref: 'main' }),
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' },
+    });
+    return res.status;
+  } catch { return 0; }
+}
 // A form post to GitHub's sign-in endpoints, answered in JSON.
 async function ghForm(url, body) {
   try {
@@ -460,14 +489,7 @@ async function startLiveCheck(env) {
     }
   }
   if (!t?.token || !/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return null;
-  let status = 0;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/dispatches`, {
-      method: 'POST', body: JSON.stringify({ ref: 'main' }),
-      headers: { Authorization: `Bearer ${t.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' },
-    });
-    status = res.status;
-  } catch { status = 0; }
+  const status = await dispatchLive(env, t.token);
   await kvPut(env, 'timer', { ...t, ok: status === 204, status, last: Date.now() });
   return status;
 }

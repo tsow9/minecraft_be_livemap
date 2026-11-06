@@ -261,6 +261,10 @@ async function loadTimer() {
   const r = await fetchJson(`${share.url}/timer`);
   if (!r) return;
   box.hidden = false;
+  // Not set (or no longer working): a bar until it is, since the map stays old without it.
+  const bar = $('#timer-bar');
+  bar.hidden = !!r.ok;
+  bar.textContent = r.set ? tl('自動更新が止まっています → 設定し直す') : tl('自動更新がまだ設定されていません → 設定する');
   const owner = (r.repo || '').split('/')[0];
   const make = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({ name: `Blockmap timer ${(r.repo || '').split('/')[1] || ''}`.trim(),
     description: 'Lets the Blockmap site start its live check', target_name: owner, expires_in: 'none', actions: 'write' })}`;
@@ -296,6 +300,7 @@ async function loadTimer() {
     loadTimer();
   });
   $('#timer-connect')?.addEventListener('click', connectTimer);
+  if (openTimerOnLoad) { openTimerOnLoad = false; $('#timer-bar').click(); }
 }
 // "GitHub と連携する": a code to enter on GitHub, then the site waits for the approval.
 async function connectTimer() {
@@ -311,10 +316,12 @@ async function connectTimer() {
   let wait = Math.max(5, d.interval || 5) * 1000;
   const look = async () => {
     if (Date.now() > until || !document.body.contains(box)) return;
-    const p = await fetch(`${share.url}/timer/poll`, { method: 'POST' }).then((x) => x.json()).catch(() => null);
+    const p = await fetch(`${share.url}/timer/poll`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ handle: d.handle }) })
+      .then((x) => x.json()).catch(() => null);
     if (p?.pending) { if (p.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
     if (p?.ok) toast(tl('タイマーを設定しました'));
-    else toast(p?.error === 'access_denied' ? tl('許可されませんでした') : tl('GitHub と連携できませんでした'));
+    else toast(p?.error === 'access_denied' ? tl('許可されませんでした')
+      : p?.error === 'not-installed' ? tl('先に「Blockmap を GitHub に入れる」で、このリポジトリに入れてください') : tl('GitHub と連携できませんでした'));
     loadTimer();
   };
   setTimeout(look, wait);
@@ -323,6 +330,7 @@ async function connectTimer() {
 // Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
 // A bar tells the admin when a new version is out; it opens this part of the admin menu.
 let releaseTimer = null;
+let openTimerOnLoad = false;
 async function loadRelease() {
   const box = $('#version-box'), body = $('#version-body');
   const r = await fetchJson(`${share.url}/release`);
@@ -3712,6 +3720,12 @@ function setupUpdates() {
     if ($('#panel-site').hidden) $('#btn-site').click();
     setTimeout(() => $('#version-box').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
   });
+  $('#timer-bar').addEventListener('click', () => {
+    if ($('#panel-site').hidden) $('#btn-site').click();
+    setTimeout(() => $('#timer-box').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  });
+  // From the setup page's "set it up in the map site": the timer part of the admin menu, opened.
+  if (location.hash === '#timer') { history.replaceState(null, '', location.pathname + location.search); openTimerOnLoad = true; }
   if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
   let view = null, updated = false;
   try {

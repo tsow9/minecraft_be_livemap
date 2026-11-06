@@ -136,3 +136,8 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .sitebox .url code { font-size: 15px; color: var(--fg); }
 .sitebox .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
 .sitebox .row .copy { margin-left: 0; padding: 6px 12px; }
+/* Step 4's automatic updates: two buttons (add the app, connect), then the code. */
+button.btn { border: 0; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+button.btn:disabled { opacity: .5; cursor: default; }
+.status .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.auto-steps { margin: 8px 0; padding-left: 20px; }

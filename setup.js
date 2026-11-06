@@ -6,6 +6,8 @@
   const $ = (s) => document.querySelector(s);
   const KEY = 'blockmap.setup';
   let saved = {};
+  // Automatic updates (step 4): whether the site says they work, the GitHub App to add, and the connecting's stage.
+  let timerOk = true, appSlug = 'blockmap-connect', auto = { phase: 'idle' }, lastAuto = '';
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
   // The repository, and once its site is made, that it is done and where (so coming back needs no question to GitHub).
   const save = () => {
@@ -100,7 +102,9 @@
     const site = siteUrl;
     const box = $('#site-box');
     box.classList.toggle('ready', !!site);
-    box.innerHTML = site
+    box.innerHTML = site && !timerOk
+      ? `<span class="small">${T('手順 4 の自動更新を設定すると、ここにアドレスが出ます。', 'Your site\'s address appears here once automatic updates are set up in step 4.')}</span>`
+      : site
       ? `<b>${T('サイトのアドレス', 'Your site')}</b>
         <div class="url"><code>${esc(site)}</code></div>
         <p class="row"><a class="btn" href="${esc(site)}" data-count="open-site" target="_blank" rel="noopener">${T('サイトを開く', 'Open my site')}</a><button class="copy" type="button" data-text="${esc(site)}"><svg class="ic"><use href="#i-copy"/></svg>${T('アドレスをコピー', 'Copy the address')}</button></p>`
@@ -212,9 +216,16 @@
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
-    if (saved.done) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
+    if (saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
     const s = await askSite(repo);
     fromSite = !!s;
+    // The timer (a must): known from the site; sites from before it existed say nothing, and are not held up.
+    if (s) {
+      const was = timerOk;
+      timerOk = s.timer !== false; appSlug = s.app || appSlug;
+      if (timerOk && !saved.timer) { saved.timer = '1'; save(); }
+      if (was !== timerOk) refresh();
+    }
     if (s) {
       const url = s.log;
       if (s.state === 'starting') state = { kind: 'code', url, code: '' };
@@ -315,7 +326,8 @@
       pick: `<b>${T('どの Realm の地図を作りますか?', 'Which Realm should this site map?')}</b>${T('あなたの Realm が 2 つ以上見つかりました。地図にする Realm を選んでください(15 分以内)。', 'You own two or more Realms. Pick the one to map (within 15 minutes).')}
         <div class="realms">${(state?.realms || []).map((n) => `<button type="button" class="realm" data-realm="${esc(n)}">${esc(n)}</button>`).join('')}</div>
         <span class="small">${T('ほかの Realm の地図は、別の名前でもう 1 つリポジトリを作ると作れます。', 'To map another Realm too, make one more repository with another name.')}</span>`,
-      done: `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`,
+      done: () => (timerOk ? `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`
+        : `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('あと 1 つ、下の自動更新を設定してください。', 'One more thing: set up automatic updates below.')}`),
     }[state?.kind === 'making' && state.step ? 'progress' : state?.kind] || '';
     box.className = `status ${state?.kind || ''}`;
     secretHint();
@@ -324,7 +336,63 @@
     // Only when it changed: asked every 2 seconds, the box would otherwise be remade under a finger about to press.
     const next = pick(html) + paused;
     if (next !== lastBox) { box.innerHTML = next; lastBox = next; }
+    renderAuto();
   }
+  // ---- automatic updates (a must): the Blockmap Connect GitHub App, connected with a code while the site is made ----
+  // GitHub's own timer runs hours late; with this the site starts the map's runs every 10 minutes. The site keeps the
+  // token (only if it really can start this repository's runs); this page only sees the code to enter.
+  function renderAuto() {
+    const box = $('#auto-box');
+    const show = fromSite && !!siteUrl && (!timerOk || auto.phase === 'ok') && ['building', 'making', 'done'].includes(state?.kind);
+    box.hidden = !show;
+    if (!show) return;
+    let html;
+    if (timerOk) html = `<b class="good">${T('✓ 自動更新を設定しました', '✓ Automatic updates are set up')}</b>`;
+    else {
+      html = `<b>${T('自動更新を設定します(必須)', 'Set up automatic updates (required)')}</b>
+        ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
+        <ol class="auto-steps"><li>${T('「Blockmap Connect を入れる」を押し、GitHub の画面で「Install」を押します。', 'Press “Add Blockmap Connect”, then “Install” on GitHub.')}</li>
+          <li>${T('「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。', 'Press “Connect GitHub”, enter the code shown on GitHub, then press “Authorize”.')}</li></ol>
+        <p class="row"><a class="btn ghost" href="https://github.com/apps/${esc(appSlug)}/installations/new" target="_blank" rel="noopener">${T('1. Blockmap Connect を入れる', '1. Add Blockmap Connect')}</a>
+          <button class="btn" type="button" id="auto-connect"${auto.phase === 'code' ? ' disabled' : ''}>${T('2. GitHub と連携する', '2. Connect GitHub')}</button></p>`;
+      if (auto.phase === 'code') {
+        html += `<div class="code"><span>${esc(auto.code)}</span><button class="copy" type="button" data-text="${esc(auto.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
+          <p><a class="btn" href="${esc(auto.uri)}" target="_blank" rel="noopener">${T('github.com/login/device を開く', 'Open github.com/login/device')}</a></p>
+          <span class="small">${T('許可すると、ここが自動で変わります。', 'Once you allow it, this changes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
+      } else if (auto.phase === 'error') {
+        html += `<span class="bad">${auto.err === 'not-installed'
+          ? T('Blockmap Connect がこのリポジトリに入っていませんでした。1 を押して入れてから、もう一度 2 を押してください。', 'Blockmap Connect was not on this repository. Press 1 to add it, then press 2 again.')
+          : auto.err === 'access_denied' ? T('許可されませんでした。もう一度 2 を押してください。', 'It was not allowed. Press 2 again.')
+            : T('うまくいきませんでした。もう一度 2 を押してください。', 'That did not work. Press 2 again.')}</span>`;
+      }
+    }
+    if (html !== lastAuto) { box.innerHTML = html; lastAuto = html; }
+    box.className = `status ${timerOk ? 'done' : 'code'}`;
+  }
+  // Text bodies, so no preflight.
+  const askTimer = (what, body) => fetch(`${siteUrl}/api/setup/timer/${what}`, { method: 'POST', body: JSON.stringify(body || {}) }).then((r) => r.json());
+  document.addEventListener('click', async (e) => {
+    if (!e.target.closest('#auto-connect') || !siteUrl) return;
+    let d = null;
+    try { d = await askTimer('connect'); } catch { /* offline */ }
+    if (d?.error === 'set') { timerOk = true; renderAuto(); return; }
+    if (!d?.user_code) { auto = { phase: 'error', err: 'github' }; renderAuto(); return; }
+    auto = { phase: 'code', code: d.user_code, uri: d.uri || 'https://github.com/login/device' };
+    renderAuto();
+    const until = Date.now() + (d.expires_in || 900) * 1000;
+    let wait = Math.max(5, d.interval || 5) * 1000;
+    const look = async () => {
+      if (auto.phase !== 'code') return;
+      if (Date.now() > until) { auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
+      let p = null;
+      try { p = await askTimer('poll', { handle: d.handle }); } catch { /* try again */ }
+      if (!p || p.pending) { if (p?.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
+      if (p.ok || p.error === 'set') { timerOk = true; auto = { phase: 'ok' }; saved.timer = '1'; save(); refresh(); renderStatus(); poll(); return; }
+      auto = { phase: 'error', err: p.error };
+      renderAuto();
+    };
+    setTimeout(look, wait);
+  });
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
   // Step 3's box: waiting for the token, then found (once signing in has started, the token is surely there).
@@ -372,7 +440,7 @@
     let wait = fromSite ? 2000 : state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
     if (fromSite) { /* no limit */ } else if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
     else if (budget.left < 25 && budget.reset > Date.now()) wait = Math.max(wait, (budget.reset - Date.now()) / Math.max(1, budget.left - 3));
-    if (state?.kind !== 'done') timer = setTimeout(() => poll(), wait);
+    if (state?.kind !== 'done' || !timerOk) timer = setTimeout(() => poll(), wait);
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });
 

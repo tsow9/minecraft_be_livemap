@@ -649,13 +649,17 @@ body.finding .pl-icon.off { opacity: .4; }
 @keyframes building-spin { to { transform: rotate(360deg); } }
 body:has(#building:not([hidden])) #crosshair { display: none; }
 /* The admin's "a new version of Blockmap is out": opens the version part of the admin menu. */
-#release-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; padding: 9px 16px;
+#release-bar, #timer-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; padding: 9px 16px;
   border-radius: 999px; border: 1px solid var(--accent); background: var(--glass); color: var(--accent); font: inherit;
   font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
 #release-bar:hover { background: var(--accent-soft); }
-body.tools-open #release-bar { bottom: 160px; }
-#update-bar:not([hidden]) ~ #release-bar { display: none; }
-@media (max-width: 700px) { #release-bar { left: 10px; right: 10px; transform: none; bottom: calc(16px + env(safe-area-inset-bottom)); white-space: normal; } }
+/* The admin's "the timer is not set yet" (it must be): before a new version's bar, which waits behind it. */
+#timer-bar { border-color: #f5a524; color: #f5a524; }
+#timer-bar:hover { background: rgba(245, 165, 36, 0.14); }
+#timer-bar:not([hidden]) ~ #release-bar { display: none; }
+body.tools-open #release-bar, body.tools-open #timer-bar { bottom: 160px; }
+#update-bar:not([hidden]) ~ #release-bar, #update-bar:not([hidden]) ~ #timer-bar { display: none; }
+@media (max-width: 700px) { #release-bar, #timer-bar { left: 10px; right: 10px; transform: none; bottom: calc(16px + env(safe-area-inset-bottom)); white-space: normal; } }
 #version-box a { color: var(--accent); }
 #version-box .btns { margin-top: 8px; }
 #version-box .mini.primary { background: var(--accent); border-color: var(--accent); color: #06130d; font-weight: 700; }
