@@ -2,7 +2,8 @@
 # The frequent check: who is online and where players are.
 # With nobody playing it runs once and ends. While someone plays it keeps going, looking every
 # LOOP_SECONDS for a new world save, so positions and the map follow soon after Realms saves.
-# It ends after LOOP_BUDGET seconds (the next run takes over) or once nobody has played for IDLE_EXIT seconds.
+# It ends after LOOP_BUDGET seconds (starting the next run itself, which picks up at once) or once nobody has played
+# for IDLE_EXIT seconds.
 set -u
 # Messages in the owner's language (repository variable LANGUAGE → BLOCKMAP_LANG): English for "en", else Japanese.
 t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
@@ -62,6 +63,11 @@ while :; do
   fi
   [ $last_online -eq 0 ] && break                                  # nobody playing: one look is enough
   [ $((now - last_online)) -ge "$IDLE_EXIT" ] && break             # everyone has left
-  [ $((now - started)) -ge "$LOOP_BUDGET" ] && break                # hand over to the next run
+  if [ $((now - started)) -ge "$LOOP_BUDGET" ]; then
+    # Someone is still playing: start the next run now (it begins as soon as this one ends), so following them
+    # carries on without waiting for the next timer.
+    gh workflow run live.yml --ref main >/dev/null 2>&1 && echo "$(t '次の位置確認に引き継ぎます' 'Handing over to the next live check')"
+    break
+  fi
   sleep "$LOOP_SECONDS"
 done
