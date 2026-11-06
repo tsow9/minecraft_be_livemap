@@ -60,8 +60,8 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 
 | Name | Value |
 |---|---|
-| `LANGUAGE` | `en` shows the messages in the Actions runs in English (Japanese if left out) |
-| `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York` (`Asia/Tokyo` if left out) |
+| `LANGUAGE` | The language of the messages in the Actions runs (`ja` or `en`). If left out: the language of the browser the admin views the map site in (before that, the setup page's) |
+| `TIMEZONE` | The time zone for the map's dates, e.g. `America/New_York`. If left out: the admin's browser's |
 | `REALM_NAME` | The name of the Realm this site maps (as in Minecraft's list of Realms). Even with two or more Realms it is usually not needed: you pick one on the setup page after signing in. Use it to change the choice later |
 | `CLOUDFLARE_ACCOUNT_ID` | If one Cloudflare sign-in reaches several accounts (for example, you were invited to someone else's): the ID of the one to use. Not needed for accounts made with separate email addresses |
 

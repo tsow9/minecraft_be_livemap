@@ -63,7 +63,23 @@ need_python() {
 
 # The key that encrypts the sign-in and the map data (CACHE_KEY), the site's address (SITE_URL) and a Realm picked on
 # the setup page (REALM_PICK).
-get_key() { with_env bash tools/realms_key.sh "$@"; }
+get_key() {
+  with_env bash tools/realms_key.sh "$@" || return 1
+  # The language and time zone, unless set in the repository's variables: the admin's (or the setup page's) browser,
+  # kept in the site's database by the site.
+  if [ -z "$LANGUAGE" ] || [ -z "$TIMEZONE" ]; then
+    local prefs
+    prefs=$(python3 tools/ci/d1.py get prefs 2>/dev/null) || prefs=""
+    if [ -n "$prefs" ]; then
+      eval "$(PREFS="$prefs" python3 -c 'import json, os, re, shlex
+p = json.loads(os.environ["PREFS"])
+lang, tz = p.get("lang"), p.get("tz")
+if os.environ.get("LANGUAGE") == "" and lang in ("ja", "en"): print("export BLOCKMAP_LANG=" + lang)
+if os.environ.get("TIMEZONE") == "" and isinstance(tz, str) and re.fullmatch(r"[A-Za-z0-9_/+-]{1,40}", tz) and os.path.exists("/usr/share/zoneinfo/" + tz): print("export TZ=" + shlex.quote(tz))' 2>/dev/null)"
+    fi
+  fi
+  return 0
+}
 
 # The Realms sign-in, encrypted, kept in the site's Cloudflare database.
 auth_get() {

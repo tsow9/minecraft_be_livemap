@@ -168,10 +168,19 @@
       const s = await res.json();
       if (!s?.state || s.r !== await repoTag(repo)) return null;
       if (siteUrl !== base) { siteUrl = base; refresh(); }  // it answered about this repository: the address is sure
+      if (!prefsSent) sendPrefs(base);
       return s;
     } catch { return null; }
   }
   let lastSiteLook = 0;
+  // This browser's language and time zone, for the runs' messages and the map's dates (until the admin's map page says).
+  let prefsSent = false;
+  function sendPrefs(base) {
+    prefsSent = true;
+    let tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* old browser */ }
+    if (tz) fetch(`${base}/api/setup/prefs`, { method: 'POST', body: JSON.stringify({ lang, tz }) }).catch(() => {});
+  }
   // Signing in puts the site up first and notes its exact address (site-info branch): with it, the site itself is
   // asked from then on (no limit, and it says at once when signing in is done). Looked for at most every 20 seconds.
   async function lookForSite(repo) {

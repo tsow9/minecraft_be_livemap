@@ -76,7 +76,7 @@ Object.assign(I18N_EN, {
   '{dim}側のゲートはまだ見つかっていません': 'No portal found in the {dim} yet',
   '{dim}のゲート生成目安': 'A portal would appear in the {dim} around', 'その場所を見る': 'Show that place',
   'ネザー座標の換算': 'Nether coordinates', 'ネザーで1ブロック進むと、地上では8ブロック進みます。': '1 block in the Nether is 8 blocks in the Overworld.',
-  '地図で見る': 'Show on the map', '今の地図の中心を入れる': 'Use the center of the map', 'ネザーゲートを地図に表示': 'Show Nether Portals on the map',
+  '地図で見る': 'Show on the map', '今の地図の中心を入れる': 'Use the center of the map', 'ネザーゲートを地図に表示': 'Show Nether Portals on the map', 'ゲートやポータルを地図に表示': 'Show portals on the map',
   '{s}秒': '{s}s', '{m}分': '{m}min ', '走って約{time}': 'About {time} sprinting', '・途中に溶岩あり': ' · lava on the way',
   '行き先を選ぶ': 'Choose destination', '行き先を一覧から選ぶか、地図でタップしてください': 'Pick a destination from the list or tap the map',
   '{n}ブロック': '{n} blocks', 'ネザー経由なら約{n}ブロック': 'About {n} blocks through the Nether', '走って…計算中': 'Sprinting… calculating',
@@ -123,7 +123,7 @@ Object.assign(I18N_EN, {
   'ゲームモード': 'Game Mode', 'チート': 'Cheats', '<h3>ルール</h3>': '<h3>Rules</h3>', '{time} 時点': 'as of {time}',
   // the page around the map
   '新しいバージョンがあります': 'A new version is available', '更新する': 'Update', '最新版に更新しました': 'Updated to the latest version',
-  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語設定': 'Language', '日付で選ぶ': 'Pick a date', 'スライダーを動かすと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。': 'Move the slider to see the map of that day. Maps are kept daily for the last 30 days, weekly for half a year, then monthly.', '白い点をドラッグで形を直す・図形やピンをドラッグで動かす': 'Drag the white points to reshape · drag a shape or pin to move it', '編集(形を直す・動かす)': 'Edit (reshape and move)', '楕円': 'Ellipse', '範囲で消す': 'Delete in an area', '始点をタップ → 終点をタップで完成': 'Tap the start → tap the end', 'ドラッグすると、その大きさの楕円になります': 'Drag to draw an ellipse of that size', '消したい範囲をドラッグで囲む': 'Drag a box around what to delete', '囲んだ範囲に消せるものはありません': 'Nothing to delete in that box', '{n}個を消しますか?': 'Delete {n} item(s)?', '{n}個を消しました': 'Deleted {n} item(s)', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
+  '拡大': 'Zoom in', '縮小': 'Zoom out', '言語設定': 'Language', '日付で選ぶ': 'Pick a date', 'スライダーを動かすと、その日の地図に戻れます。直近30日は毎日、半年前までは毎週、それより前は毎月の地図が残っています。': 'Move the slider to see the map of that day. Maps are kept daily for the last 30 days, weekly for half a year, then monthly.', '白い点をドラッグで形を直す・図形やピンをドラッグで動かす': 'Drag the white points to reshape · drag a shape or pin to move it', '編集(形を直す・動かす)': 'Edit (reshape and move)', '楕円': 'Ellipse', '範囲で消す': 'Delete in an area', '始点をタップ → 終点をタップで完成': 'Tap the start → tap the end', 'ドラッグすると、その大きさの楕円になります': 'Drag to draw an ellipse of that size', '消したい範囲をドラッグで囲む': 'Drag a box around what to delete', '囲んだ範囲に消せるものはありません': 'Nothing to delete in that box', '{n}個を消しますか?': 'Delete {n} item(s)?', '{n}個を消しました': 'Deleted {n} item(s)', 'リンク先:': 'Links to:', 'リンク先(入る位置で変わります):': 'Links to (depends on where you step in):', 'リンク先を見る': 'Show the linked portal', 'ゲート{n}': 'Nether Portal {n}', '{who}・{n}人': '{who} · {n}', 'ほか{n}人': '{n} others', 'バイオーム': 'biome', 'バイオーム・{n}チャンク': 'Biome · {n} chunks',
   // 管理者メニュー: the Realm's payment
   'Realm の支払い': 'Realm payment', 'Realms情報に、次の支払い日と料金が出ます。': 'Realms info shows the next payment day and the price.',
   '支払日': 'Payment day', '保存しました': 'Saved', 'なし': 'None',
@@ -135,6 +135,8 @@ Object.assign(I18N_EN, {
   'ログアウトしますか?': 'Sign out?',
   '地図を作っています': 'Making the map', '数分で、ここに自動で表示されます。': 'It appears here by itself in a few minutes.',
   '不明': 'Unknown',
+  'エンドポータル': 'End Portal', 'エンドゲートウェイ': 'End Gateway', 'エンドの外側の島へ': 'To the outer End islands',
+  'オーバーワールドへの帰り道': 'The way back to the Overworld', '動いています': 'Active', 'エンダーアイ {n}/{all}': 'Eyes of Ender {n}/{all}', 'ポータル': 'portal',
   '職業ブロック': 'Job site', 'なし': 'None',
   'Blockmap のバージョン': 'Blockmap version', 'いまのバージョン: {v}': 'This version: {v}', '変更内容': 'What changed',
   '{v} に更新しています': 'Updating to {v}', '10〜20 分ほどで終わります。終わると、ページを開き直したときに新しくなります。': 'It takes 10 to 20 minutes. Once done, reopening the page shows the new version.',

@@ -34,6 +34,18 @@ export default {
         const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
         return json(row ? JSON.parse(row.v) : {}, 200, { 'Access-Control-Allow-Origin': '*' });
       }
+      // The language and time zone of the runs' messages and the map's dates, from the setup page's browser (only
+      // until the admin's own map page sets them, below). Nothing but a language code and a zone name.
+      if (url.pathname === '/api/setup/prefs' && req.method === 'POST') {
+        const open = { 'Access-Control-Allow-Origin': '*' };
+        let b = null;
+        try { b = JSON.parse(await req.text()); } catch { /* not JSON */ }
+        const cur = await kvGet(env, 'prefs');
+        if (cur?.by === 'admin') return json({ ok: true }, 200, open);
+        const p = cleanPrefs(b);
+        if (p) await kvPut(env, 'prefs', { ...p, by: 'setup' });
+        return json({ ok: !!p }, 200, open);
+      }
       // The owner picks which of their Realms to map (only while the sign-in is asking, and only one it offered).
       // Sent as plain text, so the setup page needs no preflight.
       if (url.pathname === '/api/setup/pick' && req.method === 'POST') {
@@ -128,6 +140,12 @@ export default {
         const v = { state: 'requested', version: rel.latest, at: Date.now() };
         await kvPut(env, 'update', v);
         return json(v);
+      }
+      // The admin's page says its language and time zone: the runs' messages and the map's dates follow them.
+      if (path === '/prefs' && admin && me.via === 'microsoft' && req.method === 'POST') {
+        const p = cleanPrefs(await req.json().catch(() => null));
+        if (p) await kvPut(env, 'prefs', { ...p, by: 'admin' });
+        return json({ ok: !!p });
       }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
       if (path === '/privacy' && admin && req.method === 'POST') {
@@ -379,6 +397,11 @@ async function kvGet(env, k) {
 async function kvPut(env, k, v) {
   await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
     .bind(k, JSON.stringify(v), Date.now()).run();
+}
+function cleanPrefs(b) {
+  const lang = b?.lang === 'en' || b?.lang === 'ja' ? b.lang : null;
+  const tz = typeof b?.tz === 'string' && /^[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){0,2}$/.test(b.tz) && b.tz.length <= 40 ? b.tz : null;
+  return lang && tz ? { lang, tz } : null;
 }
 // "1.10.0" is newer than "1.9.2".
 function newer(a, b) {

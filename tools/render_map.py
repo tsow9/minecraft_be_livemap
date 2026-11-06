@@ -36,6 +36,10 @@ UNSET = -32768
 
 # ---------- sub-chunk decoding ----------
 _palette_cache = {}
+# Blocks the map maker notes where they are (codes in the per-block mask decode_subchunk returns).
+NETHER_PORTAL, END_PORTAL, END_FRAME, END_FRAME_EYE, END_GATEWAY = 1, 2, 3, 4, 5
+SPECIAL = {'minecraft:portal': NETHER_PORTAL, 'minecraft:end_portal': END_PORTAL,
+           'minecraft:end_portal_frame': END_FRAME, 'minecraft:end_gateway': END_GATEWAY}
 
 
 def _palette_lut(data, pos):
@@ -50,7 +54,7 @@ def _palette_lut(data, pos):
     colors = np.zeros((max(count, 1), 3), np.uint8)
     ids = np.zeros(max(count, 1), np.uint16)
     ground = np.zeros(max(count, 1), bool)
-    portal = np.zeros(max(count, 1), bool)
+    portal = np.zeros(max(count, 1), np.uint8)
     for i in range(count):
         entry, pos = root_compound(data, pos)
         states = entry.get('states') if isinstance(entry.get('states'), dict) else {}
@@ -60,7 +64,10 @@ def _palette_lut(data, pos):
         colors[i] = rgb
         ids[i] = block_ids.id_of(name, states)
         ground[i] = kind == 'solid' and not is_foliage(name)
-        portal[i] = name == 'minecraft:portal'
+        code = SPECIAL.get(name, 0)
+        if code == END_FRAME and states.get('end_portal_eye_bit') in (1, True):
+            code = END_FRAME_EYE
+        portal[i] = code
     hit = (kinds, colors, ids, ground, portal if portal.any() else None)
     if len(_palette_cache) > 20000:
         _palette_cache.clear()
@@ -241,11 +248,14 @@ def surface_biome(data, tag, floor, top_y):
 
 # Nether portal blocks found while reading, per dimension id: [(x, y, z), ...]
 portal_blocks = {}
+# End portals (with their frames) and End gateways, per dimension id and kind (SPECIAL codes): [(x, y, z), ...]
+end_blocks = {}
 
 
 def read_surfaces(db_dir, dims):
     want_ids = {DIM_IDS[d] for d in dims}
     portal_blocks.clear()
+    end_blocks.clear()
     surfaces = {d: {} for d in want_ids}
     nether_raw = {}
     seen = 0
@@ -273,9 +283,15 @@ def read_surfaces(db_dir, dims):
             continue
         *decoded, portal = decoded
         if portal is not None and portal.any():
-            xs, zs, ys = np.nonzero(portal)
-            portal_blocks.setdefault(dim, []).extend(
-                zip((cx * 16 + xs).tolist(), (sy * 16 + ys).tolist(), (cz * 16 + zs).tolist()))
+            for code in np.unique(portal).tolist():
+                if not code:
+                    continue
+                xs, zs, ys = np.nonzero(portal == code)
+                at = zip((cx * 16 + xs).tolist(), (sy * 16 + ys).tolist(), (cz * 16 + zs).tolist())
+                if code == NETHER_PORTAL:
+                    portal_blocks.setdefault(dim, []).extend(at)
+                else:
+                    end_blocks.setdefault(dim, {}).setdefault(code, []).extend(at)
         if dim == 1:
             if 0 <= sy <= NETHER_TOP // 16:
                 nether_raw.setdefault((cx, cz), {})[sy] = decoded
@@ -364,15 +380,42 @@ def name_portals(gates, previous):
     return gates
 
 
+def group_ends(kinds):
+    """End portals: each ring of frames (12 in a stronghold) with the portal inside it, or the exit portal in the End;
+    End gateways: one each. Returns [{kind, x, y, z, eyes, frames, active}]."""
+    out = []
+    ring = [(p, c) for c in (END_PORTAL, END_FRAME, END_FRAME_EYE) for p in kinds.get(c, [])]
+    left = dict(ring)
+    while left:
+        start = next(iter(left))
+        group, todo = {start: left.pop(start)}, [start]
+        while todo:
+            x, y, z = todo.pop()
+            for p in [q for q in left if abs(q[0] - x) <= 2 and abs(q[2] - z) <= 2 and abs(q[1] - y) <= 1]:
+                group[p] = left.pop(p)
+                todo.append(p)
+        xs = [p[0] for p in group]; zs = [p[2] for p in group]
+        codes = list(group.values())
+        frames = sum(1 for c in codes if c in (END_FRAME, END_FRAME_EYE))
+        out.append({'kind': 'end_portal' if frames else 'end_exit', 'x': (min(xs) + max(xs)) // 2,
+                    'y': min(p[1] for p in group), 'z': (min(zs) + max(zs)) // 2,
+                    'eyes': sum(1 for c in codes if c == END_FRAME_EYE), 'frames': frames,
+                    'active': END_PORTAL in codes})
+    for x, y, z in kinds.get(END_GATEWAY, []):
+        out.append({'kind': 'end_gateway', 'x': x, 'y': y, 'z': z})
+    return sorted(out, key=lambda g: (g['kind'], g['x'], g['z']))
+
+
 def write_portals(site):
     names = {v: k for k, v in DIM_IDS.items()}
     path = os.path.join(site, 'portals.json')
     previous = (_load_json(path) or {}).get('dims') or {}
     gates = {names[d]: group_portals(b) for d, b in portal_blocks.items() if d in names}
-    out = {'updatedAt': int(time.time() * 1000), 'dims': name_portals(gates, previous)}
+    out = {'updatedAt': int(time.time() * 1000), 'dims': name_portals(gates, previous),
+           'ends': {names[d]: group_ends(k) for d, k in end_blocks.items() if d in names}}
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
-    return sum(len(v) for v in out['dims'].values())
+    return sum(len(v) for v in out['dims'].values()) + sum(len(v) for v in out['ends'].values())
 
 
 # ---------- tiles ----------

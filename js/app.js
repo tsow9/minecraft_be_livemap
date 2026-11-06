@@ -111,7 +111,7 @@ function showInvites(role) {
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
   $('#btn-site').hidden = !DATA || role !== 'admin';
-  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); }
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); sendPrefs(); }
   renderMe();
 }
 function renderMe() {
@@ -196,6 +196,14 @@ async function loadPrivacy() {
     }
   } catch { list.innerHTML = tl('<li class="sub">設定を読み込めませんでした</li>'); }
 }
+// The admin's language and time zone: the automatic runs write their messages and date the maps by them.
+function sendPrefs() {
+  let tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* old browser */ }
+  if (!tz) return;
+  fetch(`${share.url}/prefs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: LANG === 'en' ? 'en' : 'ja', tz }) }).catch(() => {});
+}
+
 // Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
 // A bar tells the admin when a new version is out; it opens this part of the admin menu.
 let releaseTimer = null;
@@ -2070,6 +2078,13 @@ function setupSearch() {
         }
       }
     }
+    for (const [dim, list] of Object.entries(state.ends || {})) {
+      if (!DIMS[dim]) continue;
+      for (const e of list) {
+        out.push({ kind: 'gate', dim, x: e.x, z: e.z, title: endTitle(e), hay: `${endTitle(e)} ${tl('エンドポータル')} ${tl('ポータル')} end portal`,
+          icon: e.kind === 'end_gateway' ? GATEWAY_SVG : END_SVG, meta: `${endSub(e)}  ${where(dim, e.x, e.z)}`, go: () => goTo(e.x, e.z, dim, 1) });
+      }
+    }
     for (const dim of ['overworld', 'nether']) {
       for (const g of shownGates(dim)) {
         out.push({ kind: 'gate', dim, x: g.x, z: g.z, title: gateName(g) || tl('ネザーゲート'), hay: `${g.name || ''} ${gateName(g)} ${tl('ネザーゲート')} ${tl('ゲート')}`,
@@ -2771,8 +2786,25 @@ function gateName(g) {
 }
 
 async function loadPortals() {
-  state.portals = (await fetchJson(`${DATA}portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`))?.dims || {};
+  const p = await fetchJson(`${DATA}portals.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
+  state.portals = p?.dims || {};
+  state.ends = p?.ends || {};  // End portals (strongholds, the way home in the End) and End gateways
   renderPortals();
+}
+
+// End portals and gateways: frame stone around a starry black pool.
+const END_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="19" height="22"><ellipse class="gm-shadow" cx="11" cy="24" rx="7.5" ry="1.7"/>`
+  + '<g class="gm-body"><rect x="2" y="2" width="18" height="18" rx="2" fill="#d9dca3" stroke="#1b1d22" stroke-width="2.6"/>'
+  + '<rect x="6" y="6" width="10" height="10" fill="#0d1f24" stroke="#1b1d22" stroke-width="1.2"/>'
+  + '<path d="M8.5 9h1M12 8h1M10 12h1M13.5 13h1M8 14h1" stroke="#7ff0d8" stroke-width="1.4"/></g></svg>';
+const GATEWAY_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="19" height="22"><ellipse class="gm-shadow" cx="11" cy="24" rx="7" ry="1.6"/>`
+  + '<g class="gm-body"><circle cx="11" cy="11" r="8.5" fill="#0d1f24" stroke="#1b1d22" stroke-width="2.6"/>'
+  + '<circle cx="11" cy="11" r="5" fill="none" stroke="#c39bff" stroke-width="1.6"/><path d="M9 9h1M12.5 12h1M11 7.5h1" stroke="#7ff0d8" stroke-width="1.4"/></g></svg>';
+const endTitle = (e) => (e.kind === 'end_gateway' ? tl('エンドゲートウェイ') : tl('エンドポータル'));
+function endSub(e) {
+  if (e.kind === 'end_gateway') return tl('エンドの外側の島へ');
+  if (e.kind === 'end_exit') return tl('オーバーワールドへの帰り道');
+  return e.active ? tl('動いています') : tl('エンダーアイ {n}/{all}', { n: e.eyes || 0, all: e.frames || 12 });
 }
 
 // Where a gate leads: the nearest gate on the other side around x/8 (or x*8), as the game looks for it.
@@ -2815,6 +2847,23 @@ function shownGates(dim) {
 function renderPortals() {
   portalGroup.clearLayers();
   if (!$('#show-portals').checked) return;
+  for (const e of state.ends?.[state.dim] || []) {
+    const m = L.marker(ll(e.x + 0.5, e.z + 0.5), {
+      pmIgnore: true, zIndexOffset: 400,
+      icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
+        html: `<div class="portal-icon gm" style="transform:translate(-50%,-20px)">${e.kind === 'end_gateway' ? GATEWAY_SVG : END_SVG}<span class="nm">${esc(endTitle(e))}</span></div>` }),
+    });
+    const place = { id: `end:${state.dim}:${e.x}:${e.y}:${e.z}`, name: endTitle(e), x: e.x, z: e.z, dim: state.dim };
+    m.bindPopup(() => {
+      const el = document.createElement('div'); el.className = 'pop';
+      el.innerHTML = `<h4>${esc(endTitle(e))}</h4><div class="sub">${esc(endSub(e))}</div><div class="xyz">X ${e.x} / Y ${e.y} / Z ${e.z}</div>`;
+      const acts = document.createElement('div'); acts.className = 'acts';
+      acts.append(routeButton(place));
+      el.append(acts);
+      return el;
+    });
+    portalGroup.addLayer(routeAware(m, place.id));
+  }
   for (const g of shownGates(state.dim)) {
     const m = L.marker(ll(g.x + 0.5, g.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
