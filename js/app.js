@@ -226,6 +226,10 @@ function setupSettings() {
       setLang(b.dataset.lang);
     });
   });
+  // Blockmap's version at the bottom; our own site is marked as the experimental one.
+  const rel = document.querySelector('meta[name="blockmap-release"]')?.content || '';
+  const exp = !!document.querySelector('meta[name="blockmap-experimental"]');
+  $('#set-version').innerHTML = rel ? `Blockmap ${esc(rel)}${exp ? ` <span class="exp-badge">${tl('実験版')}</span><span class="exp-note">${tl('新しい機能を先に試している版です')}</span>` : ''}` : '';
   const label = () => { pick.textContent = TZ ? tzLabel(TZ) : `${tl('端末に合わせる')}${DEVICE_TZ ? `(${DEVICE_TZ.replace(/_/g, ' ')})` : ''}`; };
   label();
   pick.addEventListener('click', (e) => {

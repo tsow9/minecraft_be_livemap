@@ -140,6 +140,7 @@ Object.assign(I18N_EN, {
   '「Blockmap を GitHub に入れる」を押し、{repo} を選んで「Install」を押します。': 'Press “Add Blockmap to GitHub”, choose {repo} and press “Install”.',
   '「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。': 'Press “Connect GitHub”, enter the code shown on GitHub and press “Authorize”.',
   'Blockmap を GitHub に入れる': 'Add Blockmap to GitHub', 'GitHub と連携する': 'Connect GitHub', 'トークンを貼る方法(うまくいかないとき)': 'Paste a token instead (if that does not work)',
+  '実験版': 'Experimental', '新しい機能を先に試している版です': 'This version tries out new features first',
   'GitHub と連携できませんでした': 'Could not connect GitHub', 'GitHub を開いてコードを入れる': 'Open GitHub and enter the code', '許可すると、ここが自動で「動いています」に変わります。': 'Once approved, this turns to “Working” by itself.',
   '許可されませんでした': 'It was not approved', 'まだ設定されていません。': 'Not set up yet.', '✓ 動いています(最後に起動: {time})': '✓ Working (last started: {time})',
   '✕ トークンが使えません(期限切れなど)。作り直して、もう一度貼ってください。': '✕ The token does not work (it may have expired). Make a new one and paste it again.',

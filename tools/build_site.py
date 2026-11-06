@@ -19,6 +19,15 @@ SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'apple-touch-icon.png',
 MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 
 
+def experimental():
+    """Our own site (the repository the copies update from) runs new things first: its page says so."""
+    try:
+        with open(os.path.join(ROOT, 'tools', 'ci', 'upstream'), encoding='utf-8') as f:
+            return os.environ.get('GITHUB_REPOSITORY', '').lower() == f.read().strip().lower()
+    except OSError:
+        return False
+
+
 def release():
     """The release number (VERSION at the top of the repository, e.g. 1.2.0)."""
     try:
@@ -91,7 +100,8 @@ def main():
     with open(page, encoding='utf-8') as f:
         html = f.read()
     html = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)"', rf'\1?v={version}"', html)
-    html = html.replace('<meta charset="utf-8">', f'<meta charset="utf-8">\n<meta name="blockmap-release" content="{release()}">', 1)
+    html = html.replace('<meta charset="utf-8">', f'<meta charset="utf-8">\n<meta name="blockmap-release" content="{release()}">'
+                        + ('\n<meta name="blockmap-experimental" content="1">' if experimental() else ''), 1)
     with open(page, 'w', encoding='utf-8') as f:
         f.write(html)
     if folder:

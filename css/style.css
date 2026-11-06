@@ -472,6 +472,10 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #lang-menu { display: grid; gap: 10px; width: 260px; padding: 12px; border-radius: var(--radius); background: var(--glass-strong);
   border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: var(--blur); font-size: 13px; }
 #lang-menu[hidden] { display: none; }
+.set-version { padding-top: 8px; border-top: 1px solid var(--line); color: var(--sub); font-size: 12px; }
+.set-version:empty { display: none; }
+.exp-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #f5a524; color: #1a1300; font-size: 11px; font-weight: 700; }
+.exp-note { display: block; margin-top: 4px; color: #f5a524; }
 .set-row { display: grid; gap: 6px; }
 .set-label { color: var(--sub); font-size: 12px; }
 .set-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 10px; background: var(--field); }
