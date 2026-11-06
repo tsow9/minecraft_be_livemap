@@ -2078,9 +2078,9 @@ function setupSearch() {
         }
       }
     }
-    for (const [dim, list] of Object.entries(state.ends || {})) {
+    for (const dim of Object.keys(state.ends || {})) {
       if (!DIMS[dim]) continue;
-      for (const e of list) {
+      for (const e of shownEnds(dim)) {
         out.push({ kind: 'gate', dim, x: e.x, z: e.z, title: endTitle(e), hay: `${endTitle(e)} ${tl('エンドポータル')} ${tl('ポータル')} end portal`,
           icon: e.kind === 'end_gateway' ? GATEWAY_SVG : END_SVG, meta: `${endSub(e)}  ${where(dim, e.x, e.z)}`, go: () => goTo(e.x, e.z, dim, 1) });
       }
@@ -2800,6 +2800,8 @@ const END_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="19" height="22">
 const GATEWAY_SVG = `<svg class="gm-svg" viewBox="0 0 22 26" width="19" height="22"><ellipse class="gm-shadow" cx="11" cy="24" rx="7" ry="1.6"/>`
   + '<g class="gm-body"><circle cx="11" cy="11" r="8.5" fill="#0d1f24" stroke="#1b1d22" stroke-width="2.6"/>'
   + '<circle cx="11" cy="11" r="5" fill="none" stroke="#c39bff" stroke-width="1.6"/><path d="M9 9h1M12.5 12h1M11 7.5h1" stroke="#7ff0d8" stroke-width="1.4"/></g></svg>';
+// End portals only once someone has opened them (all the eyes in); End gateways always.
+const shownEnds = (dim) => (state.ends?.[dim] || []).filter((e) => e.kind === 'end_gateway' || e.active);
 const endTitle = (e) => (e.kind === 'end_gateway' ? tl('エンドゲートウェイ') : tl('エンドポータル'));
 function endSub(e) {
   if (e.kind === 'end_gateway') return tl('エンドの外側の島へ');
@@ -2847,7 +2849,7 @@ function shownGates(dim) {
 function renderPortals() {
   portalGroup.clearLayers();
   if (!$('#show-portals').checked) return;
-  for (const e of state.ends?.[state.dim] || []) {
+  for (const e of shownEnds(state.dim)) {
     const m = L.marker(ll(e.x + 0.5, e.z + 0.5), {
       pmIgnore: true, zIndexOffset: 400,
       icon: L.divIcon({ className: '', iconSize: null, iconAnchor: [0, 0],
