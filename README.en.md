@@ -109,6 +109,10 @@ Make one repository for each Realm, with different names (step 1). Which Realm e
 1. In the **Admin menu** (the shield icon on the right), select **Copy site URL** and send it to your members.
 2. Members open the address and sign in with the Microsoft account they play Minecraft with.
 
+### Update timer (recommended)
+
+GitHub's 10-minute and hourly runs can be hours late. Under **Update timer** in the admin menu, add a GitHub token that may only start this repository's runs (fine-grained, Actions: Read and write), and the site starts the live check every 10 minutes itself (the live check updates the map hourly).
+
 ### Updating to a new version
 
 When a new version is out, the admin sees "Version … is out" at the bottom of the map site. Press it, and in the admin menu under **Blockmap version** press **Update**: the site moves to the new version in 10 to 20 minutes, with no GitHub screens.

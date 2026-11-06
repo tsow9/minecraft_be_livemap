@@ -658,3 +658,11 @@ body.tools-open #release-bar { bottom: 160px; }
 /* A villager's job site block and bed, under its position. */
 .v-places { margin: 4px 0 2px; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
 .v-places span { display: inline-block; min-width: 6.5em; color: var(--fg); }
+#timer-box { margin-top: 14px; }
+#timer-box .good { color: var(--accent); }
+#timer-box .bad { color: #ff8a86; }
+#timer-box a.mini { display: inline-flex; text-decoration: none; color: var(--fg); }
+.timer-steps { margin: 6px 0; padding-left: 1.3em; }
+.timer-form { display: flex; gap: 6px; margin-top: 8px; }
+.timer-form input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--fg); font: inherit; font-size: 13px; }
+.timer-form .primary { background: var(--accent); border-color: var(--accent); color: #06130d; font-weight: 700; }

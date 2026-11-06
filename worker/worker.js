@@ -21,6 +21,10 @@ const COOKIE_DAYS = 400;
 const USED_EVERY_MS = 3600 * 1000;  // how often "last seen" is brought up to date
 
 export default {
+  // The timer (wrangler.template.toml): starts the repository's live check, which also redraws the map hourly.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(startLiveCheck(env));
+  },
   async fetch(req, env) {
     const url = new URL(req.url);
     const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
@@ -146,6 +150,20 @@ export default {
         const p = cleanPrefs(await req.json().catch(() => null));
         if (p) await kvPut(env, 'prefs', { ...p, by: 'admin' });
         return json({ ok: !!p });
+      }
+      // The timer's GitHub token (admin only): saved, never shown again; the page sees only whether it works.
+      if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'GET') {
+        const t = await kvGet(env, 'timer');
+        return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.ok ?? null, last: t?.last || null, status: t?.status || null });
+      }
+      if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'POST') {
+        const b = await req.json().catch(() => null);
+        const token = String(b?.token || '').trim();
+        if (b?.clear) { await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('timer').run(); return json({ ok: true }); }
+        if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,250}$/.test(token)) return json({ error: 'bad token' }, 400);
+        await kvPut(env, 'timer', { token });
+        const r = await startLiveCheck(env);  // tried at once, so the admin sees whether it works
+        return json({ ok: r === 204, status: r });
       }
       if (path === '/privacy' && admin && req.method === 'GET') return json(await privacy(env));
       if (path === '/privacy' && admin && req.method === 'POST') {
@@ -398,6 +416,22 @@ async function kvPut(env, k, v) {
   await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
     .bind(k, JSON.stringify(v), Date.now()).run();
 }
+// Starts the repository's live check (GitHub's workflow_dispatch) with the admin's token; remembers how it went.
+async function startLiveCheck(env) {
+  const t = await kvGet(env, 'timer');
+  if (!t?.token || !/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return null;
+  let status = 0;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/dispatches`, {
+      method: 'POST', body: JSON.stringify({ ref: 'main' }),
+      headers: { Authorization: `Bearer ${t.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' },
+    });
+    status = res.status;
+  } catch { status = 0; }
+  await kvPut(env, 'timer', { ...t, ok: status === 204, status, last: Date.now() });
+  return status;
+}
+
 function cleanPrefs(b) {
   const lang = b?.lang === 'en' || b?.lang === 'ja' ? b.lang : null;
   const tz = typeof b?.tz === 'string' && /^[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){0,2}$/.test(b.tz) && b.tz.length <= 40 ? b.tz : null;

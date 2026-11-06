@@ -111,7 +111,7 @@ function showInvites(role) {
   $('#privacy').hidden = !DATA || role !== 'admin';
   // The owner's menu (sign-in, the site's address, what to keep off the map, who may write) is the owner's alone.
   $('#btn-site').hidden = !DATA || role !== 'admin';
-  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); }
+  if (DATA && role === 'admin') { loadAccess(); loadPrivacy(); loadBilling(); loadRelease(); loadTimer(); }
   renderMe();
 }
 function renderMe() {
@@ -247,6 +247,39 @@ function setupSettings() {
     label();
     // Times on the page follow at once.
     renderTimeline?.(); refreshBase?.(); refreshLive?.();
+  });
+}
+
+// The timer (admin only): GitHub's own timer often runs hours late, so the site starts the live check every 10 minutes
+// itself, with a GitHub token the admin makes once that may only start this repository's runs.
+async function loadTimer() {
+  const box = $('#timer-box'), body = $('#timer-body');
+  const r = await fetchJson(`${share.url}/timer`);
+  if (!r) return;
+  box.hidden = false;
+  const owner = (r.repo || '').split('/')[0];
+  const make = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({ name: `Blockmap timer ${(r.repo || '').split('/')[1] || ''}`.trim(),
+    description: 'Lets the Blockmap site start its live check', target_name: owner, expires_in: 'none', actions: 'write' })}`;
+  const state = !r.set ? `<p class="help">${tl('まだ設定されていません。')}</p>`
+    : r.ok ? `<p class="help good">${tl('✓ 動いています(最後に起動: {time})', { time: esc(timeText(r.last)) })}</p>`
+      : `<p class="help bad">${tl('✕ トークンが使えません(期限切れなど)。作り直して、もう一度貼ってください。')}</p>`;
+  body.innerHTML = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 10 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub のトークンを 1 つ登録します。このリポジトリの自動処理を起動する権限だけのトークンです。')}</p>${state}
+    <ol class="help timer-steps">
+      <li>${tl('下のボタンで GitHub を開きます。')}</li>
+      <li>${tl('「Repository access」で「Only select repositories」を選び、{repo} を選びます。', { repo: `<b>${esc(r.repo || '')}</b>` })}</li>
+      <li>${tl('いちばん下の「Generate token」を押し、表示されたトークンをコピーします。')}</li>
+      <li>${tl('下の欄に貼って「保存」を押します。')}</li>
+    </ol>
+    <p class="btns"><a class="mini" href="${esc(make)}" target="_blank" rel="noopener">${tl('GitHub でトークンを作る')}</a></p>
+    <form id="timer-form" class="timer-form"><input id="timer-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="${esc(tl('トークン'))}"><button class="mini primary" type="submit">${tl('保存')}</button></form>`;
+  $('#timer-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = $('#timer-token').value.trim();
+    if (!token) return;
+    const res = await fetch(`${share.url}/timer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).catch(() => null);
+    const d = await res?.json().catch(() => null);
+    toast(res?.ok && d?.ok ? tl('タイマーを設定しました') : tl('このトークンでは起動できませんでした'));
+    loadTimer();
   });
 }
 
