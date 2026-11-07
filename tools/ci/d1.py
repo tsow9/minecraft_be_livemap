@@ -3,6 +3,7 @@
   d1.py get KEY              prints the value (nothing if there is none)
   d1.py put KEY < value      stores what comes in
   d1.py del KEY
+  d1.py forget SINCE_MS KEY...   deletes those of KEY... stored before SINCE_MS (left from an older repository)
 
 Used for the Realms sign-in (encrypted with the key; GitHub's Actions cache is not used, so the workflow files need no
 outside actions). Needs CLOUDFLARE_API_TOKEN (CLOUDFLARE_ACCOUNT_ID is optional). Prints nothing and fails quietly
@@ -49,6 +50,8 @@ def main():
     if not os.environ.get('CLOUDFLARE_API_TOKEN'):
         raise SystemExit(1)
     what, key = sys.argv[1], sys.argv[2]
+    if what == 'forget':
+        since, keys = int(key), sys.argv[3:]
     db = database()
     query(db, 'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, at INTEGER NOT NULL)')
     if what == 'get':
@@ -60,6 +63,11 @@ def main():
               [key, sys.stdin.read(), int(time.time() * 1000)])
     elif what == 'del':
         query(db, 'DELETE FROM kv WHERE k = ?', [key])
+    elif what == 'forget':
+        for k in keys:
+            if query(db, 'SELECT k FROM kv WHERE k = ? AND at < ?', [k, since]):
+                query(db, 'DELETE FROM kv WHERE k = ?', [k])
+                print(k)
 
 
 if __name__ == '__main__':

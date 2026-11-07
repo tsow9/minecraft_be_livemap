@@ -84,7 +84,14 @@ if os.environ.get("TIMEZONE") == "" and isinstance(tz, str) and re.fullmatch(r"[
 # The Realms sign-in, encrypted, kept in the site's Cloudflare database.
 auth_get() {
   mkdir -p .auth
-  local v
+  local v made
+  # A site of the same name may be left from an older repository (made again under that name): its Realms sign-in
+  # is not this repository's, so it is forgotten and signing in starts afresh (the setup page's code).
+  if [ "$GITHUB_REPOSITORY" != "$UPSTREAM" ]; then
+    made=$(gh api "repos/$GITHUB_REPOSITORY" --jq .created_at 2>/dev/null) || made=""
+    [ -n "$made" ] && python3 tools/ci/d1.py forget "$(( $(date -d "$made" +%s) * 1000 ))" realms_auth realm_pick 2>/dev/null |
+      grep -q . && echo "$(t '前のリポジトリのログイン情報が残っていたので消しました' 'Removed a sign-in left from an earlier repository of this name')"
+  fi
   v=$(python3 tools/ci/d1.py get realms_auth 2>/dev/null) || v=""
   if [ -n "$v" ]; then printf '%s' "$v" | base64 -d > .auth/token.enc 2>/dev/null || rm -f .auth/token.enc; fi
   [ -s .auth/token.enc ] || rm -f .auth/token.enc
