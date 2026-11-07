@@ -201,12 +201,13 @@
     const res = await fetch(`${base}/api/setup`, { cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const s = await res.json();
-    if (!s?.state || s.r !== tag) throw new Error('another site');
+    // With this repository's id: its own tag. Without it (GitHub's hourly limit reached): only news from the last 20
+    // minutes counts, so a site left from an older repository of this name (finished long ago) is not taken for it.
+    if (!s?.state || (tag ? s.r !== tag : !(Date.now() - (s.at || 0) < 20 * 60000))) throw new Error('another site');
     return [base, s];
   }
   async function askSite(repo) {
     const tag = await repoTag(repo);
-    if (!tag) return null;
     let hit;
     try { hit = await Promise.any(candidates(repo).map((b) => askOne(b.replace(/\/$/, ''), tag))); } catch { return null; }
     const [base, s] = hit;
@@ -235,9 +236,9 @@
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
-    // Nothing is shown as found until this repository's id is known (it tells it apart from an older one of its name).
-    if (!(await repoInfo(repo))) { state = { kind: 'waiting' }; return; }
-    if (saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
+    // This repository's id (GitHub's public API) tells it apart from an older one of its name; "done" is trusted only with it.
+    const known = await repoInfo(repo);
+    if (known && saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
     const s = await askSite(repo);
     fromSite = !!s;
     // The timer (a must): known from the site; sites from before it existed say nothing, and are not held up.
@@ -280,6 +281,7 @@
       data = await getJSON(`https://api.github.com/repos/${repo}/actions/workflows/map.yml/runs?per_page=10`);
     } catch (e) {
       if (e.reset) limited = e.reset;
+      if (!state) state = { kind: 'waiting' };
       return;
     }
     limited = 0;
