@@ -260,10 +260,13 @@ async function loadTimer() {
   const box = $('#timer-box'), body = $('#timer-body');
   const r = await fetchJson(`${share.url}/timer`);
   if (!r) return;
-  box.hidden = false;
+  // Set up during setup and working: nothing to show. Otherwise this part of the admin menu, and a bar.
+  box.hidden = !!r.ok;
   // Not set (or no longer working): a bar until it is, since the map stays old without it.
   const bar = $('#timer-bar');
   bar.hidden = !!r.ok;
+  box.dataset.repo = r.repo || '';
+  timerApp = r.app || timerApp;
   bar.textContent = r.set ? tl('自動更新が止まっています → 設定し直す') : tl('自動更新がまだ設定されていません → 設定する');
   const owner = (r.repo || '').split('/')[0];
   const make = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({ name: `Blockmap timer ${(r.repo || '').split('/')[1] || ''}`.trim(),
@@ -281,12 +284,7 @@ async function loadTimer() {
     <p class="btns"><a class="mini" href="${esc(make)}" target="_blank" rel="noopener">${tl('GitHub でトークンを作る')}</a></p>${pasteForm}`;
   const intro = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 10 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub と連携します。このリポジトリの自動処理を起動する権限だけです。')}</p>`;
   body.innerHTML = intro + state + (r.app
-    ? `<ol class="help timer-steps">
-        <li>${tl('「Blockmap を GitHub に入れる」を押し、{repo} を選んで「Install」を押します。', { repo: `<b>${esc(r.repo || '')}</b>` })}</li>
-        <li>${tl('「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。')}</li>
-      </ol>
-      <p class="btns"><a class="mini" href="https://github.com/apps/${encodeURIComponent(r.app)}/installations/new" target="_blank" rel="noopener">${tl('Blockmap を GitHub に入れる')}</a>
-        <button class="mini primary" type="button" id="timer-connect">${tl('GitHub と連携する')}</button></p>
+    ? `<p class="btns"><button class="mini primary" type="button" id="timer-connect">${tl('GitHub と連携する')}</button></p>
       <div id="timer-code"></div>
       <details class="timer-alt"><summary>${tl('トークンを貼る方法(うまくいかないとき)')}</summary>${pasteSteps}</details>`
     : pasteSteps);
@@ -320,17 +318,36 @@ async function connectTimer() {
       .then((x) => x.json()).catch(() => null);
     if (p?.pending) { if (p.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
     if (p?.ok) toast(tl('タイマーを設定しました'));
-    else toast(p?.error === 'access_denied' ? tl('許可されませんでした')
-      : p?.error === 'not-installed' ? tl('先に「Blockmap を GitHub に入れる」で、このリポジトリに入れてください') : tl('GitHub と連携できませんでした'));
+    else if (p?.error === 'not-installed') { timerInstall(box); return; }
+    else toast(p?.error === 'access_denied' ? tl('許可されませんでした') : tl('GitHub と連携できませんでした'));
     loadTimer();
   };
   setTimeout(look, wait);
+}
+
+// Approved, but the app is not on the repository yet: how to add it; the site tries again every few seconds.
+function timerInstall(box) {
+  const repo = $('#timer-box')?.dataset.repo || '';
+  box.innerHTML = `<p class="help"><b>${tl('あと 1 つ:Blockmap Connect をリポジトリに入れます')}</b><br>
+    ${tl('下のボタンで GitHub を開き、「Only select repositories」を選んで {repo} を選び、「Install」を押します。', { repo: `<b>${esc(repo)}</b>` })}</p>
+    <p class="btns"><a class="mini primary" href="https://github.com/apps/${encodeURIComponent(timerApp)}/installations/new" target="_blank" rel="noopener">${tl('Blockmap Connect を入れる')}</a></p>
+    <p class="help">${tl('入れると、ここが自動で変わります。')}</p>`;
+  const until = Date.now() + 30 * 60000;
+  const look = async () => {
+    if (Date.now() > until || !document.body.contains(box)) return;
+    const p = await fetch(`${share.url}/timer/retry`, { method: 'POST' }).then((x) => x.json()).catch(() => null);
+    if (p?.ok) { toast(tl('タイマーを設定しました')); loadTimer(); return; }
+    if (p?.error === 'expired') { loadTimer(); return; }
+    setTimeout(look, 5000);
+  };
+  setTimeout(look, 5000);
 }
 
 // Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
 // A bar tells the admin when a new version is out; it opens this part of the admin menu.
 let releaseTimer = null;
 let openTimerOnLoad = false;
+let timerApp = 'blockmap-connect';
 async function loadRelease() {
   const box = $('#version-box'), body = $('#version-body');
   const r = await fetchJson(`${share.url}/release`);

@@ -371,39 +371,53 @@
     if (!show) return;
     let html;
     if (timerOk) html = `<b class="good">${T('✓ 自動更新を設定しました', '✓ Automatic updates are set up')}</b>`;
-    else {
-      html = `<b>${T('自動更新を設定します(必須)', 'Set up automatic updates (required)')}</b>
+    else if (auto.phase === 'code') {
+      // 1 of 2: GitHub's code.
+      html = `<b>${T('GitHub でこのコードを入れて「Authorize」を押します', 'Enter this code on GitHub, then press “Authorize”')}</b>
+        <div class="code"><span>${esc(auto.code)}</span><button class="copy" type="button" data-text="${esc(auto.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
+        <p><a class="btn" href="${esc(auto.uri)}" target="_blank" rel="noopener">${T('github.com/login/device を開く', 'Open github.com/login/device')}</a></p>
+        <span class="small">${T('許可すると、ここが自動で次に進みます。', 'Once you allow it, this moves on by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
+    } else if (auto.phase === 'install') {
+      // 2 of 2: the app on this repository (the approval is kept on the site meanwhile).
+      html = `<b>${T('あと 1 つ:Blockmap Connect をリポジトリに入れます', 'One more: add Blockmap Connect to the repository')}</b>
+        ${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」を選んで <code>${esc(saved.repo)}</code> を選び、「<b>Install</b>」を押します。`,
+          `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code>, then press “<b>Install</b>”.`)}
+        <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new" target="_blank" rel="noopener">${T('Blockmap Connect を入れる', 'Add Blockmap Connect')}</a></p>
+        <span class="small">${T('入れると、ここが自動で変わります。', 'Once added, this changes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
+    } else {
+      html = `<b>${T('自動更新を設定します', 'Set up automatic updates')}</b>
         ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
-        <ol class="auto-steps"><li>${T(`「Blockmap Connect を入れる」を押します。GitHub の画面で「Only select repositories」に <code>${esc(saved.repo)}</code> だけが選ばれていることを確かめて、「Install」を押します。`, `Press “Add Blockmap Connect”. On GitHub, check that “Only select repositories” has just <code>${esc(saved.repo)}</code>, then press “Install”.`)}</li>
-          <li>${T('「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。', 'Press “Connect GitHub”, enter the code shown on GitHub, then press “Authorize”.')}</li></ol>
-        <p class="row"><a class="btn ghost" href="${esc(installUrl())}" target="_blank" rel="noopener">${T('1. Blockmap Connect を入れる', '1. Add Blockmap Connect')}</a>
-          <button class="btn" type="button" id="auto-connect"${auto.phase === 'code' ? ' disabled' : ''}>${T('2. GitHub と連携する', '2. Connect GitHub')}</button></p>`;
-      if (auto.phase === 'code') {
-        html += `<div class="code"><span>${esc(auto.code)}</span><button class="copy" type="button" data-text="${esc(auto.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
-          <p><a class="btn" href="${esc(auto.uri)}" target="_blank" rel="noopener">${T('github.com/login/device を開く', 'Open github.com/login/device')}</a></p>
-          <span class="small">${T('許可すると、ここが自動で変わります。', 'Once you allow it, this changes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
-      } else if (auto.phase === 'error') {
-        html += `<span class="bad">${auto.err === 'not-installed'
-          ? T('Blockmap Connect がこのリポジトリに入っていませんでした。1 を押して入れてから、もう一度 2 を押してください。', 'Blockmap Connect was not on this repository. Press 1 to add it, then press 2 again.')
-          : auto.err === 'access_denied' ? T('許可されませんでした。もう一度 2 を押してください。', 'It was not allowed. Press 2 again.')
-            : T('うまくいきませんでした。もう一度 2 を押してください。', 'That did not work. Press 2 again.')}</span>`;
-      }
+        <p><button class="btn" type="button" id="auto-connect">${T('GitHub と連携する', 'Connect GitHub')}</button></p>`
+        + (auto.phase === 'error' ? `<span class="bad">${auto.err === 'access_denied' ? T('許可されませんでした。もう一度押してください。', 'It was not allowed. Please press it again.')
+          : T('うまくいきませんでした。もう一度押してください。', 'That did not work. Please press it again.')}</span>` : '');
     }
     if (html !== lastAuto) { box.innerHTML = html; lastAuto = html; }
     box.className = `status ${timerOk ? 'done' : 'code'}`;
   }
-  // GitHub's install page with this repository picked (when its ids are known).
-  const installUrl = () => (info?.id && info.owner
-    ? `https://github.com/apps/${appSlug}/installations/new/permissions?suggested_target_id=${info.owner}&repository_ids[]=${info.id}`
-    : `https://github.com/apps/${appSlug}/installations/new`);
+  const autoDone = () => { timerOk = true; auto = { phase: 'ok' }; saved.timer = '1'; save(); refresh(); renderStatus(); poll(); };
   // Text bodies, so no preflight.
   const askTimer = (what, body) => fetch(`${siteUrl}/api/setup/timer/${what}`, { method: 'POST', body: JSON.stringify(body || {}) }).then((r) => r.json());
+  // Waiting for the app to be added: the site tries the kept approval again every few seconds.
+  function waitInstall() {
+    const until = Date.now() + 30 * 60000;
+    const look = async () => {
+      if (auto.phase !== 'install') return;
+      if (Date.now() > until) { auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
+      let p = null;
+      if (document.visibilityState === 'visible') { try { p = await askTimer('retry'); } catch { /* try again */ } }
+      if (p?.ok || p?.error === 'set') { autoDone(); return; }
+      if (p?.error === 'expired') { auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
+      setTimeout(look, 5000);
+    };
+    setTimeout(look, 5000);
+  }
   document.addEventListener('click', async (e) => {
     if (!e.target.closest('#auto-connect') || !siteUrl) return;
+    e.target.closest('#auto-connect').disabled = true;
     let d = null;
     try { d = await askTimer('connect'); } catch { /* offline */ }
-    if (d?.error === 'set') { timerOk = true; renderAuto(); return; }
-    if (!d?.user_code) { auto = { phase: 'error', err: 'github' }; renderAuto(); return; }
+    if (d?.error === 'set') { autoDone(); return; }
+    if (!d?.user_code) { auto = { phase: 'error', err: 'github' }; lastAuto = ''; renderAuto(); return; }
     auto = { phase: 'code', code: d.user_code, uri: d.uri || 'https://github.com/login/device' };
     renderAuto();
     const until = Date.now() + (d.expires_in || 900) * 1000;
@@ -414,7 +428,8 @@
       let p = null;
       try { p = await askTimer('poll', { handle: d.handle }); } catch { /* try again */ }
       if (!p || p.pending) { if (p?.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
-      if (p.ok || p.error === 'set') { timerOk = true; auto = { phase: 'ok' }; saved.timer = '1'; save(); refresh(); renderStatus(); poll(); return; }
+      if (p.ok || p.error === 'set') { autoDone(); return; }
+      if (p.error === 'not-installed') { auto = { phase: 'install' }; renderAuto(); waitInstall(); return; }
       auto = { phase: 'error', err: p.error };
       renderAuto();
     };

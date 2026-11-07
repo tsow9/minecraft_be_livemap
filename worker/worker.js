@@ -42,10 +42,11 @@ export default {
       // Setting up the timer from the setup page, before anyone can sign in to the site: only while no working timer
       // is set, and a token is kept only if it really can start this repository's runs (so only someone who may run
       // them can set it). Plain text bodies, so the setup page needs no preflight.
-      if ((url.pathname === '/api/setup/timer/connect' || url.pathname === '/api/setup/timer/poll') && req.method === 'POST') {
+      if (/^\/api\/setup\/timer\/(connect|poll|retry)$/.test(url.pathname) && req.method === 'POST') {
         const open = { 'Access-Control-Allow-Origin': '*' };
         if (timerWorks(env, await kvGet(env, 'timer'))) return json({ error: 'set' }, 409, open);
         if (url.pathname.endsWith('/connect')) return json(...(await timerConnect(env)), open);
+        if (url.pathname.endsWith('/retry')) return json(await timerRetry(env), 200, open);
         let handle = '';
         try { handle = String(JSON.parse(await req.text())?.handle || ''); } catch { /* not JSON */ }
         return json(await timerPoll(env, handle), 200, open);
@@ -171,6 +172,7 @@ export default {
       }
       // Connecting the Blockmap Connect GitHub App with a code (GitHub's device flow: the site needs no secret).
       if (path === '/timer/connect' && admin && me.via === 'microsoft' && req.method === 'POST') return json(...(await timerConnect(env)));
+      if (path === '/timer/retry' && admin && me.via === 'microsoft' && req.method === 'POST') return json(await timerRetry(env));
       if (path === '/timer/poll' && admin && me.via === 'microsoft' && req.method === 'POST') {
         const b = await req.json().catch(() => null);
         return json(await timerPoll(env, String(b?.handle || '')));
@@ -456,10 +458,28 @@ async function timerPoll(env, handle) {
   if (r?.error === 'authorization_pending' || r?.error === 'slow_down') return { pending: true, interval: r.interval || null };
   if (!r?.access_token) return { error: r?.error || 'github' };
   const t = { token: r.access_token, via: 'app', refresh: r.refresh_token || null, expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null };
+  return useTimer(env, t);
+}
+// The approved token starts this repository's live check: kept as the timer. Not yet (the app is not on the
+// repository): kept aside for a while, and tried again (timerRetry) once the app has been added.
+async function useTimer(env, t) {
   const status = await dispatchLive(env, t.token);
-  if (status !== 204) return { error: status === 404 || status === 403 ? 'not-installed' : 'github', status };
-  await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now(), rid: env.GH_REPO_ID || null });
-  return { ok: true };
+  if (status === 204) {
+    await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now(), rid: env.GH_REPO_ID || null });
+    await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('timer_pending').run();
+    return { ok: true };
+  }
+  if (status === 404 || status === 403) {
+    await kvPut(env, 'timer_pending', { ...t, until: Date.now() + 30 * 60000 });
+    return { error: 'not-installed', status };
+  }
+  return { error: 'github', status };
+}
+async function timerRetry(env) {
+  const p = await kvGet(env, 'timer_pending');
+  if (!p?.token || p.until < Date.now()) return { error: 'expired' };
+  const { until, ...t } = p;
+  return useTimer(env, t);
 }
 async function dispatchLive(env, token) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return 0;
