@@ -174,16 +174,19 @@
     if (info?.repo === repo) return info;
     try {
       const r = await getJSON(`https://api.github.com/repos/${repo}`);
-      info = { repo, id: String(r.id || ''), owner: String(r.owner?.id || '') };
-    } catch { return null; }
+      if (!r?.id) return null;
+      info = { repo, id: String(r.id), owner: String(r.owner?.id || '') };
+    } catch (e) { if (e.reset) limited = e.reset; return null; }
     if (saved.repo === repo && saved.id && saved.id !== info.id) { saved = { repo, id: info.id }; siteUrl = ''; save(); refresh(); }
     // Remembered before ids were: "done" may be an older repository's, so it is looked at afresh.
     else if (saved.repo === repo && !saved.id) { saved = { repo, id: info.id }; save(); refresh(); }
     return info;
   }
   const repoTag = async (repo) => {
+    // Only with the id: by name alone, an older repository's site of the same name would answer for this one.
     const i = await repoInfo(repo);
-    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(i?.id ? `${repo.toLowerCase()}#${i.id}` : repo.toLowerCase()));
+    if (!i?.id) return null;
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${repo.toLowerCase()}#${i.id}`));
     return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
   };
   // Until the address is known, the addresses the workflow would give it are all tried: a new Cloudflare account gets
@@ -203,6 +206,7 @@
   }
   async function askSite(repo) {
     const tag = await repoTag(repo);
+    if (!tag) return null;
     let hit;
     try { hit = await Promise.any(candidates(repo).map((b) => askOne(b.replace(/\/$/, ''), tag))); } catch { return null; }
     const [base, s] = hit;
@@ -231,7 +235,8 @@
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
-    await repoInfo(repo);
+    // Nothing is shown as found until this repository's id is known (it tells it apart from an older one of its name).
+    if (!(await repoInfo(repo))) { state = { kind: 'waiting' }; return; }
     if (saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
     const s = await askSite(repo);
     fromSite = !!s;
