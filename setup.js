@@ -390,11 +390,10 @@
         ? `<b>${T('GitHub と連携しています', 'Connecting GitHub')}<span class="dots"><i></i><i></i><i></i></span></b>`
         : `<b>${T('自動更新を設定します', 'Set up automatic updates')}</b>
         ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
-        <ol class="auto-steps"><li>${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(前に入れたことがあれば、<code>${esc(saved.repo)}</code> を足して「<b>Save</b>」)。`,
-            `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if you added it before, add <code>${esc(saved.repo)}</code> and press “<b>Save</b>”).`)}</li>
+        <ol class="auto-steps"><li>${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(すでに入っていれば、そのまま戻ります)。`,
+            `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if it is already there, just come back).`)}</li>
           <li>${T('このページに戻ると、コードが出ます。GitHub に入れて「Authorize」を押します。', 'Back on this page, a code appears. Enter it on GitHub and press “Authorize”.')}</li></ol>
-        <p><a class="btn" id="auto-install" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('GitHub と連携する', 'Connect GitHub')}</a></p>
-        <p class="small"><a href="#" id="auto-connect">${T('もう入れてある場合はこちら(コードを出す)', 'Already added? Show the code')}</a></p>`
+        <p><a class="btn" id="auto-install" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('GitHub と連携する', 'Connect GitHub')}</a></p>`
         + (auto.phase === 'error' ? `<span class="bad">${auto.err === 'access_denied' ? T('許可されませんでした。もう一度押してください。', 'It was not allowed. Please press it again.')
           : T('うまくいきませんでした。もう一度押してください。', 'That did not work. Please press it again.')}</span>` : '');
     }
