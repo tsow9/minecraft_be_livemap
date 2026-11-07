@@ -369,6 +369,7 @@
     const show = fromSite && !!siteUrl && (!timerOk || auto.phase === 'ok') && ['building', 'making', 'done'].includes(state?.kind);
     box.hidden = !show;
     if (!show) return;
+    if (autoStart && !timerOk && ['idle', 'error'].includes(auto.phase)) { autoStart = false; setTimeout(startConnect, 0); }
     let html;
     if (timerOk) html = `<b class="good">${T('✓ 自動更新を設定しました', '✓ Automatic updates are set up')}</b>`;
     else if (auto.phase === 'code') {
@@ -385,9 +386,15 @@
         <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new" target="_blank" rel="noopener">${T('Blockmap Connect を入れる', 'Add Blockmap Connect')}</a></p>
         <span class="small">${T('入れると、ここが自動で変わります。', 'Once added, this changes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
     } else {
-      html = `<b>${T('自動更新を設定します', 'Set up automatic updates')}</b>
+      html = auto.phase === 'starting'
+        ? `<b>${T('GitHub と連携しています', 'Connecting GitHub')}<span class="dots"><i></i><i></i><i></i></span></b>`
+        : `<b>${T('自動更新を設定します', 'Set up automatic updates')}</b>
         ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
-        <p><button class="btn" type="button" id="auto-connect">${T('GitHub と連携する', 'Connect GitHub')}</button></p>`
+        <ol class="auto-steps"><li>${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(前に入れたことがあれば、<code>${esc(saved.repo)}</code> を足して「<b>Save</b>」)。`,
+            `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if you added it before, add <code>${esc(saved.repo)}</code> and press “<b>Save</b>”).`)}</li>
+          <li>${T('このページに戻ると、コードが出ます。GitHub に入れて「Authorize」を押します。', 'Back on this page, a code appears. Enter it on GitHub and press “Authorize”.')}</li></ol>
+        <p><a class="btn" id="auto-install" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('GitHub と連携する', 'Connect GitHub')}</a></p>
+        <p class="small"><a href="#" id="auto-connect">${T('もう入れてある場合はこちら(コードを出す)', 'Already added? Show the code')}</a></p>`
         + (auto.phase === 'error' ? `<span class="bad">${auto.err === 'access_denied' ? T('許可されませんでした。もう一度押してください。', 'It was not allowed. Please press it again.')
           : T('うまくいきませんでした。もう一度押してください。', 'That did not work. Please press it again.')}</span>` : '');
     }
@@ -404,16 +411,30 @@
       if (auto.phase !== 'install') return;
       if (Date.now() > until) { auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
       let p = null;
-      if (document.visibilityState === 'visible') { try { p = await askTimer('retry'); } catch { /* try again */ } }
+      try { p = await askTimer('retry'); } catch { /* try again */ }
       if (p?.ok || p?.error === 'set') { autoDone(); return; }
       if (p?.error === 'expired') { auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
       setTimeout(look, 5000);
     };
     setTimeout(look, 5000);
   }
-  document.addEventListener('click', async (e) => {
-    if (!e.target.closest('#auto-connect') || !siteUrl) return;
-    e.target.closest('#auto-connect').disabled = true;
+  // Back from GitHub's install page (the app's Setup URL is this page): the code is asked for at once.
+  // Back from GitHub's install page: the app's Setup URL brings the person here (?setup_action=…), or they come back
+  // themselves (noted when they left). Either way the code is asked for at once.
+  const leftForInstall = () => { try { const v = sessionStorage.getItem('blockmap.setup.install'); sessionStorage.removeItem('blockmap.setup.install'); return !!v; } catch { return false; } };
+  let autoStart = /[?&]setup_action=/.test(location.search) || leftForInstall();
+  if (/[?&]setup_action=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
+  window.addEventListener('pageshow', (e) => { if (e.persisted && leftForInstall()) { autoStart = true; renderAuto(); } });
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#auto-install')) { try { sessionStorage.setItem('blockmap.setup.install', '1'); } catch { /* private mode */ } return; }
+    if (!e.target.closest('#auto-connect')) return;
+    e.preventDefault();
+    startConnect();
+  });
+  async function startConnect() {
+    if (!siteUrl || ['starting', 'code'].includes(auto.phase)) return;
+    auto = { phase: 'starting' };
+    renderAuto();
     let d = null;
     try { d = await askTimer('connect'); } catch { /* offline */ }
     if (d?.error === 'set') { autoDone(); return; }
@@ -434,7 +455,7 @@
       renderAuto();
     };
     setTimeout(look, wait);
-  });
+  }
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
   // Step 3's box: waiting for the token, then found (once signing in has started, the token is surely there).
