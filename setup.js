@@ -11,7 +11,7 @@
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
   // The repository, and once its site is made, that it is done and where (so coming back needs no question to GitHub).
   const save = () => {
-    try { localStorage.setItem(KEY, JSON.stringify({ repo: saved.repo || '', done: saved.done || '', site: saved.site || '' })); } catch { /* private mode */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ repo: saved.repo || '', id: saved.id || '', done: saved.done || '', site: saved.site || '', timer: saved.timer || '' })); } catch { /* private mode */ }
   };
 
   // ---- language: the map's choice, else the browser's ----
@@ -167,8 +167,23 @@
   // Once the site is up (signing in puts it up first), it says how things are getting on (/api/setup): asked every few
   // seconds, with no limit. Only what is about this repository counts (an earlier site may share the address).
   let fromSite = false;  // the site answered last time
+  // The repository's id (and its owner's), from GitHub's public API once per visit: a repository made again under an
+  // old name is another one (its old site may still answer), and the app's install page can preselect it.
+  let info = null;
+  async function repoInfo(repo) {
+    if (info?.repo === repo) return info;
+    try {
+      const r = await getJSON(`https://api.github.com/repos/${repo}`);
+      info = { repo, id: String(r.id || ''), owner: String(r.owner?.id || '') };
+    } catch { return null; }
+    if (saved.repo === repo && saved.id && saved.id !== info.id) { saved = { repo, id: info.id }; siteUrl = ''; save(); refresh(); }
+    // Remembered before ids were: "done" may be an older repository's, so it is looked at afresh.
+    else if (saved.repo === repo && !saved.id) { saved = { repo, id: info.id }; save(); refresh(); }
+    return info;
+  }
   const repoTag = async (repo) => {
-    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(repo.toLowerCase()));
+    const i = await repoInfo(repo);
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(i?.id ? `${repo.toLowerCase()}#${i.id}` : repo.toLowerCase()));
     return [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
   };
   // Until the address is known, the addresses the workflow would give it are all tried: a new Cloudflare account gets
@@ -216,6 +231,7 @@
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
+    await repoInfo(repo);
     if (saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
     const s = await askSite(repo);
     fromSite = !!s;
@@ -351,9 +367,9 @@
     else {
       html = `<b>${T('自動更新を設定します(必須)', 'Set up automatic updates (required)')}</b>
         ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
-        <ol class="auto-steps"><li>${T('「Blockmap Connect を入れる」を押し、GitHub の画面で「Install」を押します。', 'Press “Add Blockmap Connect”, then “Install” on GitHub.')}</li>
+        <ol class="auto-steps"><li>${T(`「Blockmap Connect を入れる」を押します。GitHub の画面で「Only select repositories」に <code>${esc(saved.repo)}</code> だけが選ばれていることを確かめて、「Install」を押します。`, `Press “Add Blockmap Connect”. On GitHub, check that “Only select repositories” has just <code>${esc(saved.repo)}</code>, then press “Install”.`)}</li>
           <li>${T('「GitHub と連携する」を押し、出たコードを GitHub に入れて「Authorize」を押します。', 'Press “Connect GitHub”, enter the code shown on GitHub, then press “Authorize”.')}</li></ol>
-        <p class="row"><a class="btn ghost" href="https://github.com/apps/${esc(appSlug)}/installations/new" target="_blank" rel="noopener">${T('1. Blockmap Connect を入れる', '1. Add Blockmap Connect')}</a>
+        <p class="row"><a class="btn ghost" href="${esc(installUrl())}" target="_blank" rel="noopener">${T('1. Blockmap Connect を入れる', '1. Add Blockmap Connect')}</a>
           <button class="btn" type="button" id="auto-connect"${auto.phase === 'code' ? ' disabled' : ''}>${T('2. GitHub と連携する', '2. Connect GitHub')}</button></p>`;
       if (auto.phase === 'code') {
         html += `<div class="code"><span>${esc(auto.code)}</span><button class="copy" type="button" data-text="${esc(auto.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
@@ -369,6 +385,10 @@
     if (html !== lastAuto) { box.innerHTML = html; lastAuto = html; }
     box.className = `status ${timerOk ? 'done' : 'code'}`;
   }
+  // GitHub's install page with this repository picked (when its ids are known).
+  const installUrl = () => (info?.id && info.owner
+    ? `https://github.com/apps/${appSlug}/installations/new/permissions?suggested_target_id=${info.owner}&repository_ids[]=${info.id}`
+    : `https://github.com/apps/${appSlug}/installations/new`);
   // Text bodies, so no preflight.
   const askTimer = (what, body) => fetch(`${siteUrl}/api/setup/timer/${what}`, { method: 'POST', body: JSON.stringify(body || {}) }).then((r) => r.json());
   document.addEventListener('click', async (e) => {

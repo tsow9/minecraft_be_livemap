@@ -37,14 +37,14 @@ export default {
       if (url.pathname === '/api/setup' && req.method === 'GET') {
         const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
         const t = await kvGet(env, 'timer');
-        return json({ ...(row ? JSON.parse(row.v) : {}), timer: !!t?.ok, app: appSlug(env) }, 200, { 'Access-Control-Allow-Origin': '*' });
+        return json({ ...(row ? JSON.parse(row.v) : {}), timer: timerWorks(env, t), app: appSlug(env) }, 200, { 'Access-Control-Allow-Origin': '*' });
       }
       // Setting up the timer from the setup page, before anyone can sign in to the site: only while no working timer
       // is set, and a token is kept only if it really can start this repository's runs (so only someone who may run
       // them can set it). Plain text bodies, so the setup page needs no preflight.
       if ((url.pathname === '/api/setup/timer/connect' || url.pathname === '/api/setup/timer/poll') && req.method === 'POST') {
         const open = { 'Access-Control-Allow-Origin': '*' };
-        if ((await kvGet(env, 'timer'))?.ok) return json({ error: 'set' }, 409, open);
+        if (timerWorks(env, await kvGet(env, 'timer'))) return json({ error: 'set' }, 409, open);
         if (url.pathname.endsWith('/connect')) return json(...(await timerConnect(env)), open);
         let handle = '';
         try { handle = String(JSON.parse(await req.text())?.handle || ''); } catch { /* not JSON */ }
@@ -166,7 +166,7 @@ export default {
       // The timer's GitHub token (admin only): saved, never shown again; the page sees only whether it works.
       if (path === '/timer' && admin && me.via === 'microsoft' && req.method === 'GET') {
         const t = await kvGet(env, 'timer');
-        return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.ok ?? null, last: t?.last || null, status: t?.status || null,
+        return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.token ? timerWorks(env, t) : null, last: t?.last || null, status: t?.status || null,
           app: appSlug(env), via: t?.via || null });
       }
       // Connecting the Blockmap Connect GitHub App with a code (GitHub's device flow: the site needs no secret).
@@ -435,6 +435,9 @@ async function kvPut(env, k, v) {
   await env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3')
     .bind(k, JSON.stringify(v), Date.now()).run();
 }
+// A timer that works for this repository (not one left from an older repository of the same name, whose site and
+// database a new one takes over).
+const timerWorks = (env, t) => !!t?.ok && (!/^\d+$/.test(env.GH_REPO_ID || '') || t.rid === env.GH_REPO_ID);
 const appSlug = (env) => (env.GH_APP_SLUG && env.GH_APP_CLIENT_ID ? env.GH_APP_SLUG : null);
 // Start: a code to enter at github.com/login/device. The page keeps GitHub's device code (its own request's) and asks
 // with it every few seconds; the token itself stays here. Returns [body, status].
@@ -455,7 +458,7 @@ async function timerPoll(env, handle) {
   const t = { token: r.access_token, via: 'app', refresh: r.refresh_token || null, expires: r.expires_in ? Date.now() + r.expires_in * 1000 : null };
   const status = await dispatchLive(env, t.token);
   if (status !== 204) return { error: status === 404 || status === 403 ? 'not-installed' : 'github', status };
-  await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now() });
+  await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now(), rid: env.GH_REPO_ID || null });
   return { ok: true };
 }
 async function dispatchLive(env, token) {
@@ -490,7 +493,8 @@ async function startLiveCheck(env) {
   }
   if (!t?.token || !/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return null;
   const status = await dispatchLive(env, t.token);
-  await kvPut(env, 'timer', { ...t, ok: status === 204, status, last: Date.now() });
+  // It worked for this very repository: noted with its id (see timerWorks).
+  await kvPut(env, 'timer', { ...t, ok: status === 204, status, last: Date.now(), rid: status === 204 ? env.GH_REPO_ID || null : t.rid || null });
   return status;
 }
 

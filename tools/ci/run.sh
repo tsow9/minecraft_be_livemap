@@ -132,7 +132,7 @@ publish_site() {
     id=$(find_db)
     if [ -z "$id" ]; then npx wrangler d1 create "$db" >/dev/null; id=$(find_db); fi
     [ -n "$id" ] || { echo "::error::Could not create the database"; exit 1; }
-    sed -e "s/__DB_ID__/$id/; s/__DB_NAME__/$db/; s/__NAME__/$name/; s#__REPO__#$GITHUB_REPOSITORY#" wrangler.template.toml > wrangler.toml
+    sed -e "s/__DB_ID__/$id/; s/__DB_NAME__/$db/; s/__NAME__/$name/; s#__REPO__#$GITHUB_REPOSITORY#; s/__REPO_ID__/${GITHUB_REPOSITORY_ID:-}/" wrangler.template.toml > wrangler.toml
     npx wrangler d1 execute "$db" --remote --file schema.sql --yes >/dev/null || exit 1
     [ "$ACTION" = 'Update map' ] && bash ../tools/setup_status.sh publishing
     npx wrangler deploy --secrets-file "$RUNNER_TEMP/secrets.json" | tee deploy.log

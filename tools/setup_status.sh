@@ -19,7 +19,10 @@ import hashlib, json, os, sys
 arg = sys.argv[1]
 d = json.loads(arg) if arg.startswith('{') else {'state': arg}
 repo = os.environ.get('GITHUB_REPOSITORY', '').lower()
-d['r'] = hashlib.sha256(repo.encode()).hexdigest()[:16]  # which repository this is about, without naming it
+# Which repository this is about, without naming it; with its id, so a new repository of an old one's name (whose site
+# may still be up) is told apart.
+rid = os.environ.get('GITHUB_REPOSITORY_ID', '')
+d['r'] = hashlib.sha256(f'{repo}#{rid}'.encode() if rid else repo.encode()).hexdigest()[:16]
 d['log'] = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 print(json.dumps(d))
 PY

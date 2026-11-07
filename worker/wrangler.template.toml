@@ -18,6 +18,8 @@ MS_CLIENT_ID = "df3e3bed-2f3c-4079-8961-0c59d312c2fd"
 MS_RELAY = "https://tsow9.github.io/minecraft_be_livemap/login.html"
 # The GitHub repository this site comes from (owner/name): the timer below starts its live check.
 GH_REPO = "__REPO__"
+# Its id: a new repository of the same name (made again) does not take over the old one's timer.
+GH_REPO_ID = "__REPO_ID__"
 # The "Blockmap" GitHub App shared by every site (not secrets: its public client id and its name in GitHub's address).
 # The admin installs it on the repository and approves a code, and the timer starts the live check with that.
 GH_APP_CLIENT_ID = "Iv23li5jn6tfeGhFVOjt"
