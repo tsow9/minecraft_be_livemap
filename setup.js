@@ -416,7 +416,7 @@
   // Step 3: once signing in has started, the token is surely there; while still waiting after a few minutes, what to check.
   let waitingSince = 0;
   // Step 3's box: waiting for the token, then found (once signing in has started, the token is surely there).
-  let lastToken = '';
+  let lastToken = '', lastLook = 0;
   function secretHint() {
     const box = $('#token-box'), kind = state?.kind;
     if (kind !== 'waiting') waitingSince = 0; else if (!waitingSince) waitingSince = Date.now();
@@ -428,7 +428,7 @@
       : `<b>${T('トークンの登録を待っています', 'Waiting for the token')}<span class="dots"><i></i><i></i><i></i></span></b>`
         + (late ? `<span class="bad">${T('まだトークンを確認できていません。Name が <code>CLOUDFLARE_API_TOKEN</code> になっているか確かめてください(<a href="#trouble">詳しく</a>)。',
           'The token has not been found yet. Check that its Name is <code>CLOUDFLARE_API_TOKEN</code> (<a href="#trouble">more</a>).')}</span>`
-          : T('登録すると、自動で確認します。', 'Once added, it is found by itself.'));
+          : `${T('登録すると、30 秒ほどで自動で確認します。', 'Once added, it is found by itself within about half a minute.')}${lastLook ? `<span class="small">${T('このページの最終確認', 'Last checked by this page')}: ${new Date(lastLook).toLocaleTimeString()}</span>` : ''}`);
     if (html !== lastToken) { box.innerHTML = html; lastToken = html; }
   }
   // Picking a Realm: sent to the site (plain text, so no preflight); the sign-in, waiting on the site, carries on.
@@ -452,7 +452,7 @@
   async function poll(now = false) {
     clearTimeout(timer);
     if (now) { state = saved.repo ? { kind: 'waiting' } : null; limited = 0; renderStatus(); timer = setTimeout(() => poll(), 1500); return; }
-    try { await check(); } catch { /* offline: try again shortly */ }
+    try { await check(); lastLook = Date.now(); } catch { /* offline: try again shortly */ }
     renderStatus();
     if (document.visibilityState !== 'visible') return;  // looks again when the page is shown
     // Every 5 seconds while the code is shown, 10 while the site is made, 15 while waiting; slower near GitHub's limit.

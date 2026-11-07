@@ -141,3 +141,4 @@ button.btn { border: 0; font: inherit; font-size: 13px; font-weight: 700; cursor
 button.btn:disabled { opacity: .5; cursor: default; }
 .status .row { display: flex; flex-wrap: wrap; gap: 8px; }
 .auto-steps { margin: 8px 0; padding-left: 20px; }
+#token-box .small { display: block; margin-top: 4px; }

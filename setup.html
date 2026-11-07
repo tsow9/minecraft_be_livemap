@@ -100,7 +100,15 @@
     <ul>
       <li data-en="Check that step 1's box has the link to &lt;b&gt;your&lt;/b&gt; repository.">手順 1 の欄に、<b>自分が作った</b>リポジトリのリンクが入っているか確かめます。</li>
       <li data-en="Open step 3's button again. Under &lt;b&gt;Repository secrets&lt;/b&gt; there should be &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, spelled exactly so. (Not under Variables, and not under Environment secrets.)">手順 3 のボタンをもう一度開き、<b>Repository secrets</b> に <code>CLOUDFLARE_API_TOKEN</code> があるか確かめます(つづりが一字でも違うと動きません。Variables や Environment secrets ではありません)。</li>
-      <li data-en="If more than 45 minutes have passed since you made the repository, it can take up to 10 minutes more.">リポジトリを作ってから 45 分以上たっている場合は、さらに最大 10 分かかります。</li>
+    </ul>
+  </details>
+  <details id="cf-token">
+    <summary data-en="The right settings for the Cloudflare token">Cloudflare のトークンの正しい設定</summary>
+    <p data-en="Step 2's button opens Cloudflare with these already filled in. If yours differ, make the token again with that button (and paste the new one in step 3).">手順 2 のボタンから開くと、次の設定が最初から入っています。違っていたら、そのボタンからトークンを作り直して、手順 3 で貼り直します。</p>
+    <ul>
+      <li data-en="&lt;b&gt;Permissions&lt;/b&gt;: Account · Workers Scripts · Edit / Account · D1 · Edit / Account · Account Settings · Read (these three only)"><b>Permissions</b>(権限):Account・Workers Scripts・Edit / Account・D1・Edit / Account・Account Settings・Read(この 3 つだけ)</li>
+      <li data-en="&lt;b&gt;Account Resources&lt;/b&gt;: Include · All accounts (or your own account)"><b>Account Resources</b>:Include・All accounts(または自分のアカウント)</li>
+      <li data-en="&lt;b&gt;Client IP Address Filtering&lt;/b&gt; and &lt;b&gt;TTL&lt;/b&gt;: leave empty (an end date stops the map when it comes)"><b>Client IP Address Filtering</b> と <b>TTL</b>:空のまま(期限を入れると、その日に地図の更新が止まります)</li>
     </ul>
   </details>
   <details>

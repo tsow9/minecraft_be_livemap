@@ -282,7 +282,9 @@ case "${1:-}" in
   setup)
     case "$GITHUB_EVENT_NAME" in
       push) [ "$GITHUB_REPOSITORY" = "$UPSTREAM" ] || bash tools/setup_wait.sh ;;
-      workflow_dispatch) [ -n "$CLOUDFLARE_API_TOKEN" ] && { get_key; auth_get; bash tools/auto_signin.sh; } ;;
+      workflow_dispatch)
+        [ -n "$CLOUDFLARE_API_TOKEN" ] && { get_key; auth_get; bash tools/auto_signin.sh; }
+        [ "$GITHUB_REPOSITORY" = "$UPSTREAM" ] || bash tools/setup_wait.sh --next ;;
     esac
     exit 0
     ;;
