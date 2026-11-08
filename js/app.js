@@ -3373,10 +3373,11 @@ function placeText(p) {
 const TRAIL_HOURS = 24;
 // A player's bed (respawn point): the game's bed seen from above, in pixels: wooden frame, white pillow, and the
 // blanket in the player's colour.
-const BED_SVG = (c) => `<svg class="gm-svg" viewBox="0 0 20 28" width="16" height="22" shape-rendering="crispEdges"><ellipse class="gm-shadow" cx="10" cy="26" rx="7" ry="1.6"/>`
-  + `<g class="gm-body"><rect x="2" y="1" width="16" height="23" fill="#1b1d22"/><rect x="3" y="2" width="14" height="21" fill="#9a6a3a"/>`
-  + `<rect x="4" y="3" width="12" height="5" fill="#f4f1ea"/><rect x="4" y="9" width="12" height="13" fill="${c}"/>`
-  + `<rect x="4" y="9" width="12" height="2" fill="#000" opacity=".22"/><rect x="4" y="20" width="12" height="2" fill="#000" opacity=".18"/></g></svg>`;
+// A player's bed from above: the white pillow and the blanket in the player's colour (a darker fold where it meets the
+// pillow), outlined like the other icons.
+const darker = (hex, f = 0.78) => `#${[1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * f).toString(16).padStart(2, '0')).join('')}`;
+const BED_SVG = (c) => pixSvg(['KKKKKKKKKK', 'KWWWWWWWWK', 'KWWWWWWWWK', 'KccccccccK', 'KCCCCCCCCK', 'KCCCCCCCCK', 'KCCCCCCCCK',
+  'KCCCCCCCCK', 'KCCCCCCCCK', 'KCCCCCCCCK', 'KKKKKKKKKK'], { K: OUTLINE, W: '#f4f1ea', C: c, c: /^#[0-9a-f]{6}$/i.test(c) ? darker(c) : c }, 1.6);
 
 function renderPlayers() {
   playerGroup.clearLayers();

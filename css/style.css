@@ -530,6 +530,7 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
 #chips .chip-ic { display: grid; place-items: center; width: 18px; height: 18px; }
 #chips .chip-ic svg { width: 17px; height: 17px; }
 #chips .chip-ic .gm-shadow { display: none; }
+#chips #chip-pet svg { width: 14px; height: 14px; }
 /* Phone: right under the search box, the whole width; the readout and the clock move down below them. */
 @media (max-width: 700px) {
   #chips { left: 10px; right: 10px; top: calc(max(10px, env(safe-area-inset-top)) + 50px); overflow-x: auto; scrollbar-width: none; }
