@@ -2358,30 +2358,43 @@ const whereText = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
 // `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
 // For search hits, `grow` makes each drawing pixel that many screen pixels larger.
 const SCREEN = window.devicePixelRatio || 1;
-function pixSvg(rows, pal, size, edge = 0, { grow = 0 } = {}) {
-  const w = rows[0].length, h = rows.length;
+// The game's things drawn in pixels (villagers, the trader, chests, signs): flat colours, slightly brighter than the
+// game's, and a black outline round the whole shape that is the same thickness on screen for every icon. In the
+// drawings, K on the edge of the shape is where the outline goes; K inside it is a dark line (k).
+const OUTLINE = '#1b1d22';
+function pixSvg(rows, pal, size, _edge = 0, { grow = 0 } = {}) {
+  const h = rows.length, w = Math.max(...rows.map((r) => r.length));
+  const at = (x, y) => (rows[y] || '')[x] || '.';
+  const grid = rows.map((row, y) => [...row.padEnd(w, '.')].map((ch, x) => {
+    if (ch !== 'K') return ch;
+    // On the picture's edge, or with nothing beside it or below it: the outline. (Nothing above is not enough: the
+    // dark line along the top of the shoulders stays.)
+    const edgeOf = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+    const outside = edgeOf || [[1, 0], [-1, 0], [0, 1]].some(([dx, dy]) => at(x + dx, y + dy) === '.');
+    return outside ? '.' : 'k';
+  }));
+  const colours = { k: pal.k || '#2a221c', ...pal };
   const dots = Math.max(1, Math.round(size * SCREEN)) + grow;  // screen pixels per drawing pixel
   const unit = dots / SCREEN;                                  // page pixels per drawing pixel
-  const e = edge ? Math.max(1, Math.round(edge * SCREEN)) / dots : 0;  // outline, in drawing pixels
-  const top = e;                                               // room above the picture
-  let r = e ? `<rect x="${-e / 2}" y="${-e / 2}" width="${w + e}" height="${h + e}" fill="none" stroke="${pal.K}" stroke-width="${e}"/>` : '';
-  // One exact-size rectangle per run of the same colour in a row: edges then land on the screen's pixels the same way
-  // everywhere (slightly oversized squares used to grow by a screen pixel at some positions).
-  const draw = (lines, colours, dx, dy) => {
-    let out = '';
-    lines.forEach((row, y) => {
-      for (let x = 0; x < row.length;) {
-        let end = x + 1;
-        while (end < row.length && row[end] === row[x]) end += 1;
-        if (colours[row[x]]) out += `<rect x="${dx + x}" y="${dy + y}" width="${end - x}" height="1" fill="${colours[row[x]]}"/>`;
-        x = end;
+  const e = Math.max(1, Math.round(1.6 * SCREEN)) / dots;      // the outline, in drawing pixels (as on the animals)
+  let edge = '', body = '';
+  grid.forEach((row, y) => {
+    for (let x = 0; x < w;) {
+      if (row[x] === '.') { x += 1; continue; }
+      let end = x + 1;
+      while (end < w && row[end] !== '.') end += 1;
+      edge += `<rect x="${x - e}" y="${y - e}" width="${end - x + 2 * e}" height="${1 + 2 * e}"/>`;
+      for (let i = x; i < end;) {
+        let j = i + 1;
+        while (j < end && row[j] === row[i]) j += 1;
+        body += `<rect x="${i}" y="${y}" width="${j - i}" height="1" fill="${colours[row[i]]}"/>`;
+        i = j;
       }
-    });
-    return out;
-  };
-  r += draw(rows, pal, 0, 0);
-  return `<svg class="gm-svg" viewBox="${-e} ${-top} ${w + 2 * e} ${h + 2 + e + top}" width="${(w + 2 * e) * unit}" height="${(h + 2 + e + top) * unit}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body">${r}</g></svg>`;
+      x = end;
+    }
+  });
+  return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * unit}" height="${(h + 2 + 2 * e) * unit}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body"><g fill="${OUTLINE}">${edge}</g>${body}</g></svg>`;
 }
 // A villager's face over a brown robe, after the game's villager.
 const VILLAGER_ART = [[
@@ -2396,7 +2409,8 @@ const VILLAGER_ART = [[
   'KrrrrKKrrrrK',
   'KrRRRRRRRRrK',
   'KrRRRRRRRRrK',
-  'KKKKKKKKKKKK'], { K: '#1f150f', s: '#bd8b72', b: '#4a2d1f', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', r: '#6b4428', R: '#7d5131' }];
+  'KKKKKKKKKKKK'], { K: OUTLINE, k: '#3f2d25', s: '#cc9677', b: '#3d2c18', w: '#ffffff', g: '#13a828', n: '#a06a4c', M: '#88503f',
+  r: '#74492b', R: '#875a36' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
 // Each job's clothes on the villager above, after the game's: hats, aprons, an eye patch, the armorer's goggles.
 const JOB_ART = {
@@ -2429,17 +2443,17 @@ function villagerIcon(job, big = false) {
 const TRADER_ART = [[
   '..KKKKKKKK..',
   '..KhhhhhhK..',
-  '..KccccccK..',
+  '..KcCCCCcK..',
   '..KbbbbbbK..',
   '..KwgnngwK..',
   '..KssnnssK..',
-  '..KccnnccK..',
+  '..KcCnnCcK..',
   'KKKKKnnKKKKK',
-  'KTTTTKKTTTTK',
+  'KYRssKKssRYK',
   'KTSSSIISSSTK',
   'KTSSSIISSSTK',
-  'KKKKKKKKKKKK'], { K: '#141a2b', h: '#2b4170', c: '#7a1a0c', b: '#3a2a18', w: '#f4f1ea', g: '#2f8f3a', n: '#a26f55', s: '#bd8b72',
-  T: '#2c456c', S: '#3d5a8c', I: '#c98a2a' }];
+  'KKKKKKKKKKKK'], { K: OUTLINE, k: '#3f2d25', h: '#3f6194', c: '#701a0a', C: '#94220e', b: '#3d2c18', w: '#ffffff', g: '#13a828',
+  n: '#a06a4c', s: '#c79a84', Y: '#f5c844', R: '#94220e', T: '#33507e', S: '#4566a0', I: '#f5c844' }];
 const TRADER_SVG = pixSvg(...TRADER_ART, 1.6);
 const TRADER_BIG = pixSvg(...TRADER_ART, 1.6, 0, { grow: 1 });  // search hits
 // A chest seen from the front, after the game's chest kept flat: frame, wood, the dark band where the lid
@@ -2448,16 +2462,16 @@ const CHEST_ART = [[
   'AAAAAAAAAAAAAAAA',
   'ADDDDDDDDDDDDDDA',
   'ADDDDDDDDDDDDDDA',
-  'ADDDDDDNNDDDDDDA',
-  'BBBBBBBNNBBBBBBB',
-  'ADDDDDDNNDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'ADDDDDDDDDDDDDDA',
-  'AAAAAAAAAAAAAAAA'], { K: '#16130f', A: '#56493b', B: '#56493b', D: '#c6924a', N: '#e2e2e2' }];
+  'ADDDDDDNnDDDDDDA',
+  'BBBBBBBNnBBBBBBB',
+  'AEEEEEENnEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AEEEEEEEEEEEEEEA',
+  'AAAAAAAAAAAAAAAA'], { A: '#4d4538', B: '#3b352b', D: '#bc8530', E: '#a06e2c', N: '#dcdcdc', n: '#a8a8a8' }];
 const CHEST_SVG = pixSvg(...CHEST_ART, 1.15, 0.8);
 const CHEST_BIG = pixSvg(...CHEST_ART, 1.15, 0.8, { grow: 1 });  // search hits
 // A wooden sign on its post: a plank board with lines of writing.
@@ -2474,7 +2488,7 @@ const SIGN_ART = [[
   '.....KPPK.....',
   '.....KPPK.....',
   '.....KPPK.....',
-  '.....KKKK.....'], { K: '#2b1d10', W: '#c49a5c', l: '#4a3220', P: '#7a5430' }];
+  '.....KKKK.....'], { K: OUTLINE, k: '#3d2e19', W: '#bf9c62', l: '#6c5536', P: '#8a6b3f' }];
 const SIGN_SVG = pixSvg(...SIGN_ART, 1.3);
 const SIGN_BIG = pixSvg(...SIGN_ART, 1.3, 0, { grow: 1 });  // search hits
 const signTitle = (text) => text.split('\n').join(' ');
@@ -2485,15 +2499,15 @@ const signTitle = (text) => text.split('\n').join(' ');
 // (tools/pet_faces.py) and come in items.json; this plain face is for when they are not there.
 const PLAIN_FACE = [['a....a', 'aa..aa', 'aaaaaa', 'abaaba', 'aaaaaa', 'aaddaa'], { a: '#c9c2b8', b: '#2b2622', d: '#8a7f74' }];
 const LEATHER = '#6b4a2a';
-function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null) {
+function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null, own = null) {
   const faces = state.items?.faces || {};
-  const [face, pal] = faces[`${kind}:${variant}`] || faces[kind] || PLAIN_FACE;
+  const [face, pal] = own || faces[`${kind}:${variant}`] || faces[kind] || PLAIN_FACE;
   const w = face[0].length + 2;
   const grid = [Array(w).fill('.'), ...face.map((r) => ['.', ...r, '.'])];
   // The collar: two rows as wide as the bottom of the head.
   const last = grid[grid.length - 1];
   const from = last.findIndex((ch) => ch !== '.'), to = last.length - 1 - [...last].reverse().findIndex((ch) => ch !== '.');
-  for (let i = 0; i < 2; i++) grid.push(last.map((_, x) => (x >= from && x <= to ? 'c' : '.')));
+  if (collar) for (let i = 0; i < 2; i++) grid.push(last.map((_, x) => (x >= from && x <= to ? 'c' : '.')));
   if (named) {
     const mid = Math.floor((from + to) / 2);
     for (let i = 0; i < 2; i++) grid.push(grid[0].map((_, x) => (x === mid || x === mid + 1 ? 't' : '.')));
@@ -2525,7 +2539,7 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null)
   const unit = dots / SCREEN, h = grid.length;
   return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + 1}" width="${w * unit}" height="${(h + 1) * unit}" shape-rendering="crispEdges">`
     + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h - 0.2}" rx="${w / 2 - 1.5}" ry="0.9"/>`
-    + `<g class="gm-body"><g fill="#231c17">${edge}</g>${body}</g></svg>`;
+    + `<g class="gm-body"><g fill="${OUTLINE}">${edge}</g>${body}</g></svg>`;
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -2554,9 +2568,16 @@ function villagerTitle(v) {
 
 // The pets chip shows a wolf's head as the map's data draws it; until that data is here, no picture (not a stand-in
 // that would change a moment later).
+// The pets chip: a wolf's head as the game's model shows it from the front (drawn at twice the detail, so the snout,
+// three pixels wide and centred, sits where it does on the head), in flat colours.
+const WOLF_FACE = [[
+  'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa',
+  'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa',
+  'wwddeeeeddww', 'wwddeeeeddww', 'eeessddsseee', 'eeessddsseee',
+  'eeesssssseee', 'eeesssssseee', 'eeaggggggaee', 'eeaggggggaee'],
+  { a: '#e3e0e1', w: '#ffffff', d: '#191c1f', e: '#ab9177', g: '#43474b', s: '#f5eced' }];
 function petChip() {
-  const faces = state.items?.faces || {};
-  $('#chip-pet').innerHTML = faces.wolf || Object.keys(faces).some((k) => k.startsWith('wolf:')) ? animalSvg('wolf', LEATHER, false) : '';
+  $('#chip-pet').innerHTML = animalSvg('wolf', null, false, false, 1.6, null, WOLF_FACE);
 }
 
 async function loadItems() {
