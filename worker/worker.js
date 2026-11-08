@@ -235,6 +235,10 @@ export default {
         const str = (v, re) => (typeof v === 'string' && v.length <= 300 && re.test(v) ? v : undefined);
         const state = str(b?.state, /^(starting|code|pick-realm|signed-in|downloading|drawing|publishing|done|login-failed|map-failed)$/);
         if (!state) return json({ error: 'bad' }, 400);
+        // Once the site is made, later map updates do not turn the setup page back to "making the map": only a new
+        // sign-in starts the story again.
+        const was = await kvGet(env, 'setup');
+        if (was?.state === 'done' && !['starting', 'code', 'pick-realm', 'login-failed'].includes(state)) return json({ ok: true, kept: 'done' });
         const v = {
           state, at: Date.now(), r: str(b.r, /^[0-9a-f]{16}$/),
           detail: str(b.detail, /^[a-z]{1,12}$/),

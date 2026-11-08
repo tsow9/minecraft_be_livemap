@@ -229,10 +229,20 @@ sign_in() {
   local rc=$?
   auth_put   # kept even when no Realm could be chosen yet (REALM_NAME can be set later without signing in again)
   if [ $rc -eq 0 ]; then
-    gh workflow run map.yml --ref "$GITHUB_REF_NAME" -f action='Update map'
-    # And the first live check now: it tells the site who the members are, so they can sign in to it.
+    # The first live check first: it tells the site who the members are (so they can sign in to it) and saves who is
+    # who, then starts the map itself, so the first map already knows each pet's owner (one map, not two).
+    local since
+    since=$(date -u +%FT%TZ)
     gh workflow run live.yml --ref "$GITHUB_REF_NAME" || true
-    say '地図を作り始めました。数分でサイトができます' 'Started making the map. The site is ready in a few minutes'
+    say '地図を作り始めます。数分でサイトができます' 'Starting the map. The site is ready in a few minutes'
+    # Should the live check not start it within 6 minutes, the map is started from here.
+    for _ in $(seq 1 36); do
+      sleep 10
+      gh run list --workflow map.yml --limit 10 --json displayTitle,createdAt 2>/dev/null | SINCE="$since" python3 -c '
+import json, os, sys
+sys.exit(0 if any(r.get("displayTitle") == "Update map" and r.get("createdAt", "") >= os.environ["SINCE"] for r in json.load(sys.stdin)) else 1)' && break
+      [ "$_" = 36 ] && gh workflow run map.yml --ref "$GITHUB_REF_NAME" -f action='Update map'
+    done
   else
     bash tools/setup_status.sh login-failed
   fi
