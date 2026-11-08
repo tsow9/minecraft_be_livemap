@@ -7,7 +7,7 @@
   const KEY = 'blockmap.setup';
   let saved = {};
   // Automatic updates (step 4): whether the site says they work, the GitHub App to add, and the connecting's stage.
-  let timerSeen = false, timerOk = true, appSlug = 'blockmap-connect', auto = { phase: 'idle' }, lastAuto = '';
+  let timerSeen = false, timerOk = true, appSlug = 'chizuya-connect', auto = { phase: 'idle' }, lastAuto = '';
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
   // The repository, and once its site is made, that it is done and where (so coming back needs no question to GitHub).
   const save = () => {

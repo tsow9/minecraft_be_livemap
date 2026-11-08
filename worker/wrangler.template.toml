@@ -23,7 +23,7 @@ GH_REPO_ID = "__REPO_ID__"
 # The "Chizuya" GitHub App shared by every site (not secrets: its public client id and its name in GitHub's address).
 # The admin installs it on the repository and approves a code, and the timer starts the live check with that.
 GH_APP_CLIENT_ID = "Iv23li5jn6tfeGhFVOjt"
-GH_APP_SLUG = "blockmap-connect"
+GH_APP_SLUG = "chizuya-connect"
 
 # Every minute (unless one is still running) the site starts the repository's live check (GitHub's own timer often runs hours late), once the
 # admin has given it a GitHub token that may only start that repository's runs (admin menu).

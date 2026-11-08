@@ -347,7 +347,7 @@ function timerInstall(box) {
 // A bar tells the admin when a new version is out; it opens this part of the admin menu.
 let releaseTimer = null;
 let openTimerOnLoad = false;
-let timerApp = 'blockmap-connect';
+let timerApp = 'chizuya-connect';
 async function loadRelease() {
   const box = $('#version-box'), body = $('#version-body');
   const r = await fetchJson(`${share.url}/release`);
