@@ -2809,7 +2809,7 @@ function setupThingChips() {
   $('#chip-chest').innerHTML = CHEST_SVG;
   $('#chip-trader').innerHTML = TRADER_SVG;
   $('#chip-sign').innerHTML = SIGN_SVG;
-  $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
+  petChip();
   try { Object.assign(thingsOn, JSON.parse(localStorage.getItem('mcmap.things') || '{}')); } catch { /* defaults */ }
   document.querySelectorAll('#chips button').forEach((b) => {
     const k = b.dataset.layer;
