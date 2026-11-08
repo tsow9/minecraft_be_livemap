@@ -2552,13 +2552,20 @@ function villagerTitle(v) {
   return v[4] ? `${v[4]}${paren(job === tl('村人(無職)') ? tl('無職') : job)}` : job;
 }
 
+// The pets chip shows a wolf's head as the map's data draws it; until that data is here, no picture (not a stand-in
+// that would change a moment later).
+function petChip() {
+  const faces = state.items?.faces || {};
+  $('#chip-pet').innerHTML = faces.wolf || Object.keys(faces).some((k) => k.startsWith('wolf:')) ? animalSvg('wolf', LEATHER, false) : '';
+}
+
 async function loadItems() {
   // On Cloudflare it comes through the worker, without what the owner hides from members.
   state.items = await fetchJson(DATA ? `${location.origin}/api/world${HOME_WORLD ? '' : `?w=${WORLD.slot}`}` : `items.json?v=${encodeURIComponent(state.config.updatedAt || '')}`);
   const hidden = new Set(state.items?.hidden || []);
   if (hidden.has('chests')) thingsOn.chests = false;
   document.querySelector('#chips [data-layer="chests"]').hidden = hidden.has('chests');
-  $('#chip-pet').innerHTML = animalSvg('wolf', LEATHER, false);
+  petChip();
   buildFindIndex();
   if (finds) showFinds(finds.type, finds.key, false);
   renderThings();

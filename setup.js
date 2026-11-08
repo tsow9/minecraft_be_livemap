@@ -158,6 +158,7 @@
     }
     return res.json();
   }
+  const minsLeft = (at) => Math.max(1, Math.ceil(((at || 0) - Date.now()) / 60000)) || 15;
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   // One question per look: the runs list. Runs started by hand or by the sign-in carry what they do as their title
   // (run-name: "Sign in to Realms", "Update map"), so no per-run questions are needed. GitHub answers about 60
@@ -176,7 +177,12 @@
       const r = await getJSON(`https://api.github.com/repos/${repo}`);
       if (!r?.id) return null;
       info = { repo, id: String(r.id), owner: String(r.owner?.id || '') };
-    } catch (e) { if (e.reset) limited = e.reset; return null; }
+    } catch (e) {
+      if (e.reset) limited = e.reset;
+      // GitHub's hourly limit: the id this browser learned before (a repository made again under the same name since
+      // then is told apart once GitHub answers again).
+      return saved.repo === repo && saved.id ? { repo, id: saved.id, owner: '', cached: true } : null;
+    }
     if (saved.repo === repo && saved.id && saved.id !== info.id) { saved = { repo, id: info.id }; siteUrl = ''; save(); refresh(); }
     // Remembered before ids were: "done" may be an older repository's, so it is looked at afresh.
     else if (saved.repo === repo && !saved.id) { saved = { repo, id: info.id }; save(); refresh(); }
@@ -251,7 +257,7 @@
     if (s) {
       const url = s.log;
       if (s.state === 'starting') state = { kind: 'code', url, code: '' };
-      else if (s.state === 'code') state = { kind: 'code', url, code: s.expires > Date.now() ? s.code : '', uri: s.uri };
+      else if (s.state === 'code') state = { kind: 'code', url, code: s.expires > Date.now() ? s.code : '', uri: s.uri, expires: s.expires };
       else if (s.state === 'pick-realm') state = { kind: 'pick', url, realms: Array.isArray(s.realms) ? s.realms : [] };
       else if (s.state === 'picked') state = { kind: 'making', url, step: 'signed-in' };
       else if (STEPS.includes(s.state)) state = { kind: 'making', url, step: s.state, detail: s.detail };
@@ -326,7 +332,7 @@
         ? `<b>${T('下のリンクからコードを入力してください', 'Enter this code at the link below')}</b>
           <div class="code"><span id="the-code">${esc(state.code)}</span><button class="copy" type="button" data-text="${esc(state.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
           <p><a class="btn" href="${esc(state.uri || 'https://www.microsoft.com/link')}" target="_blank" rel="noopener">${T('microsoft.com/link を開く', 'Open microsoft.com/link')}</a></p>
-          <span class="small">${T('Realm のオーナーのアカウントでログインします(15 分以内)。', 'Sign in with the Realm owner\'s account (within 15 minutes).')}</span>`
+          <span class="small">${T(`Realm のオーナーのアカウントでログインします(あと ${minsLeft(state.expires)} 分)。時間が切れても、すぐに新しいコードが出ます。`, `Sign in with the Realm owner's account (${minsLeft(state.expires)} minutes left). If it runs out, a new code appears shortly.`)}</span>`
         : `<b>${T('ログインの準備をしています', 'Getting signing in ready')}<span class="dots"><i></i><i></i><i></i></span></b>${T('サイトの入れ物を用意してから、ここにコードが出ます。最初は 2 分ほどかかります。', 'The site is put up first, then the code appears here. The first time takes about 2 minutes.')}`,
       building: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('ログインできました。数分かかります。このページは開いたままで大丈夫です。', 'Signed in. This takes a few minutes; you can leave this page open.')}`,
       progress: () => {
@@ -343,7 +349,7 @@
           <ol class="progress">${STEPS.map((k, i) => `<li class="${i < at || k === 'signed-in' ? 'did' : i === at ? 'now' : ''}">${names[k]}${i === at && detail ? `<small>${detail}</small>` : ''}</li>`).join('')}</ol>
           ${state.url ? link(state.url, T('記録を見る', 'See the log')) : ''}`;
       },
-      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('時間切れのときは、20 分ほどのうちに自動で新しいコードが出ます。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If the code ran out, a new one appears here by itself within about 20 minutes. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
+      'login-failed': `<b class="bad">${T('ログインできませんでした', 'Sign-in did not work')}</b>${T('コードの時間切れなら、1〜2 分で自動で新しいコードが出ます。ほかの原因は<a href="#trouble">トラブルシューティング</a>へ。', 'If the code ran out, a new one appears here by itself in a minute or two. For other causes, see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       pick: `<b>${T('どの Realm の地図を作りますか?', 'Which Realm should this site map?')}</b>${T('あなたの Realm が 2 つ以上見つかりました。地図にする Realm を選んでください(15 分以内)。', 'You own two or more Realms. Pick the one to map (within 15 minutes).')}

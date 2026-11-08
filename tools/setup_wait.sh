@@ -7,7 +7,7 @@
 #   setup_wait.sh         (the first commit's run) starts the first probe
 #   setup_wait.sh --next  (each probe) starts the next one
 # The chain stops once a sign-in has succeeded (while one waits for its code it carries on, so a code that ran out is
-# followed by a new one: tools/auto_signin.sh starts it 10 minutes after the last), or a day after the repository was made (the 10-minute check
+# followed by a new one: tools/auto_signin.sh starts it 10 minutes after the last), or a week after the repository was made (the 10-minute check
 # carries on after that). Needs GH_TOKEN (actions: write). Never fails the run.
 set -uo pipefail
 ref=${GITHUB_REF_NAME:-main}
@@ -20,7 +20,7 @@ print("started" if any(r.get("conclusion") == "success" for r in runs) else "no"
   made=$(gh api "repos/$GITHUB_REPOSITORY" --jq .created_at 2>/dev/null) || made=''
   age=0
   [ -n "$made" ] && age=$(( $(date +%s) - $(date -d "$made" +%s 2>/dev/null || date +%s) ))
-  [ "$age" -gt 86400 ] && { echo "A day has passed; the 10-minute check carries on."; exit 0; }
+  [ "$age" -gt 604800 ] && { echo "A week has passed; the 10-minute check carries on."; exit 0; }
   # Every 20 seconds in the first two hours, then every 5 minutes (a setup left for later need not keep runs going).
   if [ "$age" -gt 7200 ]; then sleep 280; else sleep 20; fi
 fi

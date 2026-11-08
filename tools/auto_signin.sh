@@ -11,14 +11,22 @@ t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1
 [ -f .auth/token.enc ] && exit 0                       # signed in already
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || exit 0          # not set up yet
 runs=$(gh run list --workflow map.yml --limit 100 --json displayTitle,createdAt,status 2>/dev/null) || exit 0
-verdict=$(printf '%s' "$runs" | python3 -c '
+# The setup page is open (it asked the site in the last 3 minutes): a new code is started as soon as the last one has
+# ended (ran out), however many there were. Otherwise every 10 minutes at most, 24 in all.
+seen=$(python3 "$(dirname "$0")/ci/d1.py" get setup_seen 2>/dev/null) || seen=0
+verdict=$(printf '%s' "$runs" | SEEN="${seen:-0}" python3 -c '
 import json, sys, datetime
 runs = [r for r in json.load(sys.stdin) if r.get("displayTitle") == "Sign in to Realms"]
 now = datetime.datetime.now(datetime.timezone.utc)
 def age(r):
     return (now - datetime.datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))).total_seconds()
-if len(runs) >= 24: print("enough")
-elif any(r.get("status") != "completed" or age(r) < 600 for r in runs): print("wait")
+import os
+try: watched = now.timestamp() * 1000 - float(os.environ.get("SEEN") or 0) < 180000
+except ValueError: watched = False
+if any(r.get("status") != "completed" for r in runs): print("wait")
+elif watched: print("start")
+elif len(runs) >= 24: print("enough")
+elif any(age(r) < 600 for r in runs): print("wait")
 else: print("start")') || exit 0
 case "$verdict" in
   start)
