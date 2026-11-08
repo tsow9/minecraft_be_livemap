@@ -142,7 +142,7 @@ const out = (name, text) => { fs.writeFileSync(path.join(root, name), text); con
 // the mark alone, on a transparent ground
 out('tools/brand/mark.svg', svg('-7.5 -7.5 15 15', markBody(COL.light, 'a')));
 // the browser tab and home screen icon: the mark on a paper-coloured rounded square (reads on light and dark tabs)
-out('favicon.svg', svg('-7.5 -7.5 15 15', `<rect x="-7.5" y="-7.5" width="15" height="15" rx="3.2" fill="#f3ecdc"/><g transform="scale(.9)">${markBody(COL.light, 'f')}</g>`));
+out('favicon.svg', svg('-7.5 -7.5 15 15', `<rect x="-7.5" y="-7.5" width="15" height="15" rx="3.2" fill="#ffffff"/><g transform="scale(.9)">${markBody(COL.light, 'f')}</g>`));
 // the mark and the name side by side, for page headings: logo.svg on light pages, logo-dark.svg on dark ones
 for (const [name, c] of [['logo.svg', COL.light], ['logo-dark.svg', COL.dark]]) {
   const idp = name === 'logo.svg' ? 'l' : 'd', wd = wordBody(c.ink, idp);

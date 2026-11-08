@@ -12,9 +12,8 @@ code { word-break: normal; overflow-wrap: anywhere; }
 .intro p { margin: 6px 0; }
 .intro .sub { color: var(--sub); font-size: 13px; }
 header { display: flex; align-items: center; gap: 12px; }
-h1 { margin: 0; font-size: 21px; display: flex; align-items: center; gap: 10px; }
-h1 .logo { height: 40px; width: auto; display: block; }
-h1 span { color: var(--accent); }
+h1 { margin: 0; font-size: 21px; }
+h1 span { color: var(--accent); margin-left: 6px; }
 /* Language: a globe with the current language; the list names each language in itself. */
 .lang { position: relative; margin-left: auto; }
 #lang { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);

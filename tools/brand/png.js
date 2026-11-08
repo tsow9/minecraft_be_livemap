@@ -17,7 +17,7 @@ const b64 = (f) => fs.readFileSync(path.join(root, f)).toString('base64');
     console.log(file);
   };
   const tile = (s) => `<img src="data:image/svg+xml;base64,${b64('favicon.svg')}" style="width:${s}px;height:${s}px;display:block">`;
-  const bleed = (s, k) => `<div style="width:${s}px;height:${s}px;background:#f3ecdc;display:flex;align-items:center;justify-content:center"><img src="data:image/svg+xml;base64,${b64('tools/brand/mark.svg')}" style="width:${s * k}px;height:${s * k}px"></div>`;
+  const bleed = (s, k) => `<div style="width:${s}px;height:${s}px;background:#ffffff;display:flex;align-items:center;justify-content:center"><img src="data:image/svg+xml;base64,${b64('tools/brand/mark.svg')}" style="width:${s * k}px;height:${s * k}px"></div>`;
   for (const s of [32, 192, 512]) await shot(`icons/icon-${s}.png`, s, tile(s));
   await shot('icons/icon-maskable-512.png', 512, bleed(512, .68));
   await shot('apple-touch-icon.png', 180, bleed(180, .8));
