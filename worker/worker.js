@@ -40,7 +40,9 @@ export default {
         // Someone is watching the setup page: the runs may start a new sign-in code at once (tools/auto_signin.sh).
         const seen = await kvGet(env, 'setup_seen');
         if (!(Date.now() - (seen || 0) < 30000)) await kvPut(env, 'setup_seen', Date.now());
-        return json({ ...(row ? JSON.parse(row.v) : {}), timer: timerWorks(env, t), app: appSlug(env) }, 200, { 'Access-Control-Allow-Origin': '*' });
+        const pend = await kvGet(env, 'timer_pending');
+        return json({ ...(row ? JSON.parse(row.v) : {}), timer: timerWorks(env, t), app: appSlug(env), pending: !!(pend?.token && pend.until > Date.now()) },
+          200, { 'Access-Control-Allow-Origin': '*' });
       }
       // Setting up the timer from the setup page, before anyone can sign in to the site: only while no working timer
       // is set, and a token is kept only if it really can start this repository's runs (so only someone who may run
