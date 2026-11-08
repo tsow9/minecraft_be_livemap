@@ -244,7 +244,9 @@
     if (!repo) { state = null; return; }
     // This repository's id (GitHub's public API) tells it apart from an older one of its name; "done" is trusted only with it.
     const known = await repoInfo(repo);
-    if (known && saved.done && saved.timer) { siteUrl = saved.site || siteUrl; state = { kind: 'done' }; refresh(); return; }
+    // What this browser remembers is only where to ask (the site's address); what is shown always comes from the site
+    // or the repository as they are now.
+    if (known && saved.done && saved.site && !siteUrl) siteUrl = saved.site;
     const s = await askSite(repo);
     fromSite = !!s;
     // The timer (a must): known from the site; sites from before it existed say nothing, and are not held up.
@@ -372,8 +374,8 @@
   // token (only if it really can start this repository's runs); this page only sees the code to enter.
   function renderAuto() {
     const box = $('#auto-box');
-    // Shown once the site has said whether automatic updates work (older sites do not say), and kept showing ✓ after.
-    const show = ['building', 'making', 'done'].includes(state?.kind) && ((fromSite && !!siteUrl && timerSeen) || (timerOk && !!saved.timer));
+    // Shown once the site has said whether automatic updates work (older sites do not say): ✓, or how to set them up.
+    const show = ['building', 'making', 'done'].includes(state?.kind) && fromSite && !!siteUrl && timerSeen;
     box.hidden = !show;
     if (!show) return;
     resumeAuto();
@@ -517,7 +519,9 @@
     let wait = fromSite ? 2000 : state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
     if (fromSite) { /* no limit */ } else if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
     else if (budget.left < 25 && budget.reset > Date.now()) wait = Math.max(wait, (budget.reset - Date.now()) / Math.max(1, budget.left - 3));
-    if (state?.kind !== 'done' || !timerOk) timer = setTimeout(() => poll(), wait);
+    // Once everything is done, looked at less often (it still follows any change at the site).
+    if (state?.kind === 'done' && timerOk) wait = Math.max(wait, 15000);
+    timer = setTimeout(() => poll(), wait);
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });
 
