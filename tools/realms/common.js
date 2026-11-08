@@ -59,7 +59,11 @@ async function ownedRealms (api, auth) {
   const realms = await api.getRealms()
   const xuid = (await auth.getXboxToken(REALMS_RELYING_PARTY)).userXUID
   const owned = realms.filter(r => (xuid && r.ownerUUID === xuid) || r.member === false)
-  return owned.length ? owned : realms
+  if (owned.length) return owned
+  // Only a member of every Realm listed (an account that is not the owner): none of them can be downloaded, and the
+  // site's admin would be someone else, so signing in stops here ("No Realm owned by this account").
+  if (xuid && realms.every(r => r.member === true && r.ownerUUID && r.ownerUUID !== xuid)) return []
+  return realms
 }
 
 // The Realm this site maps: the only one owned, else the one named in REALM_NAME (a repository variable), else the

@@ -2573,18 +2573,15 @@ function villagerTitle(v) {
   return v[4] ? `${v[4]}${paren(job === tl('村人(無職)') ? tl('無職') : job)}` : job;
 }
 
-// The pets chip shows a wolf's head as the map's data draws it; until that data is here, no picture (not a stand-in
-// that would change a moment later).
-// The pets chip: a wolf's head as the game's model shows it from the front (drawn at twice the detail, so the snout,
-// three pixels wide and centred, sits where it does on the head), in flat colours.
-const WOLF_FACE = [[
-  'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa',
-  'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa',
-  'wwddeeeeddww', 'wwddeeeeddww', 'eeessddsseee', 'eeessddsseee',
-  'eeesssssseee', 'eeesssssseee', 'eeaggggggaee', 'eeaggggggaee'],
-  { a: '#e3e0e1', w: '#ffffff', d: '#191c1f', e: '#ab9177', g: '#43474b', s: '#f5eced' }];
+// The pets chip: the same wolf's head as the wolves on the map (the face the map's data brings, made from the game's
+// model each build), with a red collar like a tamed wolf's. Until the data is here it draws that same face (a copy of
+// what the build makes for the plain wolf), so the picture does not change a moment later.
+const WOLF_CHIP = [['aa..aa', 'bb..bb', 'dbaabd', 'ddbbdb', 'efggfe', 'gaafag', 'gaaaag', 'ghhhhg'],
+  { a: '#e9e0e1', b: '#dcd9d9', d: '#cfcdcd', e: '#ebe9e9', f: '#464749', g: '#988d85', h: '#646669' }];
+const WOLF_COLLAR = '#c8352d';
 function petChip() {
-  $('#chip-pet').innerHTML = animalSvg('wolf', null, false, false, 1.6, null, WOLF_FACE);
+  const face = state.items?.faces?.wolf || WOLF_CHIP;
+  $('#chip-pet').innerHTML = animalSvg('wolf', WOLF_COLLAR, false, false, 1.6, null, face);
 }
 
 async function loadItems() {

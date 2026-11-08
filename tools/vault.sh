@@ -27,6 +27,17 @@ case "${1:-}" in
       # Made with another key (copied with someone else's branches, or REALMS_CACHE_KEY was changed). Stop rather than
       # start afresh, so a hiccup can never wipe the map's history.
       if ! cat "$tmp"/data.enc.* | crypt -d 2>/dev/null | tar -xz -C "$dir" 2>/dev/null; then
+        # Copied along when the repository was made ("Include all branches" in step 1): Chizuya's own repository's
+        # data, from before this repository existed or its first minutes. It was never this copy's: drop it and start.
+        made=$(gh api "repos/${GITHUB_REPOSITORY:-}" --jq .created_at 2>/dev/null) || made=''
+        tip=$(git log -1 --format=%ct FETCH_HEAD 2>/dev/null) || tip=''
+        if [ -n "$made" ] && [ -n "$tip" ] && [ "${GITHUB_REPOSITORY:-}" != "$(cat tools/ci/upstream 2>/dev/null)" ] &&
+           [ "$tip" -le $(( $(date -d "$made" +%s) + 900 )) ]; then
+          git push -q origin --delete "$branch" 2>/dev/null || true
+          rm -rf "$tmp" "$dir" && mkdir -p "$dir"
+          echo "$(t "$branch はリポジトリを作ったときに一緒に写ったもの(このリポジトリのものではない)なので、消して新しく作ります" "$branch was copied along when the repository was made (not this repository's own), so it is removed and made afresh")"
+          exit 0
+        fi
         echo "::error::$(t "$branch ブランチをこの鍵(REALMS_CACHE_KEY)で開けませんでした。鍵を変えた場合は元に戻すか、$branch ブランチを削除すると新しく作り直します" "The $branch branch cannot be opened with this key (REALMS_CACHE_KEY). If you changed the key, put it back, or delete the $branch branch to start it afresh")"
         exit 1
       fi

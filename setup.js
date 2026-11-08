@@ -179,6 +179,11 @@
       info = { repo, id: String(r.id), owner: String(r.owner?.id || '') };
     } catch (e) {
       if (e.reset) limited = e.reset;
+      // Not there for anyone: a mistyped link, or a repository made Private (the setup page and Chizuya need it Public).
+      if (e.message === '404' && saved.repo === repo) {
+        $('#repo-hint').innerHTML = T(`<code>${esc(repo)}</code> が見つかりません。リンクが合っているか、公開範囲が <b>Public</b> になっているか確かめてください(Private だと動きません)。`,
+          `<code>${esc(repo)}</code> cannot be found. Check the link, and that the repository is <b>Public</b> (Chizuya does not work with Private).`);
+      }
       // GitHub's hourly limit: the id this browser learned before (a repository made again under the same name since
       // then is told apart once GitHub answers again).
       return saved.repo === repo && saved.id ? { repo, id: saved.id, owner: '', cached: true } : null;
