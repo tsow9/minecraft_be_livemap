@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.svg" alt="Chizuya" height="80"></p>
+
 # Chizuya
 
 [English](README.en.md)

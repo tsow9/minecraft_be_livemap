@@ -669,7 +669,7 @@ h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6
 #ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}
 #msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
 .legal{margin:16px 0 0;font-size:12px;color:#7d828c;text-align:center}.legal a{color:#7d828c}
-</style></head><body><div class="box"><h1>Chizuya</h1>
+</style></head><body><div class="box"><h1><img src="/logo-dark.svg" alt="Chizuya" style="height:40px;width:auto;display:block"></h1>
 <div id="start"><p id="intro"></p>
 <button id="ms"></button></div><p id="msg"></p>
 <p class="legal"><a id="privacy" href="${legal}privacy.html" target="_blank" rel="noopener"></a> · <a id="terms" href="${legal}terms.html" target="_blank" rel="noopener"></a></p>
