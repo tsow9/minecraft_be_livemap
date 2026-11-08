@@ -525,6 +525,13 @@
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && saved.repo) poll(); });
 
+  // A link to a troubleshooting item (#lost-repo, #remake-token…) opens it, not just scrolls to it closed.
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    const d = a && document.getElementById(a.getAttribute('href').slice(1));
+    if (d && d.tagName === 'DETAILS') d.open = true;
+  });
+
   applyLang();
   if (saved.repo) poll();
 })();

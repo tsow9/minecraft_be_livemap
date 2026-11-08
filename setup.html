@@ -32,7 +32,7 @@
 <ol class="steps">
 <li class="step">
   <h2><span class="num">1</span><span data-en="Create the repository">リポジトリを作る</span></h2>
-  <p><span data-en="Open the button below and create the repository. Keep it &lt;b&gt;Public&lt;/b&gt;">下のボタンを開いて、リポジトリを作ります。公開範囲は <b>Public</b> のままにします</span><button class="info" type="button" data-info="why-public" aria-label="?">i</button><span data-en=".&lt;br&gt;Leave &lt;b&gt;Include all branches&lt;/b&gt; unticked.">。<br><b>Include all branches</b> にはチェックを入れません。</span></p>
+  <p><span data-en="Press the button below and create the repository. Keep it &lt;b&gt;Public&lt;/b&gt;">下のボタンを押して、リポジトリを作ります。公開範囲は <b>Public</b> のままにします</span><button class="info" type="button" data-info="why-public" aria-label="?">i</button><span data-en=".&lt;br&gt;Leave &lt;b&gt;Include all branches&lt;/b&gt; unticked.">。<br><b>Include all branches</b> にはチェックを入れません。</span></p>
   <div class="info-box" id="why-public" hidden>
     <p data-en="Automatic updates run on GitHub Actions, which is free without limit only for public repositories. Private ones get 2,000 minutes a month; Blockmap needs about 4,000.">自動更新は GitHub Actions で動きます。Actions を無制限に無料で使えるのは、公開リポジトリだけです。非公開は月 2,000 分までで、Blockmap は月 4,000 分ほど使います。</p>
     <p data-en="Only the program and encrypted data become public. Gamertags and coordinates never appear, and only your Realm's members can sign in to the site.">公開されるのは、プログラムと暗号化したデータだけです。ゲーマータグや座標は表に出ず、サイトに入れるのは Realm のメンバーだけです。</p>
@@ -48,7 +48,7 @@
 <li class="step">
   <h2><span class="num">2</span><span data-en="Create a Cloudflare token">Cloudflare のトークンを作る</span></h2>
   <ol>
-    <li data-en="Open the button below. The needed permissions are already filled in.">下のボタンを開きます。必要な権限は入力済みです。</li>
+    <li data-en="Press the button below. The needed permissions are already filled in.">下のボタンを押します。必要な権限は入力済みです。</li>
     <li data-en="Scroll to the bottom and press &lt;b&gt;Continue to summary&lt;/b&gt;, then &lt;b&gt;Create Token&lt;/b&gt;.">いちばん下の <b>Continue to summary</b> を押し、続けて <b>Create Token</b> を押します。</li>
     <li data-en="Copy the token shown. It is shown only once, so go straight on to step 3.">表示されたトークンをコピーします。トークンは一度しか表示されないので、そのまま手順 3 に進みます。</li>
   </ol>
@@ -58,22 +58,22 @@
 <li class="step">
   <h2><span class="num">3</span><span data-en="Add the token to the repository">トークンをリポジトリに登録する</span></h2>
   <ol>
-    <li data-en="Open the button below. GitHub's “New secret” screen opens.">下のボタンを開きます。GitHub の「New secret」の画面が開きます。</li>
+    <li data-en="Press the button below. GitHub's “New secret” screen opens.">下のボタンを押します。GitHub の「New secret」の画面が開きます。</li>
     <li data-en="&lt;b&gt;Secret&lt;/b&gt;: paste the token you copied in step 2.">「<b>Secret</b>」に、手順 2 でコピーしたトークンを貼ります。</li>
     <li><span data-en="&lt;b&gt;Name&lt;/b&gt;: paste">「<b>Name</b>」に貼ります:</span> <code>CLOUDFLARE_API_TOKEN</code><button class="copy" type="button" data-text="CLOUDFLARE_API_TOKEN"><svg class="ic"><use href="#i-copy"/></svg><span data-en="Copy">コピー</span></button></li>
     <li data-en="Press &lt;b&gt;Add secret&lt;/b&gt;.">「<b>Add secret</b>」を押します。</li>
   </ol>
   <div id="token-box" class="status" hidden></div>
   <p class="hint" data-en="It can take a few minutes for the token to be noticed .">トークンが登録されたことの確認には、数分かかる場合があります。</p>
-  <p><a class="btn repo-link" data-count="secret" data-path="/settings/secrets/actions/new#:~:text=New%20secret" target="_blank" rel="noopener" data-en="Open “New repository secret”">「New repository secret」を開く</a></p>
+  <p><a class="btn repo-link" data-count="secret" data-path="/settings/secrets/actions/new#:~:text=New%20secret" target="_blank" rel="noopener" data-en="Open “New secret”">「New secret」の画面を開く</a></p>
 </li>
 
 <li class="step">
   <h2><span class="num">4</span><span data-en="Sign in to Realms">Realms にログインする</span></h2>
-  <p data-en="Once the token is added, signing in gets ready by itself, and the code to enter appears below. Sign in to Microsoft with this code, and shortly after, your site starts being built.">トークンを登録すると、自動的にログインの準備が始まり、入力するコードが下に表示されます。このコードで Microsoft にサインインすると、少し経ってサイトの構築が始まります。</p>
+  <p data-en="Once the token is added, signing in gets ready by itself, and the code to enter appears below. Sign in to Microsoft with this code, and shortly after, your site starts being built.">トークンを登録すると、自動的にログインの準備が始まり、入力するコードが下に表示されます。このコードで Microsoft にログインすると、少し経ってサイトの構築が始まります。</p>
   <div id="status" class="status" hidden></div>
   <div id="auto-box" class="status" hidden></div>
-  <p class="hint" data-en="It can take a few minutes for the sign-in to be noticed.">サインインの確認には、数分かかる場合があります。</p>
+  <p class="hint" data-en="It can take a few minutes for the sign-in to be noticed.">ログインの確認には、数分かかる場合があります。</p>
   <p class="hint" data-en="After signing in, Microsoft shows “Minecraft for Nintendo Switch”. That is expected.">ログイン後、Microsoft の画面に「Minecraft for Nintendo Switch」と表示されますが、正常です。</p>
 </li>
 
@@ -104,15 +104,8 @@
     </ol>
     <p class="small" data-en="A token left undeleted does no harm by itself, but one nobody uses is safer gone.">消し忘れても動きに影響はありませんが、使わないトークンは消しておくほうが安全です。</p>
   </details>
-  <details>
-    <summary data-en="The code does not appear in step 4">手順 4 にコードが出てこない</summary>
-    <ul>
-      <li data-en="Check that step 1's box has the link to &lt;b&gt;your&lt;/b&gt; repository.">手順 1 の欄に、<b>自分が作った</b>リポジトリのリンクが入っているか確かめます。</li>
-      <li data-en="Open step 3's button again. Under &lt;b&gt;Repository secrets&lt;/b&gt; there should be &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, spelled exactly so. (Not under Variables, and not under Environment secrets.)">手順 3 のボタンをもう一度開き、<b>Repository secrets</b> に <code>CLOUDFLARE_API_TOKEN</code> があるか確かめます(つづりが一字でも違うと動きません。Variables や Environment secrets ではありません)。</li>
-    </ul>
-  </details>
   <details id="cf-token">
-    <summary data-en="The right settings for the Cloudflare token">Cloudflare のトークンの正しい設定</summary>
+    <summary data-en="I want to check the Cloudflare token's settings">Cloudflare のトークンの設定が合っているか確かめたい</summary>
     <p data-en="Step 2's button opens Cloudflare with these already filled in. If yours differ, make the token again with that button (and paste the new one in step 3).">手順 2 のボタンから開くと、次の設定が最初から入っています。違っていたら、そのボタンからトークンを作り直して、手順 3 で貼り直します。</p>
     <ul>
       <li data-en="&lt;b&gt;Permissions&lt;/b&gt;: Account · Workers Scripts · Edit / Account · D1 · Edit / Account · Account Settings · Read (these three only)"><b>Permissions</b>(権限):Account・Workers Scripts・Edit / Account・D1・Edit / Account・Account Settings・Read(この 3 つだけ)</li>
@@ -121,11 +114,18 @@
     </ul>
   </details>
   <details>
+    <summary data-en="The code does not appear in step 4">手順 4 にコードが出てこない</summary>
+    <ul>
+      <li data-en="Check that step 1's box has the link to &lt;b&gt;your&lt;/b&gt; repository.">手順 1 の欄に、<b>自分が作った</b>リポジトリのリンクが入っているか確かめます。</li>
+      <li data-en="Press step 3's button again. Under &lt;b&gt;Repository secrets&lt;/b&gt; there should be &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, spelled exactly so. (Not under Variables, and not under Environment secrets.)">手順 3 のボタンをもう一度押し、<b>Repository secrets</b> に <code>CLOUDFLARE_API_TOKEN</code> があるか確かめます(つづりが一字でも違うと動きません。Variables や Environment secrets ではありません)。</li>
+    </ul>
+  </details>
+  <details id="remake-token">
     <summary data-en="“Sign-in did not work” before any code appeared">コードが出る前に「ログインできませんでした」と出た</summary>
     <p data-en="The token cannot do what Blockmap needs (a setting was changed when it was made, or it was not copied whole).">トークンで、Blockmap に必要な操作ができません(作るときに設定が変わった、または途中までしかコピーできていない、など)。</p>
     <ol>
       <li data-en="Make the token again with step 2's button, changing nothing on the screen.">手順 2 のボタンから、画面の内容を変えずにトークンを作り直します。</li>
-      <li data-en="Open step 3's button, press the pencil next to &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, and paste the new token.">手順 3 のボタンを開き、<code>CLOUDFLARE_API_TOKEN</code> の横の鉛筆マークを押して、新しいトークンを貼り直します。</li>
+      <li data-en="Press step 3's button, press the pencil next to &lt;code&gt;CLOUDFLARE_API_TOKEN&lt;/code&gt;, and paste the new token.">手順 3 のボタンを押し、<code>CLOUDFLARE_API_TOKEN</code> の横の鉛筆マークを押して、新しいトークンを貼り直します。</li>
       <li data-en="Signing in starts again by itself while this page is open (within about 10 minutes otherwise), and the code appears in step 4.">このページを開いていれば、すぐに自動でログインがやり直され、手順 4 にコードが出ます(開いていないときは 10 分ほどのうちに)。</li>
     </ol>
   </details>
@@ -140,7 +140,7 @@
     <summary data-en="“The map could not be made”">「地図を作れませんでした」と出た</summary>
     <ul>
       <li data-en="Open “See the log” and find the red message. The &lt;a href=&quot;https://github.com/tsow9/minecraft_be_livemap/blob/main/README.en.md#troubleshooting&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;README's table&lt;/a&gt; says what each message means and what to do.">「記録を見る」を開き、赤いメッセージを探します。メッセージごとの意味と直し方は、<a href="https://github.com/tsow9/minecraft_be_livemap#トラブルシューティング" target="_blank" rel="noopener">説明書の表</a>にあります。</li>
-      <li data-en="If the red message mentions Cloudflare (the account, the key, the site's address, or publishing), the token cannot do everything Blockmap needs: make it again and paste it again as in ““Sign-in did not work” before any code appeared” above, then wait for the next map update (within an hour).">赤いメッセージに Cloudflare のこと(アカウント・鍵・公開先のアドレス・公開)が出ている場合は、トークンに必要な権限が足りません。上の「コードが出る前に「ログインできませんでした」と出た」と同じ手順でトークンを作り直して貼り直し、次の地図の更新(1 時間以内)を待ちます。</li>
+      <li data-en="If the red message mentions Cloudflare (the account, the key, the site's address, or publishing), the token cannot do everything Blockmap needs: make it again and paste it again as in &lt;a href=&quot;#remake-token&quot;&gt;remaking the token&lt;/a&gt;, then wait for the next map update (within an hour).">赤いメッセージに Cloudflare のこと(アカウント・鍵・公開先のアドレス・公開)が出ている場合は、トークンに必要な権限が足りません。<a href="#remake-token">トークンの作り直し方</a>と同じ手順で作り直して貼り直し、次の地図の更新(1 時間以内)を待ちます。</li>
       <li data-en="If you own two or more Realms, pick one in step 4. To change it later, add &lt;code&gt;REALM_NAME&lt;/code&gt; (the Realm's name) under Variables, then update the map.">Realm を 2 つ以上持っている場合は、手順 4 で選びます。あとから変えるときは、Variables に <code>REALM_NAME</code>(Realm の名前)を追加して、地図を更新します。</li>
     </ul>
   </details>
