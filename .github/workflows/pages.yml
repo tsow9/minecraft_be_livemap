@@ -31,7 +31,10 @@ jobs:
         run: |
           v=$(tr -d ' \n' < VERSION)
           if gh release view "v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
-          gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --generate-notes
+          # The notes: this version's part of CHANGELOG.md (a plain list of what changed); GitHub's own list if there is none.
+          awk -v v="$v" '/^## /{on = ($2 == v); next} on' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --notes-file notes.md
+          else gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --generate-notes; fi
           echo "Released v$v"
 
   pages:

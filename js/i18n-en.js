@@ -143,6 +143,7 @@ Object.assign(I18N_EN, {
   '自動更新が止まっています → 設定し直す': 'Automatic updates have stopped → set them up again', '自動更新がまだ設定されていません → 設定する': 'Automatic updates are not set up yet → set them up',
   '先に「Blockmap を GitHub に入れる」で、このリポジトリに入れてください': 'First add Blockmap to this repository with “Add Blockmap to GitHub”',
   'あと 1 つ:Blockmap Connect をリポジトリに入れます': 'One more: add Blockmap Connect to the repository', '下のボタンで GitHub を開き、「Only select repositories」を選んで {repo} を選び、「Install」を押します。': 'Open GitHub with the button below, choose “Only select repositories”, pick {repo}, then press “Install”.', 'Blockmap Connect を入れる': 'Add Blockmap Connect', '入れると、ここが自動で変わります。': 'Once added, this changes by itself.',
+  'もう最新のバージョンです': 'it is the newest version already', '管理者としてログインし直してください': 'please sign in again as the admin', 'サイトがエラーを返しました({n})': 'the site answered with an error ({n})', 'サイトにつながりませんでした': 'could not reach the site',
   '実験版': 'Experimental', '新しい機能を先に試している版です': 'This version tries out new features first',
   'GitHub と連携できませんでした': 'Could not connect GitHub', 'GitHub を開いてコードを入れる': 'Open GitHub and enter the code', '許可すると、ここが自動で「動いています」に変わります。': 'Once approved, this turns to “Working” by itself.',
   '許可されませんでした': 'It was not approved', 'まだ設定されていません。': 'Not set up yet.', '✓ 動いています(最後に起動: {time})': '✓ Working (last started: {time})',

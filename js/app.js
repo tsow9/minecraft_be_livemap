@@ -359,12 +359,11 @@ async function loadRelease() {
     for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
   const fresh = rel.latest && isNewer(rel.latest, current);
   const busy = ['requested', 'started', 'updating'].includes(up.state) && up.version === rel.latest;
-  const notes = rel.url ? ` <a href="${esc(rel.url)}" target="_blank" rel="noopener">${tl('変更内容')}</a>` : '';
   let html = `<p class="help">${tl('いまのバージョン: {v}', { v: esc(current || '?') })}</p>`;
   if (fresh && busy) {
     html += `<p class="help"><b>${tl('{v} に更新しています', { v: esc(rel.latest) })}</b><br>${tl('10〜20 分ほどで終わります。終わると、ページを開き直したときに新しくなります。')}</p>`;
   } else if (fresh) {
-    html += `<p class="help">${tl('新しいバージョン {v} があります。', { v: esc(rel.latest) })}${notes}</p>`
+    html += `<p class="help">${tl('新しいバージョン {v} があります。', { v: esc(rel.latest) })}</p>`
       + `<div class="btns"><button class="mini primary" type="button" id="update-now">${tl('更新する')}</button></div>`;
     if (up.state === 'failed') html += `<p class="help">${tl('前回の更新はうまくいきませんでした。もう一度押してください。')}</p>`;
   } else {
@@ -374,7 +373,15 @@ async function loadRelease() {
   $('#update-now')?.addEventListener('click', async (e) => {
     e.target.disabled = true;
     const res = await fetch(`${share.url}/update`, { method: 'POST' }).catch(() => null);
-    if (!res?.ok) { e.target.disabled = false; toast(tl('更新を始められませんでした')); return; }
+    if (!res?.ok) {
+      e.target.disabled = false;
+      // Why, in words: already the newest, signed out, or something else (with its number, to tell us).
+      const why = res?.status === 400 ? tl('もう最新のバージョンです') : res?.status === 401 || res?.status === 403 ? tl('管理者としてログインし直してください')
+        : res ? tl('サイトがエラーを返しました({n})', { n: res.status }) : tl('サイトにつながりませんでした');
+      toast(`${tl('更新を始められませんでした')}:${why}`);
+      loadRelease();
+      return;
+    }
     toast(tl('更新を始めます'));
     loadRelease();
   });
