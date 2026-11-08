@@ -1,5 +1,5 @@
 #!/bin/bash
-# Updating a copy of Blockmap to the newest release, from the site's admin menu: the owner presses "Update", and that
+# Updating a copy of Chizuya to the newest release, from the site's admin menu: the owner presses "Update", and that
 # is all (no GitHub screens).
 #
 #   update.sh check   (the live check, every 10 minutes) tells the site the newest release, so the admin sees that
@@ -7,10 +7,10 @@
 #   update.sh apply   (Map site → Update Blockmap) takes the newest release into this repository and puts the site
 #                     and the map on it
 #
-# Everything but the workflow files is taken (GitHub does not let an automatic run change those, and Blockmap never
+# Everything but the workflow files is taken (GitHub does not let an automatic run change those, and Chizuya never
 # needs them changed: they only run tools/ci/run.sh). Settings live in the repository's secrets and variables and the
 # data in the site and the encrypted branches, so nothing of the owner's is touched.
-# Needs GH_TOKEN, CACHE_KEY and the Cloudflare token (as tools/ci/run.sh has them). Does nothing in Blockmap's own
+# Needs GH_TOKEN, CACHE_KEY and the Cloudflare token (as tools/ci/run.sh has them). Does nothing in Chizuya's own
 # repository.
 set -uo pipefail
 t() { case "${BLOCKMAP_LANG:-ja}" in en*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
@@ -27,8 +27,12 @@ tell() {  # tell PATH JSON → the site's answer
   curl -sS --max-time 20 -X POST "$site/api/$1" -H "X-Passphrase: $pass" -H 'Content-Type: application/json' --data "$2"
 }
 
-newest() {  # prints "<version> <release page>" of the newest release
-  gh api "repos/$UPSTREAM/releases/latest" --jq '[(.tag_name | ltrimstr("v")), .html_url] | @tsv' 2>/dev/null | tr '\t' ' '
+newest() {  # prints "<version> <release page>" of the newest version (its tag v<version>)
+  # Versions before 1.0 are tags only (no release page on GitHub); from 1.0 on, each also has a release with its notes.
+  local v
+  v=$(gh api "repos/$UPSTREAM/tags?per_page=100" --jq '.[].name' 2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)
+  [ -n "$v" ] || return 1
+  case "$v" in 0.*) echo "$v" ;; *) echo "$v https://github.com/$UPSTREAM/releases/tag/v$v" ;; esac
 }
 
 case "${1:-}" in
@@ -61,10 +65,10 @@ case "${1:-}" in
     (
       cd "$work/repo" &&
       git add -A &&
-      git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -q -m "Blockmap $latest" &&
+      git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -q -m "Chizuya $latest" &&
       git push -q origin HEAD:main
     ) || fail "$(t '取り込めませんでした' 'Could not take it in')"
-    echo "$(t "Blockmap $latest を取り込みました。サイトと地図を新しいバージョンにします" "Took in Blockmap $latest. Now putting the site and the map on it")"
+    echo "$(t "Chizuya $latest を取り込みました。サイトと地図を新しいバージョンにします" "Took in Chizuya $latest. Now putting the site and the map on it")"
     # The new version puts the site and the map on itself (its own tools/ci/run.sh).
     cd "$work/repo" && BLOCKMAP_CI_COPY= exec bash tools/ci/run.sh refresh
     ;;

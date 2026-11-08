@@ -226,10 +226,10 @@ function setupSettings() {
       setLang(b.dataset.lang);
     });
   });
-  // Blockmap's version at the bottom; our own site is marked as the experimental one.
+  // Chizuya's version at the bottom; our own site is marked as the experimental one.
   const rel = document.querySelector('meta[name="blockmap-release"]')?.content || '';
   const exp = !!document.querySelector('meta[name="blockmap-experimental"]');
-  $('#set-version').innerHTML = rel ? `Blockmap ${esc(rel)}${exp ? ` <span class="exp-badge">${tl('実験版')}</span><span class="exp-note">${tl('新しい機能を先に試している版です')}</span>` : ''}` : '';
+  $('#set-version').innerHTML = rel ? `Chizuya ${esc(rel)}${exp ? ` <span class="exp-badge">${tl('実験版')}</span><span class="exp-note">${tl('新しい機能を先に試している版です')}</span>` : ''}` : '';
   const label = () => { pick.textContent = TZ ? tzLabel(TZ) : `${tl('端末に合わせる')}${DEVICE_TZ ? `(${DEVICE_TZ.replace(/_/g, ' ')})` : ''}`; };
   label();
   pick.addEventListener('click', (e) => {
@@ -269,8 +269,8 @@ async function loadTimer() {
   timerApp = r.app || timerApp;
   bar.textContent = r.set ? tl('自動更新が止まっています → 設定し直す') : tl('自動更新がまだ設定されていません → 設定する');
   const owner = (r.repo || '').split('/')[0];
-  const make = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({ name: `Blockmap timer ${(r.repo || '').split('/')[1] || ''}`.trim(),
-    description: 'Lets the Blockmap site start its live check', target_name: owner, expires_in: 'none', actions: 'write' })}`;
+  const make = `https://github.com/settings/personal-access-tokens/new?${new URLSearchParams({ name: `Chizuya timer ${(r.repo || '').split('/')[1] || ''}`.trim(),
+    description: 'Lets the Chizuya site start its live check', target_name: owner, expires_in: 'none', actions: 'write' })}`;
   const state = !r.set ? `<p class="help">${tl('まだ設定されていません。')}</p>`
     : r.ok ? `<p class="help good">${tl('✓ 動いています(最後に起動: {time})', { time: esc(timeText(r.last)) })}</p>`
       : `<p class="help bad">${tl('✕ トークンが使えません(期限切れなど)。作り直して、もう一度貼ってください。')}</p>`;
@@ -328,9 +328,9 @@ async function connectTimer() {
 // Approved, but the app is not on the repository yet: how to add it; the site tries again every few seconds.
 function timerInstall(box) {
   const repo = $('#timer-box')?.dataset.repo || '';
-  box.innerHTML = `<p class="help"><b>${tl('あと 1 つ:Blockmap Connect をリポジトリに入れます')}</b><br>
+  box.innerHTML = `<p class="help"><b>${tl('あと 1 つ:Chizuya Connect をリポジトリに入れます')}</b><br>
     ${tl('下のボタンで GitHub を開き、「Only select repositories」を選んで {repo} を選び、「Install」を押します。', { repo: `<b>${esc(repo)}</b>` })}</p>
-    <p class="btns"><a class="mini primary" href="https://github.com/apps/${encodeURIComponent(timerApp)}/installations/new" target="_blank" rel="noopener">${tl('Blockmap Connect を入れる')}</a></p>
+    <p class="btns"><a class="mini primary" href="https://github.com/apps/${encodeURIComponent(timerApp)}/installations/new" target="_blank" rel="noopener">${tl('Chizuya Connect を入れる')}</a></p>
     <p class="help">${tl('入れると、ここが自動で変わります。')}</p>`;
   const until = Date.now() + 30 * 60000;
   const look = async () => {
@@ -343,7 +343,7 @@ function timerInstall(box) {
   setTimeout(look, 5000);
 }
 
-// Blockmap's own version (admin only): the newest release, told by the live check, and the one-press update.
+// Chizuya's own version (admin only): the newest release, told by the live check, and the one-press update.
 // A bar tells the admin when a new version is out; it opens this part of the admin menu.
 let releaseTimer = null;
 let openTimerOnLoad = false;
@@ -3807,7 +3807,7 @@ async function main() {
   setupSettings();
   const cfg = await loadConfig();
   state.config = {
-    title: cfg.title || 'Blockmap',
+    title: cfg.title || 'Chizuya',
     tileUrl: DATA + (cfg.tileUrl || 'tiles/{snapshot}/{dim}/{z}/{x}/{y}.png'),
     minNativeZoom: Number.isFinite(cfg.minNativeZoom) ? cfg.minNativeZoom : -4,
     maxNativeZoom: Number.isFinite(cfg.maxNativeZoom) ? cfg.maxNativeZoom : 0,

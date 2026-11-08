@@ -152,7 +152,7 @@ export default {
           .bind('settings', JSON.stringify(next), Date.now()).run();
         return json(next);
       }
-      // Blockmap's own version: the newest release (told by the live check) and an update the owner asked for.
+      // Chizuya's own version: the newest release (told by the live check) and an update the owner asked for.
       if (path === '/release' && admin && me.via === 'microsoft' && req.method === 'GET') {
         return json({ release: await kvGet(env, 'release'), update: await kvGet(env, 'update') });
       }
@@ -175,7 +175,7 @@ export default {
         return json({ repo: env.GH_REPO || '', set: !!t?.token, ok: t?.token ? timerWorks(env, t) : null, last: t?.last || null, status: t?.status || null,
           app: appSlug(env), via: t?.via || null });
       }
-      // Connecting the Blockmap Connect GitHub App with a code (GitHub's device flow: the site needs no secret).
+      // Connecting the Chizuya Connect GitHub App with a code (GitHub's device flow: the site needs no secret).
       if (path === '/timer/connect' && admin && me.via === 'microsoft' && req.method === 'POST') return json(...(await timerConnect(env)));
       if (path === '/timer/retry' && admin && me.via === 'microsoft' && req.method === 'POST') return json(await timerRetry(env));
       if (path === '/timer/poll' && admin && me.via === 'microsoft' && req.method === 'POST') {
@@ -342,7 +342,7 @@ async function same(a, b) {
 }
 
 // ---------- Microsoft sign-in → gamertag ----------
-// One app (MS_CLIENT_ID, registered once for every Blockmap site) signs people in; the sign-in comes back to a shared
+// One app (MS_CLIENT_ID, registered once for every Chizuya site) signs people in; the sign-in comes back to a shared
 // page (MS_RELAY) that hands the one-time code to the site that asked. This site keeps the PKCE secret, so only it
 // can turn the code into a token; the token is used once to ask Xbox for the gamertag, then dropped.
 const MS = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
@@ -495,7 +495,7 @@ async function dispatchLive(env, token) {
   try {
     const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/dispatches`, {
       method: 'POST', body: JSON.stringify({ ref: 'main' }),
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' },
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Chizuya', 'X-GitHub-Api-Version': '2022-11-28' },
     });
     return res.status;
   } catch { return 0; }
@@ -504,7 +504,7 @@ async function dispatchLive(env, token) {
 async function ghForm(url, body) {
   try {
     const res = await fetch(url, { method: 'POST', body: new URLSearchParams(body),
-      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Blockmap' } });
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Chizuya' } });
     return await res.json();
   } catch { return null; }
 }
@@ -526,7 +526,7 @@ async function startLiveCheck(env, { skipBusy = false } = {}) {
   if (skipBusy && t.ok) {
     try {
       const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/runs?per_page=5`, {
-        headers: { Authorization: `Bearer ${t.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' } });
+        headers: { Authorization: `Bearer ${t.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Chizuya', 'X-GitHub-Api-Version': '2022-11-28' } });
       const runs = res.ok ? (await res.json()).workflow_runs || [] : [];
       if (runs.some((r) => r.status !== 'completed')) return 'busy';
     } catch { /* look anyway */ }
@@ -658,7 +658,7 @@ function gatePage(env) {
   // The privacy policy and terms sit next to the sign-in relay page.
   const legal = String(env.MS_RELAY || '').replace(/login\.html$/, '');
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="format-detection" content="telephone=no,email=no,address=no">
-<meta name="robots" content="noindex"><title>Blockmap</title><link rel="icon" href="/favicon.svg">
+<meta name="robots" content="noindex"><title>Chizuya</title><link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#15171c;color:#e8e6e3;
@@ -669,7 +669,7 @@ h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#a7abb3;line-height:1.6
 #ms{width:100%;height:46px;border:0;border-radius:10px;background:#3ecf8e;color:#06130d;font-weight:700;font-size:16px}
 #msg{margin:12px 0 0;min-height:1.6em;color:#ff8a86}
 .legal{margin:16px 0 0;font-size:12px;color:#7d828c;text-align:center}.legal a{color:#7d828c}
-</style></head><body><div class="box"><h1>Blockmap</h1>
+</style></head><body><div class="box"><h1>Chizuya</h1>
 <div id="start"><p id="intro"></p>
 <button id="ms"></button></div><p id="msg"></p>
 <p class="legal"><a id="privacy" href="${legal}privacy.html" target="_blank" rel="noopener"></a> · <a id="terms" href="${legal}terms.html" target="_blank" rel="noopener"></a></p>

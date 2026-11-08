@@ -1,5 +1,5 @@
 name: Project pages
-# Blockmap's own repository only (copies skip it): the GitHub Pages pages (the sign-in relay every site uses, the
+# Chizuya's own repository only (copies skip it): the GitHub Pages pages (the sign-in relay every site uses, the
 # setup page, the privacy policy and terms), and a release whenever VERSION changes, which copies are then offered to
 # update to.
 on:
@@ -30,12 +30,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(tr -d ' \n' < VERSION)
-          if gh release view "v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
-          # The notes: this version's part of CHANGELOG.md (a plain list of what changed); GitHub's own list if there is none.
-          awk -v v="$v" '/^## /{on = ($2 == v); next} on' CHANGELOG.md > notes.md
-          if [ -s notes.md ]; then gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --notes-file notes.md
-          else gh release create "v$v" --target "$GITHUB_SHA" --title "Blockmap $v" --generate-notes; fi
-          echo "Released v$v"
+          # Before 1.0 there are no release pages: those versions are only tags (copies update from the newest tag).
+          # Release pages left from before 1.0 are taken away (their tags stay).
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | { grep '^v0\.' || true; } | while read -r old; do
+            gh release delete "$old" --yes && echo "Removed the release page of $old"
+          done
+          case "$v" in
+            0.*)
+              if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
+              gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/v$v" -f sha="$GITHUB_SHA" >/dev/null
+              echo "Tagged v$v" ;;
+            *)
+              if gh release view "v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
+              # The notes: this version's part of CHANGELOG.md (a plain list of what changed); GitHub's own list if there is none.
+              awk -v v="$v" '/^## /{on = ($2 == v); next} on' CHANGELOG.md > notes.md
+              if [ -s notes.md ]; then gh release create "v$v" --target "$GITHUB_SHA" --title "Chizuya $v" --notes-file notes.md
+              else gh release create "v$v" --target "$GITHUB_SHA" --title "Chizuya $v" --generate-notes; fi
+              echo "Released v$v" ;;
+          esac
 
   pages:
     if: github.repository == 'tsow9/minecraft_be_livemap'

@@ -9,7 +9,7 @@ import os
 import shlex
 import sys
 
-# Repository secrets and variables Blockmap reads, as the names its tools use.
+# Repository secrets and variables Chizuya reads, as the names its tools use.
 SECRETS = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'REALMS_CACHE_KEY', 'SHARE_PASSPHRASE']
 VARIABLES = ['REALM_NAME', 'MC_VERSION', 'CHECK_SPOT', 'LANGUAGE', 'TIMEZONE']
 

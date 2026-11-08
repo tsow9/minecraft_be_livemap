@@ -1,7 +1,7 @@
 #!/bin/bash
 # Everything the three workflows do (.github/workflows/map.yml, live.yml, setup.yml). The workflow files only fetch
 # the repository and run this, handing over all of the repository's secrets and variables. So a new version of
-# Blockmap changes only this and the other files under tools/, never the workflow files: GitHub does not let an
+# Chizuya changes only this and the other files under tools/, never the workflow files: GitHub does not let an
 # automatic update change workflow files, and a copy updates itself from the site's admin menu (tools/ci/update.sh).
 #
 #   run.sh map     the "Map site" workflow: the event and ACTION (What to do) say which part
@@ -214,7 +214,7 @@ update_map() {
   publish_site
 }
 
-# GitHub turns off the timers of a public repository after 60 days without changes, and a copy of Blockmap may never
+# GitHub turns off the timers of a public repository after 60 days without changes, and a copy of Chizuya may never
 # change. Once a day, switching them on again keeps the map and the live check running.
 keep_timers() {
   [ "$(date -u +%H)" = 03 ] || return 0

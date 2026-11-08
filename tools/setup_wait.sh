@@ -1,5 +1,5 @@
 #!/bin/bash
-# Right after a new copy of Blockmap is made, waits for its Cloudflare token so that signing in to Realms starts within
+# Right after a new copy of Chizuya is made, waits for its Cloudflare token so that signing in to Realms starts within
 # about half a minute of the token being added. GitHub has no event for "a secret was added", and a running job cannot
 # see secrets added after it started, so a chain of tiny runs ("Setup", probe) looks: each one starts signing in when the
 # token is there (tools/auto_signin.sh), then, until signing in has succeeded, starts the next one about 20 seconds later

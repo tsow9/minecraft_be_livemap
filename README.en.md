@@ -1,10 +1,10 @@
-# Blockmap
+# Chizuya
 
 [日本語](README.md)
 
 A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in the cloud; no PC needs to stay on.
 
-![Blockmap (a village: villagers, chests and a trade)](docs/screenshot-en.webp)
+![Chizuya (a village: villagers, chests and a trade)](docs/screenshot-en.webp)
 
 - Only the Realm's members can see the map (sign in with Microsoft).
 - The map and other data are stored only in your own Cloudflare account.
@@ -37,7 +37,7 @@ Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 1. Select **Use this template** → **Create a new repository** at the top of this page.
 2. Keep it **Public** ([why](#why-a-public-repository)).
 3. Leave **Include all branches** unchecked.
-4. The repository's name (e.g. `blockmap`) becomes the start of your site's address.
+4. The repository's name (e.g. `chizuya`) becomes the start of your site's address.
 
 ### 2. Prepare Cloudflare
 
@@ -71,7 +71,7 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 2. Wait 2–3 minutes (the site is put up first): the [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows the code (so does the running **login** job in Actions, in a box).
 3. Enter the code at https://www.microsoft.com/link.
 4. Sign in with the Realm owner's account (within 15 minutes). Afterwards Microsoft says "Minecraft for Nintendo Switch"; that is expected ([why](#security-and-privacy)).
-5. Once signed in, making the map starts by itself. A few minutes later the run's Summary shows "Site: https://blockmap.….workers.dev".
+5. Once signed in, making the map starts by itself. A few minutes later the run's Summary shows "Site: https://chizuya.….workers.dev".
 6. Open that address and sign in with Microsoft. The person who set it up is the admin.
 
 The [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows where the code is and how the map is getting on.
@@ -85,7 +85,7 @@ From then on it updates automatically.
 
 ## Why a public repository
 
-**Why it must be public**: the map updates and the player checks run on GitHub Actions, which is free without limit for public repositories but limited to 2,000 minutes a month for private ones. Blockmap uses about 4,000 minutes a month on its 10-minute checks alone, so a private repository would stop updating partway through the month.
+**Why it must be public**: the map updates and the player checks run on GitHub Actions, which is free without limit for public repositories but limited to 2,000 minutes a month for private ones. Chizuya uses about 4,000 minutes a month on its 10-minute checks alone, so a private repository would stop updating partway through the month.
 
 **Why that is safe**: only the program and encrypted data are public.
 
@@ -102,7 +102,7 @@ The secrets (keys), the Realms sign-in (encrypted, in Cloudflare) and what is on
 
 ### Mapping two or more Realms
 
-Make one repository for each Realm, with different names (step 1). Which Realm each maps is picked on the setup page after signing in (or set with `REALM_NAME`). The same GitHub and Cloudflare accounts, and the same token, can be used. Each Realm gets its own site (`https://blockmap.….workers.dev`, `https://blockmap-survival.….workers.dev` and so on), with its own map, members and drawings.
+Make one repository for each Realm, with different names (step 1). Which Realm each maps is picked on the setup page after signing in (or set with `REALM_NAME`). The same GitHub and Cloudflare accounts, and the same token, can be used. Each Realm gets its own site (`https://chizuya.….workers.dev`, `https://chizuya-survival.….workers.dev` and so on), with its own map, members and drawings.
 
 ### Inviting members
 
@@ -115,7 +115,7 @@ GitHub's 10-minute and hourly runs can be hours late. Under **Update timer** in 
 
 ### Updating to a new version
 
-When a new version is out, the admin sees "Version … is out" at the bottom of the map site. Press it, and in the admin menu under **Blockmap version** press **Update**: the site moves to the new version in 10 to 20 minutes, with no GitHub screens.
+When a new version is out, the admin sees "Version … is out" at the bottom of the map site. Press it, and in the admin menu under **Chizuya version** press **Update**: the site moves to the new version in 10 to 20 minutes, with no GitHub screens.
 
 ### Admin menu
 

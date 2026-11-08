@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="format-detection" content="telephone=no,email=no,address=no">
 <meta name="robots" content="noindex">
-<title>Blockmap ログイン</title>
+<title>Chizuya ログイン</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <!--
-  The Microsoft sign-in comes back here (one address registered for every Blockmap site), and this page hands the
+  The Microsoft sign-in comes back here (one address registered for every Chizuya site), and this page hands the
   one-time code to the site that asked for it. The code is useless without the secret that site kept for itself
   (PKCE), and the visitor sees which site it goes to before it is sent. Nothing is stored here.
 -->
@@ -27,7 +27,7 @@
 </head>
 <body>
 <div class="box">
-  <h1>Blockmap</h1>
+  <h1>Chizuya</h1>
   <p id="msg">確認しています…</p>
   <button id="go" hidden>続ける</button>
 </div>
@@ -36,11 +36,11 @@
   const ja = /^ja\b/i.test(navigator.language || '');
   document.documentElement.lang = ja ? 'ja' : 'en';
   const T = ja ? {
-    checking: '確認しています…', open: 'このページは、Blockmap の「Microsoft でログイン」から開いてください。',
+    checking: '確認しています…', open: 'このページは、Chizuya の「Microsoft でログイン」から開いてください。',
     failed: 'ログインできませんでした。もう一度ためしてください。', back: 'サイトに戻る', ok: 'ログインできました。この地図サイトに戻ります:',
     unknown: '覚えのないサイトなら、ここで閉じてください。', next: '続ける', missing: 'ログインの結果を受け取れませんでした。もう一度ためしてください。',
   } : {
-    checking: 'Checking…', open: 'Open this page from "Sign in with Microsoft" on a Blockmap site.',
+    checking: 'Checking…', open: 'Open this page from "Sign in with Microsoft" on a Chizuya site.',
     failed: 'Could not sign in. Please try again.', back: 'Back to the site', ok: 'Signed in. Going back to this map site:',
     unknown: 'If you do not know this site, close this page.', next: 'Continue', missing: 'The sign-in result did not arrive. Please try again.',
   };

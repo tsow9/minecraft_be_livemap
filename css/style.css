@@ -649,7 +649,7 @@ body.finding .pl-icon.off { opacity: .4; }
   animation: building-spin .8s linear infinite; }
 @keyframes building-spin { to { transform: rotate(360deg); } }
 body:has(#building:not([hidden])) #crosshair { display: none; }
-/* The admin's "a new version of Blockmap is out": opens the version part of the admin menu. */
+/* The admin's "a new version of Chizuya is out": opens the version part of the admin menu. */
 #release-bar, #timer-bar { position: absolute; z-index: 1060; left: 50%; transform: translateX(-50%); bottom: 14px; padding: 9px 16px;
   border-radius: 999px; border: 1px solid var(--accent); background: var(--glass); color: var(--accent); font: inherit;
   font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }

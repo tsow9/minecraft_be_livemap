@@ -60,10 +60,10 @@
 
   // The token page with its permissions filled in (Cloudflare's template links).
   const perms = [{ key: 'workers_scripts', type: 'edit' }, { key: 'd1', type: 'edit' }, { key: 'account_settings', type: 'read' }];
-  // Named after the repository once it is known (blockmap-survival → "Blockmap blockmap-survival"), so a token can be
+  // Named after the repository once it is known (blockmap-survival → "Chizuya blockmap-survival"), so a token can be
   // told apart in Cloudflare's list when there is a site per Realm.
   const tokenLink = () => {
-    const name = saved.repo ? `Blockmap ${saved.repo.split('/')[1]}` : 'Blockmap';
+    const name = saved.repo ? `Chizuya ${saved.repo.split('/')[1]}` : 'Chizuya';
     $('#token-link').href = `https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=${encodeURIComponent(JSON.stringify(perms))}`
       + `&accountId=*&zoneId=all&name=${encodeURIComponent(name)}`;
   };
@@ -369,7 +369,7 @@
     if (next !== lastBox) { box.innerHTML = next; lastBox = next; }
     renderAuto();
   }
-  // ---- automatic updates (a must): the Blockmap Connect GitHub App, connected with a code while the site is made ----
+  // ---- automatic updates (a must): the Chizuya Connect GitHub App, connected with a code while the site is made ----
   // GitHub's own timer runs hours late; with this the site starts the live check every minute. The site keeps the
   // token (only if it really can start this repository's runs); this page only sees the code to enter.
   function renderAuto() {
@@ -387,11 +387,11 @@
         <p><a class="btn" href="${esc(auto.uri)}" target="_blank" rel="noopener">${T('github.com/login/device を開く', 'Open github.com/login/device')}</a></p>
         <span class="small">${T('許可すると、ここが自動で次に進みます。', 'Once you allow it, this moves on by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
     } else if (auto.phase === 'install') {
-      // Approved, but Blockmap Connect is not on this repository yet (the approval waits on the site for 30 minutes).
-      html = `<b>${T('あと 1 つ:Blockmap Connect をリポジトリに入れます', 'One more: add Blockmap Connect to the repository')}</b>
+      // Approved, but Chizuya Connect is not on this repository yet (the approval waits on the site for 30 minutes).
+      html = `<b>${T('あと 1 つ:Chizuya Connect をリポジトリに入れます', 'One more: add Chizuya Connect to the repository')}</b>
         ${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(前に入れたことがあれば <code>${esc(saved.repo)}</code> を足して「<b>Save</b>」)。`,
           `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if you added it before, add <code>${esc(saved.repo)}</code> and press “<b>Save</b>”).`)}
-        <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('Blockmap Connect を入れる', 'Add Blockmap Connect')}</a></p>
+        <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('Chizuya Connect を入れる', 'Add Chizuya Connect')}</a></p>
         <span class="small">${T('入れると、このページに戻って自動で完了します。', 'Once added, you come back to this page and it finishes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
     } else {
       html = auto.phase === 'starting'
@@ -445,7 +445,7 @@
       if (!p || p.pending) { if (p?.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
       forgetCode();
       if (p.ok || p.error === 'set') { autoDone(); return; }
-      // Approved, and Blockmap Connect is not on the repository yet: that comes next.
+      // Approved, and Chizuya Connect is not on the repository yet: that comes next.
       if (p.error === 'not-installed') { auto = { phase: 'install' }; renderAuto(); waitInstall(); return; }
       auto = { phase: 'error', err: p.error };
       renderAuto();
