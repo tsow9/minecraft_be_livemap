@@ -2508,7 +2508,10 @@ const PLAIN_FACE = [['a....a', 'aa..aa', 'aaaaaa', 'abaaba', 'aaaaaa', 'aaddaa']
 const LEATHER = '#6b4a2a';
 function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null, own = null) {
   const faces = state.items?.faces || {};
-  const [face, pal] = own || faces[`${kind}:${variant}`] || faces[kind] || PLAIN_FACE;
+  // A plain wolf (no coat of its own, or the pale one, which is the same face as the default) gets the finer face.
+  const coat = faces[`${kind}:${variant}`];
+  const plainWolf = kind === 'wolf' && (!coat || JSON.stringify(coat) === JSON.stringify(faces[kind]));
+  const [face, pal] = own || (plainWolf ? WOLF_FACE : coat || faces[kind] || PLAIN_FACE);
   const w = face[0].length + 2;
   const grid = [Array(w).fill('.'), ...face.map((r) => ['.', ...r, '.'])];
   // The collar: two rows as wide as the bottom of the head.
@@ -2573,15 +2576,18 @@ function villagerTitle(v) {
   return v[4] ? `${v[4]}${paren(job === tl('村人(無職)') ? tl('無職') : job)}` : job;
 }
 
-// The pets chip: the same wolf's head as the wolves on the map (the face the map's data brings, made from the game's
-// model each build), with a red collar like a tamed wolf's. Until the data is here it draws that same face (a copy of
-// what the build makes for the plain wolf), so the picture does not change a moment later.
-const WOLF_CHIP = [['aa..aa', 'bb..bb', 'dbaabd', 'ddbbdb', 'efggfe', 'gaafag', 'gaaaag', 'ghhhhg'],
-  { a: '#e9e0e1', b: '#dcd9d9', d: '#cfcdcd', e: '#ebe9e9', f: '#464749', g: '#988d85', h: '#646669' }];
-const WOLF_COLLAR = '#c8352d';
+// The plain (pale) wolf, on the map and on the pets chip: its head as the game's model shows it from the front, drawn
+// at twice the detail (so the snout, three pixels wide and centred, sits where it does), in flat colours. Wolves in
+// another coat use the face the map's data brings for that coat.
+const WOLF_FACE = [[
+  'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa', 'aaaa....aaaa',
+  'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa', 'aaaaaaaaaaaa',
+  'wwddeeeeddww', 'wwddeeeeddww', 'eeessddsseee', 'eeessddsseee',
+  'eeesssssseee', 'eeesssssseee', 'eeaggggggaee', 'eeaggggggaee'],
+  { a: '#e3e0e1', w: '#ffffff', d: '#191c1f', e: '#ab9177', g: '#43474b', s: '#f5eced' }];
+const WOLF_COLLAR = '#c8352d';  // a tamed wolf's first collar
 function petChip() {
-  const face = state.items?.faces?.wolf || WOLF_CHIP;
-  $('#chip-pet').innerHTML = animalSvg('wolf', WOLF_COLLAR, false, false, 1.6, null, face);
+  $('#chip-pet').innerHTML = animalSvg('wolf', WOLF_COLLAR, false, false, 1.6, null, WOLF_FACE);
 }
 
 async function loadItems() {
