@@ -391,8 +391,8 @@
       html = `<b>${T('あと 1 つ:Blockmap Connect をリポジトリに入れます', 'One more: add Blockmap Connect to the repository')}</b>
         ${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(前に入れたことがあれば <code>${esc(saved.repo)}</code> を足して「<b>Save</b>」)。`,
           `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if you added it before, add <code>${esc(saved.repo)}</code> and press “<b>Save</b>”).`)}
-        <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new" target="_blank" rel="noopener">${T('Blockmap Connect を入れる', 'Add Blockmap Connect')}</a></p>
-        <span class="small">${T('入れると、ここが自動で変わります。', 'Once added, this changes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
+        <p><a class="btn" href="https://github.com/apps/${esc(appSlug)}/installations/new">${T('Blockmap Connect を入れる', 'Add Blockmap Connect')}</a></p>
+        <span class="small">${T('入れると、このページに戻って自動で完了します。', 'Once added, you come back to this page and it finishes by itself.')}<span class="dots"><i></i><i></i><i></i></span></span>`;
     } else {
       html = auto.phase === 'starting'
         ? `<b>${T('GitHub と連携しています', 'Connecting GitHub')}<span class="dots"><i></i><i></i><i></i></span></b>`
