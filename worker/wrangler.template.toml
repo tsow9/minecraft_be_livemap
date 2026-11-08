@@ -25,10 +25,10 @@ GH_REPO_ID = "__REPO_ID__"
 GH_APP_CLIENT_ID = "Iv23li5jn6tfeGhFVOjt"
 GH_APP_SLUG = "blockmap-connect"
 
-# Every 10 minutes the site starts the repository's live check (GitHub's own timer often runs hours late), once the
+# Every minute (unless one is still running) the site starts the repository's live check (GitHub's own timer often runs hours late), once the
 # admin has given it a GitHub token that may only start that repository's runs (admin menu).
 [triggers]
-crons = ["*/10 * * * *"]
+crons = ["* * * * *"]
 
 [[d1_databases]]
 binding = "DB"

@@ -368,7 +368,7 @@
     renderAuto();
   }
   // ---- automatic updates (a must): the Blockmap Connect GitHub App, connected with a code while the site is made ----
-  // GitHub's own timer runs hours late; with this the site starts the map's runs every 10 minutes. The site keeps the
+  // GitHub's own timer runs hours late; with this the site starts the live check every minute. The site keeps the
   // token (only if it really can start this repository's runs); this page only sees the code to enter.
   function renderAuto() {
     const box = $('#auto-box');
@@ -395,7 +395,7 @@
       html = auto.phase === 'starting'
         ? `<b>${T('GitHub と連携しています', 'Connecting GitHub')}<span class="dots"><i></i><i></i><i></i></span></b>`
         : `<b>${T('自動更新を設定します', 'Set up automatic updates')}</b>
-        ${T('地図とプレイヤーの位置を 10 分ごとに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places are refreshed every 10 minutes, connect GitHub. You can do it while the site is being built.')}
+        ${T('地図とプレイヤーの位置をこまめに新しくするために、GitHub と連携します。サイトを作っているあいだに進められます。', 'So the map and players\' places stay up to date, connect GitHub. You can do it while the site is being built.')}
         <ol class="auto-steps"><li>${T(`下のボタンで GitHub を開き、「<b>Only select repositories</b>」で <code>${esc(saved.repo)}</code> を選んで「<b>Install</b>」を押します(前に入れたことがあれば <code>${esc(saved.repo)}</code> を足して「<b>Save</b>」、もう入っていれば何もせずこのページに戻ります)。`,
             `Open GitHub with the button below, choose “<b>Only select repositories</b>”, pick <code>${esc(saved.repo)}</code> and press “<b>Install</b>” (if you added it before, add <code>${esc(saved.repo)}</code> and press “<b>Save</b>”; if it is already there, just come back).`)}</li>
           <li>${T('このページに戻ると、コードが出ます。GitHub に入れて「Authorize」を押します。', 'Back on this page, a code appears. Enter it on GitHub and press “Authorize”.')}</li></ol>
@@ -423,15 +423,25 @@
     };
     setTimeout(look, 5000);
   }
-  // Back from GitHub's install page (the app's Setup URL is this page): the code is asked for at once.
   // Back from GitHub's install page: the app's Setup URL brings the person here (?setup_action=…), or they come back
-  // themselves (noted when they left). Either way the code is asked for at once.
-  const leftForInstall = () => { try { const v = sessionStorage.getItem('blockmap.setup.install'); sessionStorage.removeItem('blockmap.setup.install'); return !!v; } catch { return false; } };
+  // themselves, in this tab or another (noted in this browser when they left, for half an hour). Either way the code
+  // is asked for at once.
+  const INSTALL_KEY = 'blockmap.setup.install';
+  const leftForInstall = () => {
+    try {
+      const v = JSON.parse(localStorage.getItem(INSTALL_KEY) || 'null');
+      if (!v) return false;
+      localStorage.removeItem(INSTALL_KEY);
+      return v.repo === saved.repo && Date.now() - v.at < 30 * 60000;
+    } catch { return false; }
+  };
   let autoStart = /[?&]setup_action=/.test(location.search) || leftForInstall();
   if (/[?&]setup_action=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
-  window.addEventListener('pageshow', (e) => { if (e.persisted && leftForInstall()) { autoStart = true; renderAuto(); } });
+  const backAgain = () => { if (leftForInstall()) { autoStart = true; renderAuto(); } };
+  window.addEventListener('pageshow', (e) => { if (e.persisted) backAgain(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') backAgain(); });
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#auto-install')) { try { sessionStorage.setItem('blockmap.setup.install', '1'); } catch { /* private mode */ } return; }
+    if (e.target.closest('#auto-install')) { try { localStorage.setItem(INSTALL_KEY, JSON.stringify({ repo: saved.repo, at: Date.now() })); } catch { /* private mode */ } return; }
     if (!e.target.closest('#auto-connect')) return;
     e.preventDefault();
     startConnect();

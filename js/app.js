@@ -254,7 +254,7 @@ function setupSettings() {
   });
 }
 
-// The timer (admin only): GitHub's own timer often runs hours late, so the site starts the live check every 10 minutes
+// The timer (admin only): GitHub's own timer often runs hours late, so the site starts the live check every minute
 // itself, with a GitHub token the admin makes once that may only start this repository's runs.
 async function loadTimer() {
   const box = $('#timer-box'), body = $('#timer-body');
@@ -282,7 +282,7 @@ async function loadTimer() {
       <li>${tl('下の欄に貼って「保存」を押します。')}</li>
     </ol>
     <p class="btns"><a class="mini" href="${esc(make)}" target="_blank" rel="noopener">${tl('GitHub でトークンを作る')}</a></p>${pasteForm}`;
-  const intro = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 10 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub と連携します。このリポジトリの自動処理を起動する権限だけです。')}</p>`;
+  const intro = `<p class="help">${tl('GitHub の自動の時計は、数時間遅れることがあります。サイトが 1 分ごとに位置確認(と 1 時間ごとの地図の更新)を起動できるよう、GitHub と連携します。このリポジトリの自動処理を起動する権限だけです。')}</p>`;
   body.innerHTML = intro + state + (r.app
     ? `<p class="btns"><button class="mini primary" type="button" id="timer-connect">${tl('GitHub と連携する')}</button></p>
       <div id="timer-code"></div>

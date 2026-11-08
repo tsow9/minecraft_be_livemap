@@ -23,7 +23,7 @@ const USED_EVERY_MS = 3600 * 1000;  // how often "last seen" is brought up to da
 export default {
   // The timer (wrangler.template.toml): starts the repository's live check, which also redraws the map hourly.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(startLiveCheck(env));
+    ctx.waitUntil(startLiveCheck(env, { skipBusy: true }));
   },
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -508,7 +508,7 @@ async function ghForm(url, body) {
 }
 
 // Starts the repository's live check (GitHub's workflow_dispatch) with the admin's token; remembers how it went.
-async function startLiveCheck(env) {
+async function startLiveCheck(env, { skipBusy = false } = {}) {
   let t = await kvGet(env, 'timer');
   // A token from the GitHub App that expires (if the app's tokens expire): renewed with its refresh token first.
   if (t?.via === 'app' && t.refresh && t.expires && t.expires - Date.now() < 10 * 60000 && env.GH_APP_CLIENT_ID) {
@@ -519,6 +519,16 @@ async function startLiveCheck(env) {
     }
   }
   if (!t?.token || !/^[\w.-]+\/[\w.-]+$/.test(env.GH_REPO || '')) return null;
+  // Every minute from the timer: not while a live check is still running or waiting to start (it keeps looking every
+  // 20 seconds while someone plays, and hands over to the next itself), so runs do not pile up.
+  if (skipBusy && t.ok) {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/live.yml/runs?per_page=5`, {
+        headers: { Authorization: `Bearer ${t.token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'Blockmap', 'X-GitHub-Api-Version': '2022-11-28' } });
+      const runs = res.ok ? (await res.json()).workflow_runs || [] : [];
+      if (runs.some((r) => r.status !== 'completed')) return 'busy';
+    } catch { /* look anyway */ }
+  }
   const status = await dispatchLive(env, t.token);
   // It worked for this very repository: noted with its id (see timerWorks).
   await kvPut(env, 'timer', { ...t, ok: status === 204, status, last: Date.now(), rid: status === 204 ? env.GH_REPO_ID || null : t.rid || null });
