@@ -114,6 +114,15 @@ site_exists() {
   [ "$code" = 200 ]
 }
 
+# The site there now was published from this very repository (it says its repository's id at /api/setup).
+site_is_ours() {
+  local url rid
+  url=${SITE_URL:-$(bash tools/site_url.sh)}
+  [ -n "$url" ] || return 1
+  rid=$(curl -sS --max-time 15 "$url/api/setup" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("rid") or "")' 2>/dev/null)
+  [ -n "$rid" ] && [ "$rid" = "${GITHUB_REPOSITORY_ID:-}" ]
+}
+
 publish_site() {
   if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
     echo "::warning::$(t 'Cloudflare の Secrets がそろっていないので、サイトは作りません' 'The Cloudflare secrets are not all set, so the site is not published')"
@@ -216,8 +225,9 @@ keep_timers() {
 # ---------- signing in to Realms ----------
 sign_in() {
   get_key --required || return 1
-  # The site first (only when there is none yet; the map comes after), so the setup page can follow along through it.
-  if [ -n "$CLOUDFLARE_API_TOKEN" ] && ! site_exists; then
+  # The site first (when there is none yet, or the one there was made by an older repository of this name: its map,
+  # timer and setup news are that repository's), so the setup page can follow along through it; the map comes after.
+  if [ -n "$CLOUDFLARE_API_TOKEN" ] && { ! site_exists || ! site_is_ours; }; then
     say '先にサイトを用意します(地図は、ログインの後に作ります)' 'Putting the site up first (the map is made after signing in)'
     publish_site || true
     get_key --required || return 1   # the site's address, now that there is a site

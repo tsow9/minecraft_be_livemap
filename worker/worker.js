@@ -41,7 +41,7 @@ export default {
         const seen = await kvGet(env, 'setup_seen');
         if (!(Date.now() - (seen || 0) < 30000)) await kvPut(env, 'setup_seen', Date.now());
         const pend = await kvGet(env, 'timer_pending');
-        return json({ ...(row ? JSON.parse(row.v) : {}), timer: timerWorks(env, t), app: appSlug(env), pending: !!(pend?.token && pend.until > Date.now()) },
+        return json({ ...(row ? JSON.parse(row.v) : {}), timer: timerWorks(env, t), app: appSlug(env), rid: env.GH_REPO_ID || null, pending: !!(pend?.token && pend.until > Date.now()) },
           200, { 'Access-Control-Allow-Origin': '*' });
       }
       // Setting up the timer from the setup page, before anyone can sign in to the site: only while no working timer
