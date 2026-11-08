@@ -7,7 +7,7 @@
   const KEY = 'blockmap.setup';
   let saved = {};
   // Automatic updates (step 4): whether the site says they work, the GitHub App to add, and the connecting's stage.
-  let timerOk = true, appSlug = 'blockmap-connect', auto = { phase: 'idle' }, lastAuto = '';
+  let timerSeen = false, timerOk = true, appSlug = 'blockmap-connect', auto = { phase: 'idle' }, lastAuto = '';
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { /* private mode */ }
   // The repository, and once its site is made, that it is done and where (so coming back needs no question to GitHub).
   const save = () => {
@@ -250,8 +250,8 @@
     // The timer (a must): known from the site; sites from before it existed say nothing, and are not held up.
     if (s) {
       const was = timerOk;
-      timerOk = s.timer !== false; appSlug = s.app || appSlug; sitePending = !!s.pending;
-      if (timerOk && !saved.timer) { saved.timer = '1'; save(); }
+      timerOk = s.timer !== false; timerSeen = typeof s.timer === 'boolean'; appSlug = s.app || appSlug; sitePending = !!s.pending;
+      if (s.timer === true && !saved.timer) { saved.timer = '1'; save(); }
       if (was !== timerOk) refresh();
     }
     if (s) {
@@ -372,7 +372,8 @@
   // token (only if it really can start this repository's runs); this page only sees the code to enter.
   function renderAuto() {
     const box = $('#auto-box');
-    const show = fromSite && !!siteUrl && (!timerOk || auto.phase === 'ok') && ['building', 'making', 'done'].includes(state?.kind);
+    // Shown once the site has said whether automatic updates work (older sites do not say), and kept showing ✓ after.
+    const show = ['building', 'making', 'done'].includes(state?.kind) && ((fromSite && !!siteUrl && timerSeen) || (timerOk && !!saved.timer));
     box.hidden = !show;
     if (!show) return;
     resumeAuto();
