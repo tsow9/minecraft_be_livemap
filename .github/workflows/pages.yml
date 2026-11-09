@@ -64,15 +64,11 @@ jobs:
         run: |
           mkdir _site
           cp login.html privacy.html terms.html legal.css legal.js setup.html setup.css setup.js favicon.svg logo.svg logo-dark.svg _site/
-          # The top page introduces Chizuya; the old "the map has moved" note stays at moved.html.
-          cp intro.css apple-touch-icon.png _site/
-          cp intro.html _site/index.html
-          mkdir _site/docs && cp docs/screenshot-ja.webp docs/screenshot-en.webp _site/docs/
           # Browsers may keep GitHub Pages files for 10 minutes: name each script and style by this version.
           v=${GITHUB_SHA::8}
-          sed -i -E "s/(href|src)=\"(setup|legal|intro)\.(css|js)\"/\1=\"\2.\3?v=$v\"/g" _site/setup.html _site/privacy.html _site/terms.html _site/index.html
+          sed -i -E "s/(href|src)=\"(setup|legal)\.(css|js)\"/\1=\"\2.\3?v=$v\"/g" _site/setup.html _site/privacy.html _site/terms.html
           url=$(bash tools/site_url.sh)
-          sed "s#__SITE__#${url:-}#" tools/moved.html > _site/moved.html
+          sed "s#__SITE__#${url:-}#" tools/moved.html > _site/index.html
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
