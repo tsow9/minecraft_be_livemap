@@ -1,0 +1,60 @@
+/* The introduction page (GitHub Pages top): a readme.txt look — rules, 【】 headings, monospace text. */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #0f1114; color: #dedad0; font-size: 14px; line-height: 1.8;
+  font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+nav, article { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+nav { display: flex; justify-content: flex-end; padding-top: 14px; }
+nav button { padding: 2px 10px; border: 1px solid #3a3d44; background: none; color: #8a867b; cursor: pointer;
+  font: 12px "JetBrains Mono", monospace; }
+nav button:hover { color: #dedad0; }
+article[hidden] { display: none; }
+:lang(ja) { word-break: auto-phrase; }
+
+header { padding-top: 10px; }
+.logo { height: 30px; width: auto; margin-bottom: 34px; }
+h1 { font-size: 34px; font-weight: 900; line-height: 1.35; margin: 0 0 6px; }
+header p { margin: 0 0 6px; color: #a8a498; }
+.btn { display: inline-block; margin-top: 14px; padding: 8px 18px; border: 1px solid #dedad0; text-decoration: none; font-weight: 700;
+  font-family: "JetBrains Mono", "Zen Kaku Gothic New", monospace; }
+.btn::before { content: "> "; }
+.btn:hover { background: #dedad0; color: #0f1114; }
+figure { margin: 28px 0 0; }
+figure img { border: 1px solid #3a3d44; }
+figcaption { margin-top: 6px; color: #6e6a60; font: 12px "JetBrains Mono", monospace; }
+
+/* Everything below the picture reads like a text file. */
+section, footer { font-family: "JetBrains Mono", "Zen Kaku Gothic New", monospace; font-size: 13.5px; line-height: 1.75; color: #c9c5ba; }
+section { margin-top: 30px; padding-top: 14px; border-top: 3px double #4a4e57; }
+h2 { margin: 0 0 8px; font-size: inherit; font-weight: 700; color: #dedad0; }
+dl, ol { margin: 0; }
+.list { display: grid; grid-template-columns: 6.5em 1fr; gap: 2px 1em; }
+.list.wide { grid-template-columns: 9em 1fr; }
+.list dt { font-weight: 700; color: #dedad0; }
+.list dt::before { content: "・"; }
+.list dd { margin: 0; }
+.steps { padding: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 2em 1fr; }
+.steps li::before { content: counter(s) "."; color: #c9a23a; }
+.more { margin: 8px 0 0; color: #8a867b; }
+.more a, footer a { text-decoration: underline; }
+.qa dt { margin-top: 12px; }
+.qa dt:first-child { margin-top: 0; }
+.qa dt::before { content: "Q. "; color: #c9a23a; }
+.qa dd { margin: 0; color: #a8a498; }
+.qa dd::before { content: "A. "; color: #6e6a60; }
+.end { padding-top: 6px; }
+footer { margin-top: 30px; padding: 14px 0 40px; border-top: 3px double #4a4e57; color: #8a867b; font-size: 12px; }
+footer p { margin: 0 0 4px; }
+
+/* Phones: labels sit above their text; a little smaller headline. */
+@media (max-width: 560px) {
+  nav, article { padding: 0 16px; }
+  .logo { margin-bottom: 24px; }
+  h1 { font-size: 26px; }
+  .btn { display: block; text-align: center; }
+  .list, .list.wide { grid-template-columns: 1fr; gap: 0; }
+  .list dd { margin: 0 0 8px 1em; }
+}

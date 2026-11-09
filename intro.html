@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<title>Chizuya — Realm を地図にするツール</title>
+<meta name="description" content="マイクラ統合版の Realm のワールドを地図にして、ブラウザで見られるようにします。地図を見られるのは、その Realm のメンバーだけです。">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="intro.css">
+</head>
+<body>
+<nav><button id="lang" type="button">English</button></nav>
+
+<article lang="ja">
+<header>
+  <img class="logo" src="logo-dark.svg" alt="Chizuya" width="140" height="30">
+  <h1>Realm を地図にするツール</h1>
+  <p>マイクラ統合版の Realm のワールドを地図にして、ブラウザで見られるようにします。地図を見られるのは、その Realm のメンバーだけです。</p>
+  <p>無料で使えます。準備にかかる時間は約15分です。</p>
+  <a class="btn" href="setup.html">セットアップをはじめる</a>
+  <figure><img src="docs/screenshot-ja.webp" alt="地図の画面" width="1600" height="900"><figcaption>fig.1 地図の画面</figcaption></figure>
+</header>
+
+<section>
+  <h2>【機能】</h2>
+  <dl class="list">
+    <dt>地図</dt><dd>1時間ごとに自動で更新されます。過去の日付の地図も見られます。</dd>
+    <dt>位置</dt><dd>プレイ中のメンバーの位置が、約1分ごとに表示されます。</dd>
+    <dt>検索</dt><dd>チェストの中身、村人の取引、ペットを検索できます。</dd>
+    <dt>共有</dt><dd>ピンや図形を置くと、ほかのメンバーの地図にも表示されます。</dd>
+    <dt>ログイン</dt><dd>Realm のメンバーだけが、Microsoft アカウントでログインして見られます。</dd>
+    <dt>自動更新</dt><dd>一度設定すれば、あとは自動で動きます。</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>【使い方】</h2>
+  <ol class="steps">
+    <li>GitHub で、Chizuya のコピー(リポジトリ)を作ります。</li>
+    <li>Cloudflare のトークンを作り、コピーに登録します。</li>
+    <li>Realm のオーナーのアカウントでログインします。地図ができたら、メンバーにリンクを送ってください。</li>
+  </ol>
+  <p class="more">くわしい手順は、<a href="setup.html">セットアップページ</a>に順番に表示されます。</p>
+</section>
+
+<section>
+  <h2>【動作環境】</h2>
+  <dl class="list wide">
+    <dt>対応</dt><dd>マイクラ統合版の Realm(Java 版には対応していません)</dd>
+    <dt>必要なもの</dt><dd>Realm のオーナーのアカウント、GitHub アカウント、Cloudflare アカウント</dd>
+    <dt>料金</dt><dd>無料(GitHub と Cloudflare の無料プランの範囲で動きます)</dd>
+    <dt>データの保存先</dt><dd>ご自身の Cloudflare アカウント。開発者のサーバーには保存されません。</dd>
+    <dt>見られる端末</dt><dd>パソコン、スマホ、タブレットのブラウザ</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>【よくある質問】</h2>
+  <dl class="qa">
+    <dt>料金はかかりますか?</dt><dd>かかりません。GitHub と Cloudflare の無料プランの範囲で動きます。</dd>
+    <dt>Java 版でも使えますか?</dt><dd>使えません。統合版の Realm 専用です。</dd>
+    <dt>スマホでも見られますか?</dt><dd>見られます。ブラウザでリンクを開いてください。</dd>
+  </dl>
+</section>
+
+<section class="end">
+  <a class="btn" href="setup.html">セットアップをはじめる</a>
+</section>
+
+<footer>
+  <p><a href="privacy.html">プライバシーポリシー</a> | <a href="terms.html">利用規約</a> | <a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></p>
+  <p class="old"><a href="moved.html">以前この住所で地図を見ていた方へ</a></p>
+  <p>© 2026 Chizuya</p>
+</footer>
+</article>
+
+<article lang="en" hidden>
+<header>
+  <img class="logo" src="logo-dark.svg" alt="Chizuya" width="140" height="30">
+  <h1>A map of your Realm</h1>
+  <p>Chizuya turns the world of your Minecraft Bedrock Realm into a map you can open in a browser. Only members of that Realm can see it.</p>
+  <p>Free to use. Setting it up takes about 15 minutes.</p>
+  <a class="btn" href="setup.html">Start the setup</a>
+  <figure><img src="docs/screenshot-en.webp" alt="The map" width="1600" height="900"><figcaption>fig.1 The map</figcaption></figure>
+</header>
+
+<section>
+  <h2>[ Features ]</h2>
+  <dl class="list">
+    <dt>Map</dt><dd>Updated every hour by itself. Maps from earlier days stay available.</dd>
+    <dt>Players</dt><dd>Members who are playing are shown on the map, about once a minute.</dd>
+    <dt>Search</dt><dd>Search chest contents, villager trades and pets.</dd>
+    <dt>Sharing</dt><dd>Pins and shapes you place show up on the other members' maps too.</dd>
+    <dt>Sign-in</dt><dd>Only members of the Realm can see it, by signing in with their Microsoft account.</dd>
+    <dt>Automatic</dt><dd>Set it up once and it keeps running by itself.</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>[ How it works ]</h2>
+  <ol class="steps">
+    <li>Make a copy of Chizuya (a repository) on GitHub.</li>
+    <li>Make a Cloudflare token and add it to the copy.</li>
+    <li>Sign in with the Realm owner's account. When the map is ready, send the link to your members.</li>
+  </ol>
+  <p class="more">The <a href="setup.html">setup page</a> takes you through each step in turn.</p>
+</section>
+
+<section>
+  <h2>[ Requirements ]</h2>
+  <dl class="list wide">
+    <dt>Works with</dt><dd>Minecraft Bedrock Edition Realms (not Java Edition)</dd>
+    <dt>You need</dt><dd>The Realm owner's account, a GitHub account and a Cloudflare account</dd>
+    <dt>Cost</dt><dd>Free (it runs within GitHub's and Cloudflare's free plans)</dd>
+    <dt>Your data</dt><dd>Kept in your own Cloudflare account, never on the developer's servers.</dd>
+    <dt>Devices</dt><dd>A browser on a computer, phone or tablet</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>[ FAQ ]</h2>
+  <dl class="qa">
+    <dt>Does it cost anything?</dt><dd>No. It runs within GitHub's and Cloudflare's free plans.</dd>
+    <dt>Does it work with Java Edition?</dt><dd>No. It is for Bedrock Edition Realms only.</dd>
+    <dt>Can I view it on my phone?</dt><dd>Yes. Open the link in your browser.</dd>
+  </dl>
+</section>
+
+<section class="end">
+  <a class="btn" href="setup.html">Start the setup</a>
+</section>
+
+<footer>
+  <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Use</a> | <a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></p>
+  <p class="old"><a href="moved.html">Used to view a map at this address?</a></p>
+  <p>© 2026 Chizuya</p>
+</footer>
+</article>
+<script src="legal.js"></script>
+</body>
+</html>
