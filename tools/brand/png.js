@@ -1,4 +1,4 @@
-// The PNG icons, drawn from favicon.svg and tools/brand/mark.svg (node tools/brand/png.js; needs Playwright).
+// The PNG icons, drawn from favicon.svg and tools/brand/mark.svg (made by tools/brand/make.py; node tools/brand/png.js; needs Playwright).
 //   icons/icon-32.png, icon-192.png, icon-512.png   the rounded paper tile, as favicon.svg
 //   icons/icon-maskable-512.png, apple-touch-icon.png   full-bleed paper with the mark inside the safe area
 //   (Android and iOS cut their own shape out of these)
