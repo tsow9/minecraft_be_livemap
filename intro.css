@@ -1,7 +1,7 @@
 /* The introduction page (GitHub Pages top, not published yet): calm, light, a little old-fashioned. */
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:#f6f5f1;color:#1a1c1a;font:14px/1.75 'Space Grotesk','Zen Kaku Gothic New',sans-serif;-webkit-font-smoothing:antialiased}
+body{background:#f6f5f1;color:#211a16;font:14px/1.75 'Space Grotesk','Zen Kaku Gothic New',sans-serif;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%}
 a{color:inherit}
 .m{font-family:'JetBrains Mono','Zen Kaku Gothic New',monospace}
@@ -19,7 +19,7 @@ article[hidden]{display:none}
 .hero .logo{height:84px;width:auto;margin:0 auto 18px}
 .hero p{margin:0 auto;max-width:34em;color:#45474a;font-size:16px}
 .go{max-width:460px;margin:26px auto 0;border:1px solid #c9c8c2;background:#efeee9;padding:14px}
-.btn{display:flex;justify-content:center;align-items:center;gap:8px;padding:11px 16px;background:#141923;color:#fff;font-weight:700;font-size:15px;text-decoration:none;border:1px solid #000}
+.btn{display:flex;justify-content:center;align-items:center;gap:8px;padding:11px 16px;background:#211a16;color:#fff;font-weight:700;font-size:15px;text-decoration:none;border:1px solid #211a16}
 .btn:hover{background:#2a303b}
 .go small{display:block;margin-top:8px;font:11.5px 'JetBrains Mono','Zen Kaku Gothic New',monospace;color:#5a5c5f;letter-spacing:.02em}
 .shot{margin-top:44px;width:100%;height:auto}

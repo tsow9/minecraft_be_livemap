@@ -1,15 +1,16 @@
 :root { color-scheme: light; }
 * { box-sizing: border-box; }
-body { margin: 0; padding: 24px 16px 64px; background: #f6f5f1; color: #1a1c1a; line-height: 1.75; font-size: 15px;
+body { margin: 0; padding: 24px 16px 64px; background: #f6f5f1; color: #211a16; line-height: 1.75; font-size: 15px;
   font-family: "Hiragino Sans", "Noto Sans JP", system-ui, -apple-system, sans-serif; }
 nav, article { max-width: 720px; margin: 0 auto; }
-nav { font-size: 13px; color: #5a5c5f; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-nav button { margin-left: auto; padding: 4px 12px; border-radius: 999px; border: 1px solid #dcdbd6; background: #fff; color: #1a1c1a;
+nav { font-size: 13px; color: #6a625a; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+nav button { margin-left: auto; padding: 4px 12px; border-radius: 999px; border: 1px solid #dcd8d0; background: #fff; color: #211a16;
   font: inherit; cursor: pointer; }
-a { color: #1f6f4a; }
+a { color: #211a16; text-underline-offset: 2px; }
+nav img { height: 26px; width: auto; display: block; margin-right: 8px; }
 h1 { font-size: 24px; margin: 0 0 4px; }
 h2 { font-size: 17px; margin: 32px 0 8px; }
-.date { color: #5a5c5f; font-size: 13px; margin: 0 0 24px; }
+.date { color: #6a625a; font-size: 13px; margin: 0 0 24px; }
 ul { padding-left: 1.3em; }
 li { margin: 4px 0; }
 article[hidden] { display: none; }

@@ -2,7 +2,7 @@
 
 - 名前:画面・説明書・規約に出る名前は Chizuya(日本発を表す「地図屋」。同じ分野に BlockMap という既存ツールがあるため 2026-11-08 に変更)。内部の名前(localStorage の blockmap.*、meta blockmap-*、BLOCKMAP_* の環境変数、Worker blockmap・D1 blockmap-share、GoatCounter の blockmap.goatcounter.com、凍結した map.yml の「Update Blockmap」)は、動いているサイトを壊さないようそのまま
 
-- ロゴ:持ち主が仕上げた絵(tools/brand/source.png、背景透過の PNG。黒い四方手裏剣のような星に灰色の格子、真ん中に白い十字の穴、名前は筆の払いが入った「Chizuya」)をそのまま使う。python3 tools/brand/make.py が logo.png(星は十字の中心を文字の高さの真ん中=C の上端〜h の下端の中間に合わせて上へ動かす。y の下の払いは数えない)・tools/brand/mark.png(星だけ、正方形)・favicon.svg(白い角丸の地に星の PNG を埋め込んだもの)を作り、node tools/brand/png.js が icons/*.png・apple-touch-icon.png(白い角丸・白地に mark.png)を作る。暗い地用のロゴは作らない(暗い背景は使わない方針)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、墨 #141923 のボタン)で、見出しは logo.png(セットアップページの見出しは文字のまま)
+- ロゴ:持ち主が仕上げた絵(tools/brand/source.png、背景透過の PNG。黒い四方手裏剣のような星に灰色の格子、真ん中に白い十字の穴、名前は筆の払いが入った「Chizuya」)をそのまま使う。python3 tools/brand/make.py が logo.png(星は十字の中心を文字の高さの真ん中=C の上端〜h の下端の中間に合わせて上へ動かす。y の下の払いは数えない)・tools/brand/mark.png(星だけ、正方形)・favicon.svg(白い角丸の地に星の PNG を埋め込んだもの)を作り、node tools/brand/png.js が icons/*.png・apple-touch-icon.png(白い角丸・白地に mark.png)を作る。暗い地用のロゴは作らない(暗い背景は使わない方針)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、墨 #141923 のボタン)で、見出しは logo.png。セットアップページ・規約・移転のお知らせの見出しにも logo.png。色はロゴに合わせる:地 #f6f5f1、箱 #fff、線 #dcd8d0、文字とボタンとリンクはロゴの墨 #211a16、補足 #6a625a、完了だけ落ち着いた緑 #3f6b4e、問題は #a33a2e(地図サイトの中の画面は暗いまま)
 
 ## 進め方
 - 持ち主は専門家ではない。説明は日本語で、かみ砕いて。一つずつ進める。
@@ -47,6 +47,11 @@
   - Microsoft アカウントのログイン情報は持ち主の GitHub に暗号化したまま。リンクやデータには入れない。
 
 ## 次にやること
+- 持ち主に頼むもの:寄付の窓口(Ko-fi など)と不具合報告の Google フォームを作ってもらい、リンクを紹介ページ・セットアップページなどに入れる(フォームの質問の案も出せる)。紹介ページを公開するかどうか
+- 私の作業:紹介ページの地図の画像を撮り直す(今のは右上が「言語設定」のころのもの)。地図サイトの中の画面は暗いまま(地図が見やすいため。明るくするなら持ち主に確認)
+- 配り始める前:CHANGELOG を書いて 1.0.0 にする(最初の GitHub リリース)。条件を変えて(別の Cloudflare アカウントなど)もう一度セットアップを通しで確かめる
+- 個人で注意してもらうもの(直さない):Cloudflare のアカウントが複数、組織のリポジトリ、Realm の契約切れ
+- 前に試しで作ったコピー tsow9/blockmap は自動更新できない(要らなければ消してよい)
 - 紹介ページ(intro.html・intro.css・intro.js。Google Stitch の案をもとに少し古めにした明るい地:中央の大きなロゴ・一行の説明・ボタン・地図の画像(枠や説明文なし)→[ 機能 ]の2列の表→[ 使い方 ]3手順→[ 動作環境 ]の表→[ よくある質問 ]の開閉→最後のボタン。日英は article を intro.js で切り替え(blockmap.lang))は作ったが、持ち主の指示でまだ公開しない。公開するときは pages.yml で intro.html を _site/index.html に、moved.html を _site/moved.html にし、intro.css・intro.js・apple-touch-icon.png・docs/screenshot-*.webp も写す(紹介ページの下から moved.html へリンク済み)。寄付・不具合の報告のリンクは Ko-fi・Google フォームができたら足す。地図の画像は「設定」ボタンになる前のものなので撮り直す
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
 2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。

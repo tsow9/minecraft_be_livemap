@@ -661,13 +661,13 @@ function gatePage(env) {
 <meta name="robots" content="noindex"><title>Chizuya</title><link rel="icon" href="/favicon.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <style>
-:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f5f1;color:#1a1c1a;
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f5f1;color:#211a16;
 font-family:"M PLUS Rounded 1c",system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
 button{font:inherit}
 .box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:6px;background:#fff;border:1px solid #dcdbd6}
 h1{margin:0 0 12px;font-size:20px}p{margin:0 0 16px;color:#5a5c5f;line-height:1.6;font-size:14px}
-#ms{width:100%;height:46px;border:0;border-radius:4px;background:#141923;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
-#msg{margin:12px 0 0;min-height:1.6em;color:#b3261e}
+#ms{width:100%;height:46px;border:0;border-radius:4px;background:#211a16;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+#msg{margin:12px 0 0;min-height:1.6em;color:#a33a2e}
 .legal{margin:16px 0 0;font-size:12px;color:#75777b;text-align:center}.legal a{color:#75777b}
 </style></head><body><div class="box"><h1><img src="/logo.png" alt="Chizuya" style="height:36px;width:auto;display:block"></h1>
 <div id="start"><p id="intro"></p>
