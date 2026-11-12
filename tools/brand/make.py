@@ -4,7 +4,7 @@
 
 Writes logo.png (the star and the name), tools/brand/mark.png (the star alone, square) and favicon.svg (the star on a
 white rounded square, the picture inside). The star is moved up so its centre (the cross) sits halfway up the
-letters (top of the C .. foot of the h), not counting the tail of the y.
+letters (top of the C .. foot of the h), not counting the tail of the y. The star's grey grid is darkened (GRID).
 """
 import base64
 import io
@@ -18,10 +18,17 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 SPLIT = 400       # source x: the star is left of this, the name right
 CROSS_Y = 227.5   # source y of the cross's centre
 PAD = 6
+GRID = .45       # the star's grey grid lines, brought this far toward the dark faces (1 = as drawn)
 
 src = Image.open(os.path.join(HERE, 'source.png')).convert('RGBA')
 W, H = src.size
 a = np.array(src)
+# the grid on the star a little darker: tones above the faces' own are pulled toward them
+st = a[:, :SPLIT, :3].astype(float)
+v = st.mean(-1, keepdims=True)
+dark = np.where(v > 55, 55 + (v - 55) * GRID, v)
+a[:, :SPLIT, :3] = np.clip(st * np.where(v > 0, dark / np.maximum(v, 1), 1), 0, 255).astype(np.uint8)
+src = Image.fromarray(a)
 ink = a[..., 3] > 128
 
 
