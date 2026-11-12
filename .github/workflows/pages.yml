@@ -63,7 +63,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           mkdir _site
-          cp login.html privacy.html terms.html legal.css legal.js setup.html setup.css setup.js favicon.svg logo.svg _site/
+          cp login.html privacy.html terms.html legal.css legal.js setup.html setup.css setup.js favicon.svg logo.png _site/
           # Browsers may keep GitHub Pages files for 10 minutes: name each script and style by this version.
           v=${GITHUB_SHA::8}
           sed -i -E "s/(href|src)=\"(setup|legal)\.(css|js)\"/\1=\"\2.\3?v=$v\"/g" _site/setup.html _site/privacy.html _site/terms.html

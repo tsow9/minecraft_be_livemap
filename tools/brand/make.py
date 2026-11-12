@@ -1,77 +1,58 @@
-"""Chizuya's logo, traced from the owner's drawing (tools/brand/source.png) into SVG.
+"""Chizuya's logo, from the owner's finished picture (tools/brand/source.png, transparent PNG).
 
-    python3 tools/brand/make.py      (needs potrace: apt-get install potrace)
+    python3 tools/brand/make.py      then   node tools/brand/png.js
 
-Writes logo.svg (the star and the name), tools/brand/mark.svg (the star alone) and favicon.svg (the star on a white
-rounded square). Then `node tools/brand/png.js` draws the PNG icons from favicon.svg and mark.svg.
-The star is moved so its centre (the cross) sits halfway up the letters (top of C .. baseline), not counting the
-tail of the y. The star keeps its two lighter faces, drawn over the dark shape.
+Writes logo.png (the star and the name), tools/brand/mark.png (the star alone, square) and favicon.svg (the star on a
+white rounded square, the picture inside). The star is moved up so its centre (the cross) sits halfway up the
+letters (top of the C .. foot of the h), not counting the tail of the y.
 """
+import base64
+import io
 import os
-import re
-import subprocess
-import tempfile
 
 import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-S = 3            # traced at 3x for smooth curves
-SPLIT = 400      # source x: the star is left of this, the name right
-CROSS_Y = 227.5  # source y of the cross's centre
-INK, STAR, MID, LIT = '#211a16', '#26211d', '#382e28', '#433630'
+SPLIT = 400       # source x: the star is left of this, the name right
+CROSS_Y = 227.5   # source y of the cross's centre
+PAD = 6
 
-im = Image.open(os.path.join(HERE, 'source.png')).convert('RGBA')
-W, H = im.size
-a = np.array(im.resize((W * S, H * S), Image.LANCZOS)).astype(float)
-alpha, lum = a[..., 3] / 255, a[..., :3].mean(-1)
-xs = np.arange(W * S)[None, :]
-text = (alpha > .5) & (xs >= SPLIT * S)
-star = (alpha > .5) & (xs < SPLIT * S)
+src = Image.open(os.path.join(HERE, 'source.png')).convert('RGBA')
+W, H = src.size
+a = np.array(src)
+ink = a[..., 3] > 128
 
 
-def trace(mask):
-    with tempfile.TemporaryDirectory() as tmp:
-        pbm, out = os.path.join(tmp, 'm.pbm'), os.path.join(tmp, 'm.svg')
-        Image.fromarray(np.where(mask, 0, 255).astype('uint8')).convert('1').save(pbm)
-        subprocess.run(['potrace', '-s', '--flat', '-a', '1.0', '-O', '0.4', '-t', '4', '-o', out, pbm], check=True)
-        s = open(out).read()
-    return re.search(r'<g transform="([^"]+)"', s).group(1), ' '.join(re.findall(r' d="([^"]+)"', s))
+def rows(x0, x1):
+    return np.where(ink[:, x0:x1].any(1))[0]
 
 
-def group(mask, fill):
-    tr, d = trace(mask)
-    return f'<g transform="scale({1 / S:.6f}) {tr}"><path fill="{fill}" d="{d}"/></g>'
+dy = round((rows(455, 646)[0] + rows(681, 817)[-1]) / 2 - CROSS_Y)
+star = src.crop((0, 0, SPLIT, H))
+name = src.crop((SPLIT, 0, W, H))
+up = max(0, -dy)
+canvas = Image.new('RGBA', (W, H + up), (0, 0, 0, 0))
+canvas.alpha_composite(name, (SPLIT, up))
+canvas.alpha_composite(star, (0, up + dy))
+box = canvas.getbbox()
+logo = canvas.crop((box[0] - PAD, box[1] - PAD, box[2] + PAD, box[3] + PAD))
+logo.save(os.path.join(ROOT, 'logo.png'), optimize=True)
+print('logo.png', logo.size, 'star moved by', dy)
 
+sb = star.getbbox()
+side = max(sb[2] - sb[0], sb[3] - sb[1]) + 2 * PAD
+mark = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+mark.alpha_composite(star.crop(sb), ((side - (sb[2] - sb[0])) // 2, (side - (sb[3] - sb[1])) // 2))
+mark.save(os.path.join(HERE, 'mark.png'), optimize=True)
+print('tools/brand/mark.png', mark.size)
 
-def rows(mask):
-    return np.where(mask.any(1))[0] / S
-
-
-def cols(mask):
-    return np.where(mask.any(0))[0] / S
-
-
-# halfway up the letters: the top of the C to the foot of the h
-top = rows(text[:, 455 * S:646 * S])[0]
-foot = rows(text[:, 681 * S:817 * S])[-1]
-dy = (top + foot) / 2 - CROSS_Y
-star_body = (f'<g transform="translate(0 {dy:.2f})">' + group(star, STAR) + group(star & (lum > 43), MID)
-             + group(star & (lum > 50), LIT) + '</g>')
-
-pad = 6
-sy, sx, ty, tx = rows(star) + dy, cols(star), rows(text), cols(text)
-x0, x1, y0, y1 = min(sx[0], tx[0]), max(sx[-1], tx[-1]), min(sy[0], ty[0]), max(sy[-1], ty[-1])
-svg = lambda vb, body: f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}">{body}</svg>\n'
-write = lambda name, s: (open(os.path.join(ROOT, name), 'w').write(s), print(f'{name}: {len(s) / 1024:.1f} KB'))
-
-write('logo.svg', svg(f'{x0 - pad:.1f} {y0 - pad:.1f} {x1 - x0 + 2 * pad:.1f} {y1 - y0 + 2 * pad:.1f}',
-                      f'<title>Chizuya</title>{star_body}' + group(text, INK)))
-side = max(sx[-1] - sx[0], sy[-1] - sy[0]) + 2 * pad
-cx, cy = (sx[0] + sx[-1]) / 2, (sy[0] + sy[-1]) / 2
-mvb = f'{cx - side / 2:.1f} {cy - side / 2:.1f} {side:.1f} {side:.1f}'
-write('tools/brand/mark.svg', svg(mvb, star_body))
-# the browser tab and home screen icon: the star on a white rounded square (reads on light and dark tabs)
-write('favicon.svg', svg('0 0 100 100', '<rect width="100" height="100" rx="21" fill="#ffffff"/>'
-                         f'<svg x="5" y="5" width="90" height="90" viewBox="{mvb}">{star_body}</svg>'))
+# the browser tab icon: the star on a white rounded square
+buf = io.BytesIO()
+mark.resize((192, 192), Image.LANCZOS).save(buf, 'PNG', optimize=True)
+b64 = base64.b64encode(buf.getvalue()).decode()
+svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="21" fill="#ffffff"/>'
+       f'<image x="5" y="5" width="90" height="90" href="data:image/png;base64,{b64}"/></svg>\n')
+open(os.path.join(ROOT, 'favicon.svg'), 'w').write(svg)
+print('favicon.svg', len(svg) // 1024, 'KB')

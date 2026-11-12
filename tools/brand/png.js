@@ -1,4 +1,4 @@
-// The PNG icons, drawn from favicon.svg and tools/brand/mark.svg (made by tools/brand/make.py; node tools/brand/png.js; needs Playwright).
+// The PNG icons, drawn from favicon.svg and tools/brand/mark.png (made by tools/brand/make.py; node tools/brand/png.js; needs Playwright).
 //   icons/icon-32.png, icon-192.png, icon-512.png   the rounded paper tile, as favicon.svg
 //   icons/icon-maskable-512.png, apple-touch-icon.png   full-bleed paper with the mark inside the safe area
 //   (Android and iOS cut their own shape out of these)
@@ -16,8 +16,8 @@ const b64 = (f) => fs.readFileSync(path.join(root, f)).toString('base64');
     await page.screenshot({ path: path.join(root, file), omitBackground: true });
     console.log(file);
   };
-  const tile = (s) => `<img src="data:image/svg+xml;base64,${b64('favicon.svg')}" style="width:${s}px;height:${s}px;display:block">`;
-  const bleed = (s, k) => `<div style="width:${s}px;height:${s}px;background:#ffffff;display:flex;align-items:center;justify-content:center"><img src="data:image/svg+xml;base64,${b64('tools/brand/mark.svg')}" style="width:${s * k}px;height:${s * k}px"></div>`;
+  const tile = (s) => `<div style="width:${s}px;height:${s}px;border-radius:${s * .21}px;background:#ffffff;display:flex;align-items:center;justify-content:center"><img src="data:image/png;base64,${b64('tools/brand/mark.png')}" style="width:${s * .9}px;height:${s * .9}px"></div>`;
+  const bleed = (s, k) => `<div style="width:${s}px;height:${s}px;background:#ffffff;display:flex;align-items:center;justify-content:center"><img src="data:image/png;base64,${b64('tools/brand/mark.png')}" style="width:${s * k}px;height:${s * k}px"></div>`;
   for (const s of [32, 192, 512]) await shot(`icons/icon-${s}.png`, s, tile(s));
   await shot('icons/icon-maskable-512.png', 512, bleed(512, .68));
   await shot('apple-touch-icon.png', 180, bleed(180, .8));

@@ -15,7 +15,7 @@ import time
 from msg import t
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'logo.svg', 'apple-touch-icon.png', 'manifest.webmanifest', 'icons', 'css', 'js', 'vendor']
+SITE_ITEMS = ['index.html', 'login.html', 'favicon.svg', 'logo.png', 'apple-touch-icon.png', 'manifest.webmanifest', 'icons', 'css', 'js', 'vendor']
 MAP_KEYS = ['snapshots', 'updatedAt', 'minNativeZoom', 'maxNativeZoom']
 
 
