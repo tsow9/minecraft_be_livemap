@@ -4,7 +4,7 @@
 
 Writes logo.png (the star and the name), tools/brand/mark.png (the star alone, square) and favicon.svg (the star on a
 white rounded square, the picture inside). The star is moved up so its centre (the cross) sits halfway up the
-letters (top of the C .. foot of the h), not counting the tail of the y. The star's grey grid is darkened (GRID).
+letters (top of the C .. foot of the h), not counting the tail of the y. The star's grey grid is darkened, more toward the centre (GRID).
 """
 import base64
 import io
@@ -18,7 +18,8 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 SPLIT = 400       # source x: the star is left of this, the name right
 CROSS_Y = 227.5   # source y of the cross's centre
 PAD = 6
-GRID = .45       # the star's grey grid lines, brought this far toward the dark faces (1 = as drawn)
+GRID = (0, .65) # the star's grey grid, kept this much of its lightness at the centre and at the tips (1 = as drawn)
+CROSS_X = 198.5  # source x of the cross's centre
 
 src = Image.open(os.path.join(HERE, 'source.png')).convert('RGBA')
 W, H = src.size
@@ -26,7 +27,11 @@ a = np.array(src)
 # the grid on the star a little darker: tones above the faces' own are pulled toward them
 st = a[:, :SPLIT, :3].astype(float)
 v = st.mean(-1, keepdims=True)
-dark = np.where(v > 55, 55 + (v - 55) * GRID, v)
+yy, xx = np.mgrid[0:H, 0:SPLIT]
+r = np.hypot(xx - CROSS_X, yy - CROSS_Y)
+r = r / r[a[:, :SPLIT, 3] > 128].max()                 # 0 at the cross, 1 at the farthest tip
+keep = (GRID[0] + (GRID[1] - GRID[0]) * np.clip(r, 0, 1))[..., None]
+dark = np.where(v > 55, 55 + (v - 55) * keep, v)
 a[:, :SPLIT, :3] = np.clip(st * np.where(v > 0, dark / np.maximum(v, 1), 1), 0, 255).astype(np.uint8)
 src = Image.fromarray(a)
 ink = a[..., 3] > 128
