@@ -32,7 +32,7 @@ A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in
 
 ## Setup
 
-Takes about 30 minutes. The [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) opens each screen in turn and makes the keys for you; the steps are the same as below.
+Takes about 15 minutes. The [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) opens each screen in turn and makes the keys for you; the steps are the same as below.
 
 ### 1. Create the repository
 
