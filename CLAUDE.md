@@ -2,7 +2,7 @@
 
 - 名前:画面・説明書・規約に出る名前は Chizuya(日本発を表す「地図屋」。同じ分野に BlockMap という既存ツールがあるため 2026-11-08 に変更)。内部の名前(localStorage の blockmap.*、meta blockmap-*、BLOCKMAP_* の環境変数、Worker blockmap・D1 blockmap-share、GoatCounter の blockmap.goatcounter.com、凍結した map.yml の「Update Blockmap」)は、動いているサイトを壊さないようそのまま
 
-- ロゴ:持ち主が仕上げた絵(tools/brand/source.png、背景透過の PNG。黒い四方手裏剣のような星に灰色の格子、真ん中に白い十字の穴、名前は筆の払いが入った「Chizuya」)をそのまま使う。python3 tools/brand/make.py が logo.png(星は十字の中心を文字の高さの真ん中=C の上端〜h の下端の中間に合わせて上へ動かす。y の下の払いは数えない)・tools/brand/mark.png(星だけ、正方形)・favicon.svg(白い角丸の地に星の PNG を埋め込んだもの)を作り、node tools/brand/png.js が icons/*.png・apple-touch-icon.png(白い角丸・白地に mark.png)を作る。暗い地用のロゴは作らない(暗い背景は使わない方針)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、墨 #141923 のボタン)で、見出しは logo.png。セットアップページ・規約・移転のお知らせの見出しにも logo.png。色はロゴに合わせる:地 #f6f5f1、箱 #fff、線 #dcd8d0、文字とボタンとリンクはロゴの墨 #211a16、補足 #6a625a、完了だけ落ち着いた緑 #3f6b4e、問題は #a33a2e(地図サイトの中の画面は暗いまま)
+- ロゴ:持ち主が仕上げた絵(tools/brand/source.png、背景透過の PNG。黒い四方手裏剣のような星に灰色の格子、真ん中に白い十字の穴、名前は筆の払いが入った「Chizuya」)をそのまま使う。python3 tools/brand/make.py が logo.png(星は十字の中心を文字の高さの真ん中=C の上端〜h の下端の中間に合わせて上へ動かす。y の下の払いは数えない)・tools/brand/mark.png(星だけ、正方形)・favicon.svg(白い角丸の地に星の PNG を埋め込んだもの)を作り、node tools/brand/png.js が icons/*.png・apple-touch-icon.png(白い角丸・白地に mark.png)を作る。暗い地用のロゴは作らない(暗い背景は使わない方針)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、ロゴの墨 #211a16 のボタン)で、見出しは logo.png。セットアップページ・規約・移転のお知らせの見出しにも logo.png。色はロゴに合わせる:地 #f6f5f1、箱 #fff、線 #dcd8d0、文字とボタンとリンクはロゴの墨 #211a16、補足 #6a625a、完了だけ落ち着いた緑 #3f6b4e、問題は #a33a2e(地図サイトの中の画面は暗いまま)
 
 ## 進め方
 - 持ち主は専門家ではない。説明は日本語で、かみ砕いて。一つずつ進める。
