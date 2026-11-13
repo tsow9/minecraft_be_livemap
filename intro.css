@@ -56,7 +56,8 @@ details p{margin:6px 0 2px;color:#45474a;font-size:13.5px}
 .end .btn{display:inline-flex;font-size:14px}
 footer{margin-top:52px;border-top:1px solid #c9c8c2;padding:18px 0 44px}
 footer .w{display:flex;justify-content:space-between;font:12px 'JetBrains Mono','Zen Kaku Gothic New',monospace;color:#5a5c5f}
-footer a{margin-left:16px;text-decoration:underline}
+footer a{margin-left:16px;text-decoration:underline;white-space:nowrap}
+footer .w>span:last-child{text-align:right}
 @media(max-width:600px){header nav{gap:12px}
 header nav a.opt{display:none}
 .grid,.steps{grid-template-columns:1fr}
@@ -64,7 +65,8 @@ header nav a.opt{display:none}
 .end{flex-direction:column;align-items:stretch}
 .end .btn{display:flex}
 footer .w{flex-direction:column;gap:6px}
-footer a{margin:0 16px 0 0}
+footer a{margin:0}
+footer .w>span:last-child{display:flex;flex-wrap:wrap;gap:4px 16px;text-align:left}
 .hero .logo{height:60px}
 thead{display:none}
 tr{display:block;padding:8px 14px;border-bottom:1px solid #dcdbd6}

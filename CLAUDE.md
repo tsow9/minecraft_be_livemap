@@ -47,12 +47,12 @@
   - Microsoft アカウントのログイン情報は持ち主の GitHub に暗号化したまま。リンクやデータには入れない。
 
 ## 次にやること
-- 持ち主に頼むもの:寄付の窓口(Ko-fi は https://ko-fi.com/chizuya_map に決定。受け取りは Receive tips だけ)と不具合報告の Google フォームを作ってもらい、リンクを紹介ページ・セットアップページなどに入れる(フォームの質問の案も出せる)。紹介ページを公開するかどうか
+- 寄付は Ko-fi(https://ko-fi.com/chizuya_map、Receive tips だけ。受け取りは Stripe を勧めた)、不具合の報告は Google フォーム(https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform、メールは集めない・ログイン不要)。リンクは紹介ページとセットアップページの下、プライバシーポリシーの #form に入れた。持ち主が決めること:紹介ページを公開するかどうか
 - 地図サイトの中の画面は暗いまま(地図が見やすいため。明るくするなら持ち主に確認)。docs/screenshot-*.webp は右上のボタンだけ今の「設定」に差し替えた(この環境には地図のデータがなく、撮り直せないため)
-- 配り始める前:CHANGELOG の 1.0.0 は下書き済み(日付は公開時に入れる)。寄付・フォームのリンクを入れてから VERSION を 1.0.0 にする(最初の GitHub リリース)。条件を変えて(別の Cloudflare アカウントなど)もう一度セットアップを通しで確かめる
+- 配り始める前:CHANGELOG の 1.0.0 は下書き済み(日付は公開時に入れる)。寄付・フォームのリンクは入れた。持ち主の合図で VERSION を 1.0.0 にする(最初の GitHub リリース)。条件を変えて(別の Cloudflare アカウントなど)もう一度セットアップを通しで確かめる
 - 個人で注意してもらうもの(直さない):Cloudflare のアカウントが複数、組織のリポジトリ、Realm の契約切れ
 - 前に試しで作ったコピー tsow9/blockmap は自動更新できない(要らなければ消してよい)
-- 紹介ページ(intro.html・intro.css・intro.js。Google Stitch の案をもとに少し古めにした明るい地:中央の大きなロゴ・一行の説明・ボタン・地図の画像(枠や説明文なし)→[ 機能 ]の2列の表→[ 使い方 ]3手順→[ 動作環境 ]の表→[ よくある質問 ]の開閉→最後のボタン。日英は article を intro.js で切り替え(blockmap.lang))は作ったが、持ち主の指示でまだ公開しない。公開するときは pages.yml で intro.html を _site/index.html に、moved.html を _site/moved.html にし、intro.css・intro.js・apple-touch-icon.png・docs/screenshot-*.webp も写す(紹介ページから moved.html へのリンクは持ち主の希望で置かない)。寄付・不具合の報告のリンクは Ko-fi・Google フォームができたら足す
+- 紹介ページ(intro.html・intro.css・intro.js。Google Stitch の案をもとに少し古めにした明るい地:中央の大きなロゴ・一行の説明・ボタン・地図の画像(枠や説明文なし)→[ 機能 ]の2列の表→[ 使い方 ]3手順→[ 動作環境 ]の表→[ よくある質問 ]の開閉→最後のボタン。日英は article を intro.js で切り替え(blockmap.lang))は作ったが、持ち主の指示でまだ公開しない。公開するときは pages.yml で intro.html を _site/index.html に、moved.html を _site/moved.html にし、intro.css・intro.js・apple-touch-icon.png・docs/screenshot-*.webp も写す(紹介ページから moved.html へのリンクは持ち主の希望で置かない)。下に寄付・不具合の報告のリンクあり
 1. (済)招待制のサイトを Cloudflare に作る。今の GitHub Pages のサイトは、持ち主が困らないよう切り替えまで残す。
 2. (済)切り替え:ブランチの暗号化、位置確認の送り先を新しい Worker に、GitHub Pages は「移転しました」と login.html だけ、古い share/(blockmap-share Worker)を削除。
 3. (済)私たち専用の設定を外し、古いサイト用のコード(合言葉・招待リンク・liveUrl)を app.js から外した。
