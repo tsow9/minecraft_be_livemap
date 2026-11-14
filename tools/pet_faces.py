@@ -27,6 +27,9 @@ MAX_ROWS = {'llama': 11, 'trader_llama': 11, 'camel': 9}
 SIDE_EYES = {'horse', 'donkey', 'mule', 'skeleton_horse', 'zombie_horse', 'parrot'}
 NOD = 0.5         # how much of the game's nodding is kept: a horse's neck leans 30 degrees, drawn at 15
 DIM = 95          # a coat darker than this (0-255, its middle colour) is lightened up to it
+# These are drawn at twice the detail (two pixels per model unit), so a snout an odd number of units wide sits
+# centred as it does in the game. The site draws them at the same size on the map, only finer.
+FINE = {'wolf': 2}
 LETTERS = 'abdefghijklmnopqrsuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # 'c' (collar) and 't' (tag) are the site's
 
 
@@ -299,14 +302,15 @@ def _faces(cube, tex, scale, side_eyes):
     return out
 
 
-def head_image(geo, tex, hidden=(), max_rows=None, side_eyes=False):
-    """The head as seen from straight in front, one pixel per model unit."""
+def head_image(geo, tex, hidden=(), max_rows=None, side_eyes=False, res=1):
+    """The head as seen from straight in front, res pixels per model unit."""
     cubes = [c for c in _head_cubes(geo, hidden) if c.get('size') and min(c['size'][:2]) > 0]
     if not cubes:
         return None
     main = max(cubes, key=lambda c: c['size'][0] * c['size'][1])
     scale = tex.width / geo['w']  # a high-resolution texture has more pixels per model unit
-    STEPS = (1 / 6, 1 / 2, 5 / 6)  # each texture pixel is looked at in 9 places, so turned faces leave no holes
+    n = 3 * res  # each texture pixel is looked at in 9 places (more when finer), so turned faces leave no holes
+    STEPS = tuple((k + .5) / n for k in range(n))
     points = []  # (x, y, depth, colour)
     for c in cubes:
         for t, corner, du, dv, normal in _faces(c, tex, scale, side_eyes and c is main):
@@ -330,7 +334,7 @@ def head_image(geo, tex, hidden=(), max_rows=None, side_eyes=False):
     g = main.get('inflate', 0)
     cx, cy, _ = _turn((main['origin'][0] - g, main['origin'][1] + main['size'][1] + g, main['origin'][2] - g), main['turns'])
     dx, dy = cx - math.floor(cx), cy - math.floor(cy)
-    points = [(x - dx, y - dy, z, colour) for x, y, z, colour in points]
+    points = [((x - dx) * res, (y - dy) * res, z, colour) for x, y, z, colour in points]
     left = math.floor(min(p[0] for p in points))
     top = math.ceil(max(p[1] for p in points))
     width = math.floor(max(p[0] for p in points)) - left + 1
@@ -345,7 +349,7 @@ def head_image(geo, tex, hidden=(), max_rows=None, side_eyes=False):
             out[col, row] = colour[:3] + (255,)
     if max_rows and img.getbbox():
         top_row = img.getbbox()[1]
-        img = img.crop((0, top_row, img.width, top_row + max_rows))
+        img = img.crop((0, top_row, img.width, top_row + max_rows * res))
     box = img.getbbox()
     return img.crop(box) if box else None
 
@@ -410,7 +414,7 @@ def build(wanted, repo):
                 continue
             if path not in cache:
                 tex = pack.texture(path)
-                img = head_image(geo, tex, hidden, MAX_ROWS.get(kind), kind in SIDE_EYES) if tex else None
+                img = head_image(geo, tex, hidden, MAX_ROWS.get(kind), kind in SIDE_EYES, FINE.get(kind, 1)) if tex else None
                 cache[path] = face(img) if img else None
             if cache[path]:
                 out[key] = cache[path]
