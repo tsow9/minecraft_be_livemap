@@ -639,7 +639,10 @@ function setupShare() {
   renderAll();
   loadSettings();
   pullChanges(true).then(() => { if (share.pending.size && mayWrite()) pushChanges(); });
-  setInterval(() => { if (document.visibilityState === 'visible') pullChanges(); }, 10000);
+  // Others' pins every 30 seconds (90 while nobody touches the page): each look is one request against the site's
+  // free daily allowance, shared by everyone who has the map open.
+  const pull = () => setTimeout(() => { if (document.visibilityState === 'visible') pullChanges(); pull(); }, 30000 * idleFactor());
+  pull();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullChanges(); });
 }
 
@@ -2373,6 +2376,14 @@ const whereText = (dim, x, z) => `${DIMS[dim].name}  X ${x}  Z ${z}`;
 // `edge` adds an extra dark outline around the whole picture (about that many page pixels, whole screen pixels).
 // For search hits, `grow` makes each drawing pixel that many screen pixels larger.
 const SCREEN = window.devicePixelRatio || 1;
+// Nobody has touched the page for 10 minutes (left open on a second screen): the page asks the site three times less often.
+let lastInput = Date.now(), wasIdle = false;
+for (const ev of ['pointerdown', 'wheel', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = Date.now(); }, { capture: true, passive: true });
+function idleFactor() {
+  const idle = Date.now() - lastInput > 10 * 60 * 1000;
+  if (idle) wasIdle = true;
+  return idle ? 3 : 1;
+}
 // The game's things drawn in pixels (villagers, the trader, chests, signs): flat colours, slightly brighter than the
 // game's, and a black outline round the whole shape that is the same thickness on screen for every icon. In the
 // drawings, K on the edge of the shape is where the outline goes; K inside it is a dark line (k).
@@ -3718,16 +3729,20 @@ async function setupPlayers() {
   await refreshLive();
   // While someone plays: positions every 10 seconds (the live check brings new ones every 20) and the map every 20 seconds.
   // Otherwise every 15 seconds, and the map every minute.
+  // How often the page asks the site: each ask is one request against the site's free daily allowance (100,000), shared
+  // by everyone with the map open. About 6 a minute while someone plays, so 10 people can keep it open 10 hours a day.
   const every = (fn, playing, idle) => {
     const next = () => setTimeout(async () => {
       if (document.visibilityState === 'visible') { try { await fn(); } catch { /* try again next time */ } }
       next();
-    }, state.anyoneOnline ? playing : idle);
+    }, (state.anyoneOnline ? playing : idle) * idleFactor());
     next();
   };
-  every(refreshLive, 10000, 15000);
+  every(refreshLive, 20000, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLive(); });
-  every(refreshConfig, 20000, 60000);
+  every(refreshConfig, 60000, 180000);
+  // Back from a while away: bring things up to date at once.
+  addEventListener('pointerdown', () => { if (wasIdle) { wasIdle = false; refreshLive(); if (sharing()) pullChanges(); } }, { capture: true, passive: true });
   // A new site still making its first map: look every 5 seconds, so the map shows as soon as it is published.
   if (state.demo && DATA) {
     $('#building').hidden = false;
