@@ -54,10 +54,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 #crosshair { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px;
   pointer-events: none; z-index: 500; }
-#crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
-#crosshair::before { left: 11px; top: 0; width: 2px; height: 24px; }
-#crosshair::after { top: 11px; left: 0; height: 2px; width: 24px; }
+/* One plus sign with one dark edge all round it (two bars each with its own edge looked like two lines laid over each other). */
+#crosshair { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2V22M2 12H22' stroke='rgba(0,0,0,.55)' stroke-width='4' stroke-linecap='square' fill='none'/%3E%3Cpath d='M12 2V22M2 12H22' stroke='%23fff' stroke-width='2' stroke-linecap='square' fill='none'/%3E%3C/svg%3E") center / 24px 24px no-repeat; }
 
 #topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 1050; display: flex; gap: 8px; padding: 12px;
   padding-top: max(12px, env(safe-area-inset-top)); pointer-events: none; flex-wrap: wrap; }
