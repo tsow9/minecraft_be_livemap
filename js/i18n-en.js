@@ -87,7 +87,7 @@ Object.assign(I18N_EN, {
   'ゲーム内の時刻と天気(だいたい)': 'Time and weather in the game (roughly)',
   'ゲーム内の時刻と天気(最後に遊んだとき)': 'Time and weather in the game (when last played)',
   // players and exploring
-  'プレイヤー・参加中の人': 'Players and who is online', '開拓した人(推定)': 'Who explored (estimate)', '描く・編集': 'Draw and edit',
+  'プレイヤー・参加中の人': 'Players and who is online', '開拓した人(推定)': 'Who explored (estimate)', '開拓した人': 'Who explored', '描く・編集': 'Draw and edit',
   '記録を始める前': 'Before records began', '(不明)': '(unknown)', '未ログイン': 'Never signed in',
   '{n}分前': '{n} min ago', '{n}時間前': '{n} h ago', '{n}日前': '{n} days ago',
   'プレイ中 ・ 現在地({time} の記録)': 'Playing · here now (as of {time})', '最終ログアウト位置': 'Where they logged out',

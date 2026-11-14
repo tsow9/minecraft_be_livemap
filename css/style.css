@@ -123,6 +123,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   background: var(--accent); color: #06130d; font-size: 10px; line-height: 16px; font-weight: 700;
   box-shadow: 0 0 0 2px var(--bg-solid); }
 .plist { list-style: none; margin: 0 0 12px; padding: 0; max-height: 30vh; overflow: auto; }
+/* The players' lists: up to four rows, more scroll (the fifth shows by half, so the list is seen to go on). */
+#live-list, #player-list { max-height: calc(4.5 * 33.3px); }
 .plist li { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; }
 .plist li.click { cursor: pointer; }
 .plist li.click:hover { background: var(--hover); }
