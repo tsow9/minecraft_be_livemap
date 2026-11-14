@@ -3837,7 +3837,7 @@ async function main() {
     updatedAt: cfg.updatedAt,
     // Monthly Realm fee and day of the month it is paid (written by hand: Realms does not report either).
   };
-  document.title = cfg.title || tl('Chizuya - マップ');
+  document.title = tl('Chizuya - マップ');  // not the map data's own title (an older "Chizuya")
   state.demo = state.config.snapshots.length === 0;
   state.snapshotIndex = snapshots().length - 1;
 
