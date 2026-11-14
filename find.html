@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<title>Chizuya - 地図を探す</title>
+<meta name="description" content="Chizuya の地図サイトのアドレスを、作った人の GitHub のユーザー名から探します。">
+<link rel="icon" href="favicon.svg?v=10" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=10">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="intro.css">
+</head>
+<body>
+<article lang="ja">
+<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="ページ内の案内"><a href="setup.html">セットアップ</a><a href="find.html" aria-current="page">地図を探す</a><a href="./#faq-ja">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">English</button></nav></div></header>
+<main class="w find">
+<section aria-labelledby="find-title-ja"><h1 id="find-title-ja" class="lab">[ 地図を探す ]</h1>
+<p class="more">地図のアドレスを忘れたときは、地図サイトを作った人の GitHub のユーザー名(またはリポジトリのリンク)を入れてください。その人の Chizuya の地図サイトを探します。</p>
+<form class="find-form" autocomplete="off"><label class="sr" for="find-q-ja">GitHub のユーザー名</label>
+<input id="find-q-ja" name="q" type="text" inputmode="url" spellcheck="false" placeholder="例:tsow9" required>
+<button class="btn" type="submit">探す</button></form>
+<p class="find-msg" role="status" aria-live="polite"></p>
+<table class="find-out" hidden><thead><tr><th scope="col">リポジトリ</th><th scope="col">地図のアドレス</th><th scope="col"><span class="sr">操作</span></th></tr></thead><tbody></tbody></table>
+<p class="more">入れた名前は GitHub に問い合わせるだけで、どこにも保存しません。アドレスが分かっても、地図を見られるのはその Realm のメンバーだけです。</p>
+</section>
+</main>
+<footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">プライバシーポリシー</a><a href="terms.html">利用規約</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">不具合の報告</a><a href="https://ko-fi.com/chizuya_map">応援する(Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
+</article>
+<article lang="en" hidden>
+<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="Page navigation"><a href="setup.html">Setup</a><a href="find.html" aria-current="page">Find a map</a><a href="./#faq-en">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">日本語</button></nav></div></header>
+<main class="w find">
+<section aria-labelledby="find-title-en"><h1 id="find-title-en" class="lab">[ FIND A MAP ]</h1>
+<p class="more">Forgot your map’s address? Enter the GitHub username (or the repository link) of whoever made the map site. Their Chizuya map sites are found for you.</p>
+<form class="find-form" autocomplete="off"><label class="sr" for="find-q-en">GitHub username</label>
+<input id="find-q-en" name="q" type="text" inputmode="url" spellcheck="false" placeholder="e.g. tsow9" required>
+<button class="btn" type="submit">Find</button></form>
+<p class="find-msg" role="status" aria-live="polite"></p>
+<table class="find-out" hidden><thead><tr><th scope="col">Repository</th><th scope="col">Map address</th><th scope="col"><span class="sr">Actions</span></th></tr></thead><tbody></tbody></table>
+<p class="more">The name is only sent to GitHub to look it up, and is kept nowhere. Even with the address, only the Realm’s members can see the map.</p>
+</section>
+</main>
+<footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">Report a problem</a><a href="https://ko-fi.com/chizuya_map">Support (Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
+</article>
+<script src="intro.js"></script>
+<script src="find.js"></script>
+</body>
+</html>

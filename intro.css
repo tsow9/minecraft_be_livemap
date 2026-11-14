@@ -171,3 +171,21 @@ footer a:hover { text-decoration: underline; }
   footer .w { flex-direction: column; gap: 12px; }
   footer .w > span:last-child { gap: 4px 20px; }
 }
+
+/* The "Find a map" page (find.html). */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.find { padding-top: 8px; padding-bottom: 24px; }
+.find section { margin-top: 32px; }
+.find .more { margin: 0 0 16px; }
+.find-form { display: flex; gap: 8px; }
+.find-form input { flex: 1; min-width: 0; font: 15px 'JetBrains Mono', monospace; padding: 10px 12px; border: 1px solid #c9c8c2; background: #fff; color: inherit; }
+.find-form input:focus { outline: 2px solid #4a4542; outline-offset: 1px; }
+.find-form .btn { flex: none; cursor: pointer; }
+.find-form .btn:disabled { opacity: .6; cursor: default; }
+.find-msg { min-height: 1.6em; margin: 12px 0 6px; font-size: 13.5px; }
+.find-out { margin-bottom: 18px; }
+.find-out td.m { overflow-wrap: anywhere; }
+@media (min-width: 640px) { .find-out td.m { white-space: nowrap; } }
+.find-out .acts { white-space: nowrap; text-align: right; }
+.find-out .acts a, .find-out .acts button { font: inherit; font-size: 12.5px; color: inherit; background: none; border: 0; padding: 0; margin-left: 12px; text-decoration: underline; cursor: pointer; }
+header nav a[aria-current="page"] { text-decoration: underline; }
