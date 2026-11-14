@@ -64,7 +64,9 @@ input:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 @media (max-width: 600px) {
   header .w { padding-top: 20px; padding-bottom: 12px; gap: 12px; }
   header nav { width: 100%; justify-content: flex-start; gap: 4px 16px; }
-  header nav > button, header nav > .lang { margin-left: auto; }
+  /* The language button sits beside the logo, so the links keep one line. */
+  header .w { position: relative; }
+  header nav > button, header nav > .lang { position: absolute; top: 16px; right: 24px; margin: 0; }
   header nav a { min-height: 44px; }
 }
 @media (max-width: 480px) {
@@ -72,6 +74,7 @@ input:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
   header img { height: 28px; }
   header nav { gap: 4px 12px; font-size: .75rem; }
   header button { padding-right: 10px; padding-left: 10px; }
+  header nav > button, header nav > .lang { right: 20px; }
   footer .w { flex-direction: column; gap: 12px; }
   footer .w > span:last-child { gap: 4px 20px; }
 }
