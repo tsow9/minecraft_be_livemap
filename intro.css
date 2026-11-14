@@ -9,6 +9,7 @@ a{color:inherit}
 header{border-bottom:1px solid #c9c8c2;background:#f6f5f1}
 header .w{height:52px;display:flex;align-items:center;justify-content:space-between}
 header img{height:22px}
+header .home{display:block}
 header nav{display:flex;gap:18px;font:12.5px 'JetBrains Mono',monospace;color:#5a5c5f}
 header nav a{text-decoration:none}
 header nav a:hover{text-decoration:underline}
