@@ -2403,7 +2403,7 @@ function pixSvg(rows, pal, size, _edge = 0, { grow = 0 } = {}) {
   return `<svg class="gm-svg" viewBox="${-e} ${-e} ${w + 2 * e} ${h + 2 + 2 * e}" width="${(w + 2 * e) * unit}" height="${(h + 2 + 2 * e) * unit}" shape-rendering="crispEdges">`
     + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h + 1 + e}" rx="${w / 2 - 1.5}" ry="0.9"/><g class="gm-body"><g fill="${OUTLINE}">${edge}</g>${body}</g></svg>`;
 }
-// A villager's face over a brown robe, after the game's villager.
+// A villager's face over the grey-brown robe, after the game's villager (plains).
 const VILLAGER_ART = [[
   '..KKKKKKKK..',
   '..KssssssK..',
@@ -2414,29 +2414,30 @@ const VILLAGER_ART = [[
   '..KssnnssK..',
   'KKKKKnnKKKKK',
   'KrrrrKKrrrrK',
-  'KrRRRRRRRRrK',
-  'KrRRRRRRRRrK',
+  'KrrrrrrrrrrK',
+  'KRRRRRRRRRRK',
   'KKKKKKKKKKKK'], { K: OUTLINE, k: '#3f2d25', s: '#cc9677', b: '#3d2c18', w: '#ffffff', g: '#13a828', n: '#a06a4c', M: '#88503f',
-  r: '#74492b', R: '#875a36' }];
+  r: '#8a716b', R: '#6f5b56' }];
 const VILLAGER_SVG = pixSvg(...VILLAGER_ART, 1.6);
-// Each job's clothes on the villager above, after the game's: hats, aprons, an eye patch, the armorer's goggles.
+// Each job's clothes on the villager above, after the game's own textures seen from the front, in flat colours
+// (hats, headbands, aprons, straps, the cartographer's monocle, the weaponsmith's eye patch, the armorer's helmet).
 const JOB_ART = {
-  farmer: [['..KKKKKKKK..', '..KYyYYyYK..', '..KUUUUUUK..', 'KYYyYYYYyYYK', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#e3be55', y: '#c9a23d', U: '#5a3a22' }],
-  fisherman: [['..KKKKKKKK..', '..KTTTTTTK..', '.KQQQQQQQQK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KQQQQKKQQQQK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { T: '#c9a66b', Q: '#3e8c8c' }],
-  shepherd: [['..KKKKKKKK..', '..KHHHHHHK..', '.KWWWWWWWWK.', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KWWWWKKWWWWK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { H: '#6b4428', W: '#ece8df' }],
-  fletcher: [['..KKKKKKKKF.', '..KGGGGGGKF.', '..KGGGGGGK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KGGGGKKGGGGK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { G: '#4f7a3a', F: '#f4f1ea' }],
+  farmer: [['..KKKKKKKK..', '..KYyYYyYK..', '..KUUUUUUK..', 'KYYyYYYYyYYK', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { Y: '#e3be55', y: '#c9a23d', U: '#5a3a22', r: '#74492b', R: '#875a36' }],
+  fisherman: [['..KKKKKKKK..', '..KTTUTTTK..', '..KUUUUUUK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrSrrKKrrSrK', 'KrSrrrrrrSrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { T: '#d0983e', U: '#a87030', S: '#7a4a2a' }],
+  shepherd: [['..KKKKKKKK..', '..KHHHHHHK..', '..KhHhHHhK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrWrKKrWrrK', 'KrrWWrrWWrrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { H: '#8a5040', h: '#a8604c', W: '#ece8da' }],
+  fletcher: [['..KKKKKKKK..', '..KFFFFFFK..', '..KfFffFfK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrrrrrrrrrrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { F: '#6b4a35', f: '#8a6a4a' }],
   // After the game's librarian: a red hat band with gold studs and a ribbon hanging down, glasses under the eyes, a grey robe with a pale cloth over one shoulder.
   librarian: [['..KKKKKKKK..', '..KHYHHYHK..', '..KDMDDDDK..', '..KbMbbbbK..', '..KwgnngwK..', '..KGGnnGGK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKWWrrK', 'KrrrrrWWWrrK', 'KRRRRRWWRRRK', 'KKKKKKKKKKKK'],
     { H: '#a83a36', D: '#6e2c2c', Y: '#e8c86a', M: '#d84a40', G: '#bfe6f0', r: '#8a716b', R: '#6f5b56', W: '#e3dbcf' }],
-  cartographer: [['..KKKKKKKK..', '..KHHHHHHK..', '..KssssssK..', '..KbbbbYYK..', '..KwgnngYK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRYYRRRrK', 'KrRRRYYRRRrK', 'KKKKKKKKKKKK'], { H: '#5a3a22', Y: '#d9b24c' }],
-  cleric: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRYYRRRrK', 'KrRRRYYRRRrK', 'KKKKKKKKKKKK'], { r: '#5b2a6b', R: '#7a3a8c', Y: '#d9b24c' }],
-  armorer: [['..KKKKKKKK..', '.KGGGGGGGGK.', '.KGLLGGLLGK.', '.KGGGGGGGGK.', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrAAKKAArrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { G: '#8f8f8f', L: '#4a3226', A: '#4a2e1c' }],
-  weaponsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbKbK..', '..KwgnnKKK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#2b2b2b' }],
-  toolsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#3c4048' }],
-  butcher: [['..KKKKKKKK..', '..KssssssK..', '..KDDDDDDK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRWWWWWWRrK', 'KrRWWDWWWRrK', 'KKKKKKKKKKKK'], { D: '#b3261e', W: '#ece8df' }],
-  leatherworker: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#a0632f' }],
-  mason: [['..KKKKKKKK..', '..KCCCCCCK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRAAAAAARrK', 'KrRAAAAAARrK', 'KKKKKKKKKKKK'], { A: '#8c8c8c', C: '#8c8c8c' }],
-  nitwit: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrRRRRRRRRrK', 'KrRRRRRRRRrK', 'KKKKKKKKKKKK'], { r: '#3f6b30', R: '#4f8a3c' }],
+  cartographer: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbYYK..', '..KwgnnBYK..', '..KssnnsYK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrSrrKKrrSrK', 'KrSrrrrrrSrK', 'KRRRROORRRRK', 'KKKKKKKKKKKK'], { Y: '#e8c040', B: '#8fb4e8', S: '#8a4a2a', O: '#c87048' }],
+  cleric: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrPPPKKPPPrK', 'KrPYPPPPYPrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { P: '#7a3a5c', Y: '#c8a040' }],
+  armorer: [['..KKKKKKKK..', '..KHHHHHHK..', '..KGLGGLGK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KPPrAKKArPPK', 'KrrAAAAAArrK', 'KRRAAAAAARRK', 'KKKKKKKKKKKK'], { H: '#b9b6ae', G: '#8a8a86', L: '#5a3a28', P: '#a8a6a0', A: '#3a2a22' }],
+  weaponsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbKbK..', '..KwgnnKKK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrrAAAAAArrK', 'KRAAAAAAAARK', 'KKKKKKKKKKKK'], { A: '#2b2b2b' }],
+  toolsmith: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrAAKKAArrK', 'KrrAAAAAArrK', 'KRRAAAAAARRK', 'KKKKKKKKKKKK'], { A: '#4a3426' }],
+  butcher: [['..KKKKKKKK..', '..KssssssK..', '..KDDDDDDK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrWKKWrrrK', 'KrrrWrrWrrrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { D: '#b85a52', W: '#d9d6d0' }],
+  leatherworker: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrQLKKLQrrK', 'KrrLLLLLLrrK', 'KRRLLLLLLRRK', 'KKKKKKKKKKKK'], { L: '#8a5a30', Q: '#c0b4a0' }],
+  mason: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KWrAAKKAArWK', 'KWrAAAAAArWK', 'KRRAAAAAARRK', 'KKKKKKKKKKKK'], { A: '#3a3a3a', W: '#ddd8c4' }],
+  nitwit: [['..KKKKKKKK..', '..KssssssK..', '..KssssssK..', '..KbbbbbbK..', '..KwgnngwK..', '..KssnnssK..', '..KssnnssK..', 'KKKKKnnKKKKK', 'KrrrrKKrrrrK', 'KrrrrrrrrrrK', 'KRRRRRRRRRRK', 'KKKKKKKKKKKK'], { r: '#5e8c52', R: '#4a7442' }],
 };
 const jobIcons = {};
 function villagerIcon(job, big = false) {
