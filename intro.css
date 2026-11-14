@@ -136,3 +136,4 @@ details p { margin: 0; padding: 0 40px 24px 0; color: var(--muted); font-size: .
   .find-out .acts { text-align: left; }
   .find-out .acts a, .find-out .acts button { margin: 8px 20px 0 0; }
 }
+.find .faq-list { margin-top: 40px; }
