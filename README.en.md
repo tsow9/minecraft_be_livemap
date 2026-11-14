@@ -11,6 +11,7 @@ A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in
 - Only the Realm's members can see the map (sign in with Microsoft).
 - The map and other data are stored only in your own Cloudflare account.
 - Runs on the free plans of GitHub and Cloudflare.
+- How much it can be used: about 50 hours of the map being open a day in total (for example, 10 people for 5 hours each). Past that, it cannot be opened until midnight UTC (Cloudflare's free plan allows 100,000 requests a day).
 
 ## Features
 
