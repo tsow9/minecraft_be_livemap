@@ -1,76 +1,173 @@
-/* The introduction page (GitHub Pages top, not published yet): calm, light, a little old-fashioned. */
-*{box-sizing:border-box}
-html,body{margin:0}
-body{background:#f6f5f1;color:#211a16;font:14px/1.75 'Space Grotesk','Zen Kaku Gothic New',sans-serif;-webkit-font-smoothing:antialiased}
-img{display:block;max-width:100%}
-a{color:inherit}
-.m{font-family:'JetBrains Mono','Zen Kaku Gothic New',monospace}
-.w{max-width:760px;margin:0 auto;padding:0 24px}
-header{border-bottom:1px solid #c9c8c2;background:#f6f5f1}
-header .w{height:52px;display:flex;align-items:center;justify-content:space-between}
-header img{height:22px}
-header .home{display:block}
-header nav{display:flex;gap:18px;font:12.5px 'JetBrains Mono',monospace;color:#5a5c5f}
-header nav a{text-decoration:none}
-header nav a:hover{text-decoration:underline}
-header button{font:inherit;color:inherit;background:none;border:1px solid #c9c8c2;padding:0 8px;cursor:pointer}
-article[hidden]{display:none}
-:lang(ja){word-break:auto-phrase}
-.hero{text-align:center;padding:56px 0 8px}
-.hero .logo{height:84px;width:auto;margin:0 auto 18px}
-.hero p{margin:0 auto;max-width:34em;color:#45474a;font-size:16px}
-.go{max-width:460px;margin:26px auto 0;border:1px solid #c9c8c2;background:#efeee9;padding:14px}
-.btn{display:flex;justify-content:center;align-items:center;gap:8px;padding:11px 16px;background:#4a4542;color:#fff;font-weight:700;font-size:15px;text-decoration:none;border:1px solid #4a4542}
-.btn:hover{background:#3a3532}
-.go small{display:block;margin-top:8px;font:11.5px 'JetBrains Mono','Zen Kaku Gothic New',monospace;color:#5a5c5f;letter-spacing:.02em}
-.shot{margin-top:44px;width:100%;height:auto}
-section{margin-top:52px}
-.lab{display:flex;align-items:center;gap:10px;margin-bottom:14px;font:700 11.5px 'JetBrains Mono',monospace;letter-spacing:.14em}
-.lab:after{content:'';flex:1;border-top:1px solid #c9c8c2}
-.grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #c9c8c2;border-left:1px solid #c9c8c2}
-.grid div{border-right:1px solid #c9c8c2;border-bottom:1px solid #c9c8c2;padding:14px 16px;background:#fbfaf7}
-.grid .n{font:11px 'JetBrains Mono',monospace;color:#75777b;letter-spacing:.06em}
-.grid h3{margin:2px 0 2px;font-size:16px}
-.grid p{margin:0;color:#45474a;font-size:13.5px}
-.steps{border:1px solid #c9c8c2;background:#fbfaf7;display:grid;grid-template-columns:repeat(3,1fr)}
-.steps div{padding:14px 16px}
-.steps div+div{border-left:1px solid #c9c8c2}
-.steps b{display:block;font:700 12px 'JetBrains Mono','Zen Kaku Gothic New',monospace;margin-bottom:4px}
-.steps p{margin:0;color:#45474a;font-size:13.5px}
-.more{margin:8px 0 0;font-size:12.5px;color:#5a5c5f}
-.more a{text-decoration:underline}
-table{width:100%;border-collapse:collapse;border:1px solid #c9c8c2;background:#fbfaf7;font-size:13.5px}
-th,td{text-align:left;padding:8px 14px;border-bottom:1px solid #dcdbd6;vertical-align:top}
-thead th{background:#e6e5e0;font:500 11px 'JetBrains Mono','Zen Kaku Gothic New',monospace;letter-spacing:.06em;border-bottom:1px solid #c9c8c2}
-td:first-child{font-family:'JetBrains Mono','Zen Kaku Gothic New',monospace;font-weight:500;white-space:nowrap}
-td:last-child{color:#5a5c5f;font-size:12.5px}
-details{border:1px solid #c9c8c2;background:#fbfaf7;padding:11px 16px}
-details+details{border-top:0}
-summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:700;font-size:14.5px}
-summary::-webkit-details-marker{display:none}
-summary:after{content:'▼';font:10px 'JetBrains Mono',monospace;color:#75777b;margin-top:5px}
-details[open] summary:after{content:'▲'}
-details p{margin:6px 0 2px;color:#45474a;font-size:13.5px}
-.end{margin-top:52px;border:1px solid #c9c8c2;background:#efeee9;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px}
-.end b{display:block;font-size:16px}
-.end span{font:11.5px 'JetBrains Mono',monospace;color:#5a5c5f}
-.end .btn{display:inline-flex;font-size:14px}
-footer{margin-top:52px;border-top:1px solid #c9c8c2;padding:18px 0 44px}
-footer .w{display:flex;justify-content:space-between;font:12px 'JetBrains Mono','Zen Kaku Gothic New',monospace;color:#5a5c5f}
-footer a{margin-left:16px;text-decoration:underline;white-space:nowrap}
-footer .w>span:last-child{text-align:right}
-@media(max-width:600px){header nav{gap:12px}
-header nav a.opt{display:none}
-.grid,.steps{grid-template-columns:1fr}
-.steps div+div{border-left:0;border-top:1px solid #c9c8c2}
-.end{flex-direction:column;align-items:stretch}
-.end .btn{display:flex}
-footer .w{flex-direction:column;gap:6px}
-footer a{margin:0}
-footer .w>span:last-child{display:flex;flex-wrap:wrap;gap:4px 16px;text-align:left}
-.hero .logo{height:60px}
-thead{display:none}
-tr{display:block;padding:8px 14px;border-bottom:1px solid #dcdbd6}
-td{display:block;padding:0;border:0}
-td:first-child{font-size:12px;color:#5a5c5f}
+/* Introduction: warm paper, expressive typography, and a clear view of the product. */
+:root {
+  --paper: #f6f5f1;
+  --panel: #fff;
+  --line: #dcd8d0;
+  --ink: #211a16;
+  --button: #4a4542;
+  --button-hover: #3a3532;
+  --muted: #6a625a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.8 'Space Grotesk', 'Zen Kaku Gothic New', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; text-underline-offset: .25em; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+article[hidden] { display: none; }
+:lang(ja) { word-break: auto-phrase; }
+.w { max-width: 1248px; margin: 0 auto; padding: 0 40px; }
+.m { font-family: 'JetBrains Mono', 'Zen Kaku Gothic New', monospace; }
+header .w {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+header .home { display: block; flex-shrink: 0; }
+header img { height: 32px; width: auto; flex-shrink: 0; }
+header nav { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 28px; font-size: .875rem; }
+header nav a { display: inline-flex; align-items: center; min-height: 40px; text-decoration: none; }
+header nav a:hover { text-decoration: underline; }
+header button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+header button:hover { border-color: var(--ink); background: var(--panel); }
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 56px;
+  padding: 96px 0 0;
+  margin: 0;
+}
+.hero h1 {
+  margin: 0;
+  max-width: 15em;
+  font-size: clamp(2rem, 3.4vw, 2.875rem);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.hero h1 > span { display: block; }
+.hero h1:lang(ja) { line-height: 1.5; letter-spacing: -.035em; font-weight: 700; }
+.hero-description { margin: 20px 0 0; max-width: 32em; color: var(--muted); font-size: .9375rem; line-height: 1.8; }
+.hero-visual { min-width: 0; }
+.shot { width: 100%; height: auto; }
+.go { margin-top: 32px; }
+.btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 14px 24px;
+  border: 1px solid var(--button);
+  border-radius: 3px;
+  background: var(--button);
+  color: var(--panel);
+  font-size: .9375rem;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  text-decoration: none;
+}
+.btn:hover { background: var(--button-hover); }
+.go small { display: block; margin-top: 16px; color: var(--muted); font-size: .8125rem; line-height: 1.8; }
+section { margin-top: 104px; scroll-margin-top: 32px; }
+.lab { margin: 0 0 36px; font: 500 .8125rem/1.8 'JetBrains Mono', 'Zen Kaku Gothic New', monospace; letter-spacing: .08em; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.grid > div { padding: 28px 0 0; border-top: 1px solid var(--line); }
+.grid .n { display: block; color: var(--muted); font: .75rem/1.5 'JetBrains Mono', monospace; }
+.grid h3 { margin: 16px 0 12px; font-size: 1.375rem; font-weight: 600; line-height: 1.5; letter-spacing: -.025em; }
+.grid p { margin: 0; color: var(--muted); font-size: .9375rem; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin: 0; padding: 0; list-style: none; }
+.steps > li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); }
+.step-number { padding-top: 5px; color: var(--muted); font: .75rem/1.5 'JetBrains Mono', monospace; }
+.steps h3 { margin: 0 0 12px; font-size: 1rem; font-weight: 600; line-height: 1.6; }
+.steps p { margin: 0; color: var(--muted); font-size: .9375rem; }
+.more { margin: 20px 0 0; color: var(--muted); font-size: .875rem; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 24px 20px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+thead th { padding-top: 0; padding-bottom: 16px; color: var(--muted); font: 400 .8125rem/1.6 'JetBrains Mono', 'Zen Kaku Gothic New', monospace; }
+td:first-child { width: 18%; font-weight: 600; }
+td:nth-child(2) { width: 43%; }
+td:last-child { color: var(--muted); font-size: .875rem; }
+.faq-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 40px; }
+.faq-list { border-top: 1px solid var(--line); }
+details { border-bottom: 1px solid var(--line); }
+summary { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 24px 0; cursor: pointer; list-style: none; font-weight: 600; line-height: 1.7; }
+summary::-webkit-details-marker { display: none; }
+summary:after { content: '+'; flex-shrink: 0; color: var(--muted); font: 400 1.25rem/1 'JetBrains Mono', monospace; }
+details[open] summary:after { content: '−'; }
+details p { margin: 0; padding: 0 40px 24px 0; color: var(--muted); font-size: .9375rem; }
+.end { display: flex; align-items: center; justify-content: space-between; gap: 32px; margin-top: 104px; padding: 48px; background: var(--panel); }
+.end b { display: block; font-size: clamp(1.5rem, 2.5vw, 2rem); font-weight: 600; line-height: 1.5; letter-spacing: -.035em; }
+.end span { display: block; margin-top: 12px; color: var(--muted); font: .75rem/1.8 'JetBrains Mono', 'Zen Kaku Gothic New', monospace; }
+.end .btn { flex-shrink: 0; }
+footer { margin-top: 80px; padding: 0 0 32px; }
+footer .w { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 20px 32px; padding-top: 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
+footer .w > span:last-child { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+footer a { display: inline-flex; align-items: center; min-height: 32px; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+@media (max-width: 1000px) {
+  .w { padding-right: 32px; padding-left: 32px; }
+  .hero { gap: 32px; }
+  .grid, .steps { gap: 28px; }
+}
+@media (max-width: 760px) {
+  .w { padding-right: 24px; padding-left: 24px; }
+  header .w { min-height: 76px; gap: 16px; }
+  header img { height: 26px; }
+  header nav { gap: 4px 16px; font-size: .8125rem; }
+  header nav a.opt { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 48px 0 0; }
+  .hero h1 { max-width: 19em; font-size: clamp(1.875rem, 5vw, 2.5rem); }
+  .hero h1:lang(ja) { line-height: 1.5; }
+  .go { margin-top: 28px; }
+  .go small { margin-top: 14px; }
+  section { margin-top: 64px; }
+  .lab { margin-bottom: 28px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+  .grid > div { padding-top: 24px; }
+  .steps { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .faq-section { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .end { margin-top: 64px; padding: 32px; flex-direction: column; align-items: flex-start; gap: 24px; }
+  footer { margin-top: 56px; }
+}
+@media (max-width: 480px) {
+  .w { padding-right: 20px; padding-left: 20px; }
+  header img { height: 24px; }
+  header nav { gap: 4px 12px; font-size: .75rem; }
+  header button { padding-right: 10px; padding-left: 10px; }
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .grid > div { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px 16px; }
+  .grid .n { grid-row: 1 / 3; padding-top: 7px; }
+  .grid h3 { margin: 0; font-size: 1.25rem; }
+  .grid p { grid-column: 2; }
+  thead { display: none; }
+  tr { display: block; padding: 20px 0; border-bottom: 1px solid var(--line); }
+  td, td:first-child, td:nth-child(2), td:last-child { display: block; width: auto; padding: 0; border: 0; }
+  td:first-child { margin-bottom: 6px; font-size: .875rem; }
+  td:last-child { margin-top: 6px; }
+  summary { gap: 16px; padding: 20px 0; font-size: .9375rem; }
+  details p { padding-right: 24px; }
+  .end { padding: 28px 24px; }
+  .end .btn { width: 100%; }
+  footer .w { flex-direction: column; gap: 12px; }
+  footer .w > span:last-child { gap: 4px 20px; }
 }

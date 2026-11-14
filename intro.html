@@ -13,12 +13,15 @@
 </head>
 <body>
 <article lang="ja">
-<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav><a class="opt" href="#feat-ja">機能</a><a class="opt" href="#how-ja">使い方</a><a href="#faq-ja">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">English</button></nav></div></header>
+<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="ページ内の案内"><a class="opt" href="#feat-ja">機能</a><a class="opt" href="#how-ja">使い方</a><a href="#faq-ja">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">English</button></nav></div></header>
 <main class="w">
-<div class="hero"><img class="logo" src="logo.png" alt="Chizuya" width="434" height="110"><p>マイクラ統合版の Realm のワールドを地図にして、ブラウザで見られるようにします。</p>
+<section class="hero" aria-labelledby="intro-title-ja">
+<div class="hero-copy"><h1 id="intro-title-ja">Realmsをブラウザで</h1>
+<p class="hero-description">統合版の Realm に対応。地図はブラウザで見られます。</p>
 <div class="go"><a class="btn" href="setup.html">セットアップをはじめる →</a><small>無料 / 準備は約15分 / サーバーの用意は不要</small></div></div>
-<img class="shot" src="docs/screenshot-ja.webp" alt="地図の画面" width="1600" height="900">
-<section id="feat-ja"><div class="lab">[ 機能 ]</div><div class="grid">
+<div class="hero-visual"><img class="shot" src="docs/screenshot-ja.webp" alt="地図の画面" width="1600" height="900"></div>
+</section>
+<section id="feat-ja"><h2 class="lab">[ 機能 ]</h2><div class="grid">
 <div><span class="n">01</span><h3>地図</h3><p>1時間ごとに自動で更新されます。過去の日付の地図にさかのぼって見られます。</p></div>
 <div><span class="n">02</span><h3>位置</h3><p>プレイ中のメンバーの位置が、約1分ごとに地図に表示されます。</p></div>
 <div><span class="n">03</span><h3>検索</h3><p>チェストの中身、村人の取引、ペットを検索して、場所を地図で示します。</p></div>
@@ -26,35 +29,38 @@
 <div><span class="n">05</span><h3>メンバー限定</h3><p>Microsoft アカウントでログインした、Realm のメンバーだけが見られます。</p></div>
 <div><span class="n">06</span><h3>自分のアカウントに保存</h3><p>地図のデータは、ご自身の Cloudflare アカウントに保存されます。開発者が見たり預かったりすることはありません。</p></div>
 </div></section>
-<section id="how-ja"><div class="lab">[ 使い方 ]</div><div class="steps">
-<div><b>01. コピーを作る</b><p>GitHub で、Chizuya のコピー(リポジトリ)を作ります。</p></div>
-<div><b>02. トークンを登録</b><p>Cloudflare のトークンを作り、コピーに登録します。</p></div>
-<div><b>03. ログイン</b><p>Realm のオーナーの Microsoft アカウントで、1回ログインします。</p></div>
-</div>
-<p class="more">くわしい手順は、<a href="setup.html">セットアップページ</a>に順番に表示されます。</p></section>
-<section><div class="lab">[ 動作環境 ]</div><table><thead><tr><th>項目</th><th>内容</th><th>備考</th></tr></thead><tbody>
+<section id="how-ja"><h2 class="lab">[ 使い方 ]</h2><ol class="steps" role="list">
+<li><span class="step-number" aria-hidden="true">01.</span><div><h3>コピーを作る</h3><p>GitHub で、Chizuya のコピー(リポジトリ)を作ります。</p></div></li>
+<li><span class="step-number" aria-hidden="true">02.</span><div><h3>トークンを登録</h3><p>Cloudflare のトークンを作り、コピーに登録します。</p></div></li>
+<li><span class="step-number" aria-hidden="true">03.</span><div><h3>ログイン</h3><p>Realm のオーナーの Microsoft アカウントで、1回ログインします。</p></div></li>
+</ol><p class="more">くわしい手順は、<a href="setup.html">セットアップページ</a>に順番に表示されます。</p></section>
+<section><h2 class="lab">[ 動作環境 ]</h2><table><thead><tr><th scope="col">項目</th><th scope="col">内容</th><th scope="col">備考</th></tr></thead><tbody>
 <tr><td>対応</td><td>マイクラ統合版の Realm</td><td>Java 版には対応していません</td></tr>
 <tr><td>料金</td><td>無料</td><td>GitHub と Cloudflare の無料プランの範囲で動きます</td></tr>
 <tr><td>必要なもの</td><td>Realm のオーナーのアカウント、GitHub、Cloudflare</td><td>アカウントはどれも無料で作れます</td></tr>
 <tr><td>見られる端末</td><td>パソコン、スマホ、タブレットのブラウザ</td><td>アプリのインストールは不要です</td></tr>
 </tbody></table></section>
-<section id="faq-ja"><div class="lab">[ よくある質問 ]</div>
-<details open><summary>Q. 料金はかかりますか?</summary><p>かかりません。GitHub と Cloudflare の無料プランの範囲で動きます。</p></details>
+<section id="faq-ja" class="faq-section"><h2 class="lab">[ よくある質問 ]</h2>
+<div class="faq-list"><details open><summary>Q. 料金はかかりますか?</summary><p>かかりません。GitHub と Cloudflare の無料プランの範囲で動きます。</p></details>
 <details><summary>Q. Java 版でも使えますか?</summary><p>使えません。統合版の Realm 専用です。</p></details>
 <details><summary>Q. 地図のデータはどこに保存されますか?</summary><p>ご自身の Cloudflare アカウントです。作る途中のデータは、暗号化してご自身の GitHub に置かれます。開発者のサーバーには保存されません。</p></details>
 <details><summary>Q. Realm のオーナーでなくても使えますか?</summary><p>使えません。ワールドを取り出せるのはオーナーだけのため、オーナーのアカウントが必要です。</p></details>
-</section>
+
+</div></section>
 <div class="end"><div><b>Realm の地図を作る</b><span>MIT License / オープンソース</span></div><a class="btn" href="setup.html">セットアップをはじめる →</a></div>
 </main>
 <footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">プライバシーポリシー</a><a href="terms.html">利用規約</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">不具合の報告</a><a href="https://ko-fi.com/chizuya_map">応援する(Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
 </article>
 <article lang="en" hidden>
-<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav><a class="opt" href="#feat-en">Features</a><a class="opt" href="#how-en">How</a><a href="#faq-en">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">日本語</button></nav></div></header>
+<header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="Page navigation"><a class="opt" href="#feat-en">Features</a><a class="opt" href="#how-en">How</a><a href="#faq-en">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><button class="lang" type="button">日本語</button></nav></div></header>
 <main class="w">
-<div class="hero"><img class="logo" src="logo.png" alt="Chizuya" width="434" height="110"><p>Turns the world of your Minecraft Bedrock Realm into a map you can open in a browser.</p>
+<section class="hero" aria-labelledby="intro-title-en">
+<div class="hero-copy"><h1 id="intro-title-en">Realms in your browser</h1>
+<p class="hero-description">For Minecraft Bedrock Realms. Open your map in a browser.</p>
 <div class="go"><a class="btn" href="setup.html">Start the setup →</a><small>Free / about 15 minutes / no server to run</small></div></div>
-<img class="shot" src="docs/screenshot-en.webp" alt="The map" width="1600" height="900">
-<section id="feat-en"><div class="lab">[ FEATURES ]</div><div class="grid">
+<div class="hero-visual"><img class="shot" src="docs/screenshot-en.webp" alt="The map" width="1600" height="900"></div>
+</section>
+<section id="feat-en"><h2 class="lab">[ FEATURES ]</h2><div class="grid">
 <div><span class="n">01</span><h3>Map</h3><p>Updated every hour by itself. Maps of earlier days stay available.</p></div>
 <div><span class="n">02</span><h3>Players</h3><p>Members who are playing appear on the map, about once a minute.</p></div>
 <div><span class="n">03</span><h3>Search</h3><p>Search chest contents, villager trades and pets, and see where they are.</p></div>
@@ -62,24 +68,24 @@
 <div><span class="n">05</span><h3>Members only</h3><p>Only members of the Realm can see it, signed in with their Microsoft account.</p></div>
 <div><span class="n">06</span><h3>Kept in your account</h3><p>The map is kept in your own Cloudflare account. The developer never sees or holds it.</p></div>
 </div></section>
-<section id="how-en"><div class="lab">[ HOW IT WORKS ]</div><div class="steps">
-<div><b>01. Make a copy</b><p>Make a copy of Chizuya (a repository) on GitHub.</p></div>
-<div><b>02. Add a token</b><p>Make a Cloudflare token and add it to the copy.</p></div>
-<div><b>03. Sign in</b><p>Sign in once with the Realm owner’s Microsoft account.</p></div>
-</div>
-<p class="more">The <a href="setup.html">setup page</a> takes you through each step in turn.</p></section>
-<section><div class="lab">[ REQUIREMENTS ]</div><table><thead><tr><th>Item</th><th>Details</th><th>Notes</th></tr></thead><tbody>
+<section id="how-en"><h2 class="lab">[ HOW IT WORKS ]</h2><ol class="steps" role="list">
+<li><span class="step-number" aria-hidden="true">01.</span><div><h3>Make a copy</h3><p>Make a copy of Chizuya (a repository) on GitHub.</p></div></li>
+<li><span class="step-number" aria-hidden="true">02.</span><div><h3>Add a token</h3><p>Make a Cloudflare token and add it to the copy.</p></div></li>
+<li><span class="step-number" aria-hidden="true">03.</span><div><h3>Sign in</h3><p>Sign in once with the Realm owner’s Microsoft account.</p></div></li>
+</ol><p class="more">The <a href="setup.html">setup page</a> takes you through each step in turn.</p></section>
+<section><h2 class="lab">[ REQUIREMENTS ]</h2><table><thead><tr><th scope="col">Item</th><th scope="col">Details</th><th scope="col">Notes</th></tr></thead><tbody>
 <tr><td>Works with</td><td>Minecraft Bedrock Edition Realms</td><td>Not Java Edition</td></tr>
 <tr><td>Cost</td><td>Free</td><td>Runs within GitHub’s and Cloudflare’s free plans</td></tr>
 <tr><td>You need</td><td>The Realm owner’s account, GitHub, Cloudflare</td><td>All the accounts are free to make</td></tr>
 <tr><td>Devices</td><td>A browser on a computer, phone or tablet</td><td>Nothing to install</td></tr>
 </tbody></table></section>
-<section id="faq-en"><div class="lab">[ FAQ ]</div>
-<details open><summary>Q. Does it cost anything?</summary><p>No. It runs within GitHub’s and Cloudflare’s free plans.</p></details>
+<section id="faq-en" class="faq-section"><h2 class="lab">[ FAQ ]</h2>
+<div class="faq-list"><details open><summary>Q. Does it cost anything?</summary><p>No. It runs within GitHub’s and Cloudflare’s free plans.</p></details>
 <details><summary>Q. Does it work with Java Edition?</summary><p>No. It is for Bedrock Edition Realms only.</p></details>
 <details><summary>Q. Where is the map kept?</summary><p>In your own Cloudflare account. While it is being made, the data sits encrypted in your own GitHub. Nothing is kept on the developer’s servers.</p></details>
 <details><summary>Q. Can I use it if I don’t own the Realm?</summary><p>No. Only the owner can download the world, so the owner’s account is needed.</p></details>
-</section>
+
+</div></section>
 <div class="end"><div><b>Make a map of your Realm</b><span>MIT License / open source</span></div><a class="btn" href="setup.html">Start the setup →</a></div>
 </main>
 <footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">Report a problem</a><a href="https://ko-fi.com/chizuya_map">Support (Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
