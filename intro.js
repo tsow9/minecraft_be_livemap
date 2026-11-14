@@ -5,6 +5,8 @@
   if (lang !== 'ja' && lang !== 'en') lang = /^ja\b/i.test(navigator.language || '') ? 'ja' : 'en';
   const show = (l) => {
     document.documentElement.lang = l;
+    const t = document.querySelector('title');
+    if (t?.dataset[l]) document.title = t.dataset[l];
     for (const a of document.querySelectorAll('article')) a.hidden = a.lang !== l;
   };
   for (const b of document.querySelectorAll('button.lang')) {

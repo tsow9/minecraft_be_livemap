@@ -140,7 +140,7 @@ button.btn:disabled { opacity: .5; cursor: default; }
 
 /* Match the introduction's type, column rhythm and quiet rules. */
 .setup-main { max-width: 960px; padding-top: 72px; }
-.intro { max-width: 44em; }
+.intro { max-width: none; }
 .intro h1 { margin: 0 0 20px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.4; letter-spacing: -.035em; }
 .intro > p:first-of-type { margin-bottom: 24px; font-size: .9375rem; color: var(--sub); }
 .intro .sub { font-size: .875rem; margin-top: 12px; }
