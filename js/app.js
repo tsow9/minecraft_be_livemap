@@ -2515,50 +2515,51 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null,
   const coat = faces[`${kind}:${variant}`];
   const plainWolf = kind === 'wolf' && (!coat || JSON.stringify(coat) === JSON.stringify(faces[kind]));
   const [face, pal] = own || (plainWolf ? WOLF_FACE : coat || faces[kind] || PLAIN_FACE);
-  // The wolf's face is drawn at twice the detail (k drawing pixels per game pixel): its collar and tag are made as
-  // thick, and it is sized as if it were the plain one, so it comes out as big as every other animal.
+  // Everything is laid out in screen pixels, so every animal's head pixels, collar, tag and outline are whole screen
+  // pixels and come out the same thickness on every animal. The head is scaled to about the same size whatever the
+  // animal (a cat's head is small, a cow's wide); the collar, the tag and the outline are the same size on all of them,
+  // and a tag does not make the head smaller.
+  // The wolf's face is drawn at twice the detail (k drawing pixels per game pixel); its head is scaled as if 8 wide,
+  // like a fox's or a pig's, so it stands as tall as theirs instead of being blown up to their width.
   const k = kind === 'wolf' && face[0].length >= 12 ? 2 : 1;
-  const w = face[0].length + 2;
-  const grid = [Array(w).fill('.'), ...face.map((r) => ['.', ...r, '.'])];
-  // The collar: two rows (game pixels) as wide as the bottom of the head.
-  const last = grid[grid.length - 1];
-  const from = last.findIndex((ch) => ch !== '.'), to = last.length - 1 - [...last].reverse().findIndex((ch) => ch !== '.');
-  if (collar) for (let i = 0; i < 2 * k; i++) grid.push(last.map((_, x) => (x >= from && x <= to ? 'c' : '.')));
-  if (named) {
-    const mid = Math.floor((from + to) / 2);
-    for (let i = 0; i < 2 * k; i++) grid.push(grid[0].map((_, x) => (x >= mid + 1 - k && x <= mid + k ? 't' : '.')));
-  }
-  grid.push(Array(w).fill('.'));
-  // Heads differ in size (a cat's is small, a cow's wide): scale them to about the same size on the map.
-  // In game pixels. A wolf's head is narrow (6 wide, 8 tall with its ears): it is scaled as if 8 wide, like a fox's or
-  // a pig's, so it stands as tall as theirs instead of being blown up to their width.
-  const gw = Math.max(face[0].length / k, kind === 'wolf' ? 8 : 0) + 2, gh = face.length / k + 2 + (collar ? 2 : 0) + (named ? 2 : 0);
-  const scale = Math.min(2.2, 14 / gw, 17 / gh);
-  // Screen pixels per game pixel, rounded like every animal's; the finer wolf splits each into k drawing pixels.
-  const dots = (Math.max(1, Math.round(size * scale * SCREEN)) + (big ? 1 : 0)) / k;
-  // A dark outline round the whole shape, so it stands out on any ground. It is the same thickness on screen for
-  // every animal (as thin as on the widest heads), not one drawing pixel, which would be thicker on the small heads.
-  const e = Math.max(1, Math.round(size * SCREEN)) / dots;
+  const gw = Math.max(face[0].length / k, kind === 'wolf' ? 8 : 0), gh = face.length / k;
+  const scale = Math.min(1.6, 12 / gw, 10.5 / gh);
+  const P = Math.max(1, Math.round(size * scale * SCREEN)) + (big ? 1 : 0);  // screen pixels per game pixel
+  // Where drawing pixel i starts, in whole screen pixels. With the finer wolf and an odd P, its half pixels are one
+  // screen pixel apart in width; the game pixels (pairs) are all exactly P.
+  const at = (i) => Math.round((i * P) / k);
+  const u = size * SCREEN / 1.6;                                             // screen pixels per page pixel (at size 1.6)
+  const E = Math.max(1, Math.round(1.6 * u));                                // the dark outline
+  const C = Math.max(2, Math.round(3.5 * u)) + (big ? 1 : 0);                // the collar's height
+  const TW = Math.max(2, Math.round(4 * u)) + (big ? 1 : 0), TH = TW;        // the name tag
   const colours = { ...pal, c: collar, t: '#f2e2b0' };
-  let edge = '', body = '';
-  grid.forEach((row, y) => {
+  const rects = [];  // [x, y, w, h, colour] in screen pixels, from the shape's top left
+  face.forEach((row, y) => {
     for (let x = 0; x < row.length;) {
       if (row[x] === '.') { x += 1; continue; }
-      let end = x + 1;
-      while (end < row.length && row[end] !== '.') end += 1;
-      edge += `<rect x="${x - e}" y="${y - e}" width="${end - x + 2 * e}" height="${1 + 2 * e}"/>`;
-      for (let i = x; i < end;) {
-        let j = i + 1;
-        while (j < end && row[j] === row[i]) j += 1;
-        body += `<rect x="${i}" y="${y}" width="${j - i}" height="1" fill="${colours[row[i]]}"/>`;
-        i = j;
-      }
-      x = end;
+      let j = x + 1;
+      while (j < row.length && row[j] === row[x]) j += 1;
+      rects.push([at(x), at(y), at(j) - at(x), at(y + 1) - at(y), colours[row[x]]]);
+      x = j;
     }
   });
-  const unit = dots / SCREEN, h = grid.length;
-  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + k}" width="${w * unit}" height="${(h + k) * unit}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h - 0.2 * k}" rx="${w / 2 - 1.5 * k}" ry="${0.9 * k}"/>`
+  let bottom = at(face.length);
+  const last = face[face.length - 1];
+  const from = [...last].findIndex((ch) => ch !== '.'), to = last.length - 1 - [...last].reverse().findIndex((ch) => ch !== '.');
+  if (collar) { rects.push([at(from), bottom, at(to + 1) - at(from), C, colours.c]); bottom += C; }
+  if (named) {
+    const mid = Math.round((at(from) + at(to + 1)) / 2);
+    rects.push([mid - Math.round(TW / 2), bottom, TW, TH, colours.t]); bottom += TH;
+  }
+  const W = at(face[0].length) + 2 * E, sh = Math.max(2, Math.round(2 * u));
+  const H = bottom + 2 * E + sh;
+  let edge = '', body = '';
+  for (const [x, y, w, h, c] of rects) {
+    edge += `<rect x="${x}" y="${y}" width="${w + 2 * E}" height="${h + 2 * E}"/>`;
+    body += `<rect x="${x + E}" y="${y + E}" width="${w}" height="${h}" fill="${c}"/>`;
+  }
+  return `<svg class="gm-svg" viewBox="0 0 ${W} ${H}" width="${W / SCREEN}" height="${H / SCREEN}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${W / 2}" cy="${bottom + 2 * E}" rx="${Math.max(2, W / 2 - 1.5 * P)}" ry="${Math.max(1.5, 0.9 * P)}"/>`
     + `<g class="gm-body"><g fill="${OUTLINE}">${edge}</g>${body}</g></svg>`;
 }
 
