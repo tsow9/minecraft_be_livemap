@@ -1,8 +1,8 @@
 
 :root {
   --bg-page: #0b0d10;
-  --glass: rgba(20, 22, 27, 0.86);
-  --glass-strong: rgba(22, 24, 30, 0.9);
+  --glass: rgba(20, 22, 27, 0.92);
+  --glass-strong: rgba(22, 24, 30, 0.94);
   --bg-solid: #16181d;
   --field: rgba(255, 255, 255, 0.06);
   --hover: rgba(255, 255, 255, 0.08);
@@ -14,7 +14,8 @@
   --danger: #e5484d;
   --radius: 14px;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-  --blur: saturate(160%) blur(14px);
+  /* No frosted-glass blur: re-blurring the moving map under every panel made panning and zooming slow on phones. */
+  --blur: none;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -444,7 +445,7 @@ dialog.box .primary { background: var(--accent) !important; border-color: var(--
   transition: transform .15s; }
 .pick[aria-expanded="true"]::after { transform: translateY(2px) rotate(-135deg); }
 .pick-list { position: fixed; z-index: 3000; display: grid; gap: 4px; padding: 8px; border-radius: 12px; background: var(--glass-strong);
-  border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  border: 1px solid var(--line); box-shadow: var(--shadow); }
 .pick-list[hidden] { display: none; }
 .pick-list.days { grid-template-columns: repeat(7, 34px); }
 .pick-list.curs { grid-template-columns: repeat(2, 150px); max-width: calc(100vw - 16px); }

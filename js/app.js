@@ -2528,7 +2528,10 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null,
   grid.push(Array(w).fill('.'));
   // Heads differ in size (a cat's is small, a cow's wide): scale them to about the same size on the map.
   const scale = Math.min(2.2, 14 / w, 17 / grid.length);
-  const dots = Math.max(1, Math.round(size * scale * SCREEN)) + (big ? 1 : 0);  // screen pixels per drawing pixel
+  // Screen pixels per drawing pixel. The wolf is drawn at twice the detail, its pixels mostly in pairs: half a screen
+  // pixel more or less still keeps each pair even, so it can be as big as the other animals on any screen.
+  const fine = kind === 'wolf';
+  const dots = (fine ? Math.max(1, Math.ceil(size * scale * SCREEN * 2) / 2) : Math.max(1, Math.round(size * scale * SCREEN))) + (big ? 1 : 0);
   // A dark outline round the whole shape, so it stands out on any ground. It is the same thickness on screen for
   // every animal (as thin as on the widest heads), not one drawing pixel, which would be thicker on the small heads.
   const e = Math.max(1, Math.round(size * SCREEN)) / dots;
