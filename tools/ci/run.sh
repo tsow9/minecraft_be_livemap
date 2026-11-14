@@ -123,7 +123,24 @@ site_is_ours() {
   [ -n "$rid" ] && [ "$rid" = "${GITHUB_REPOSITORY_ID:-}" ]
 }
 
+# The site there now belongs to another repository that still exists (two repositories whose names give the same site
+# name, like "realm_one" and "realm-one", in one Cloudflare account). One made by a repository since deleted (made
+# again under the same name) is not: that one is taken over.
+site_of_another() {
+  local url rid
+  url=${SITE_URL:-$(bash tools/site_url.sh)}
+  [ -n "$url" ] || return 1
+  rid=$(curl -sS --max-time 15 "$url/api/setup" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("rid") or "")' 2>/dev/null)
+  [[ "$rid" =~ ^[0-9]+$ ]] && [ "$rid" != "${GITHUB_REPOSITORY_ID:-}" ] || return 1
+  gh api "repositories/$rid" --jq .id >/dev/null 2>&1
+}
+
 publish_site() {
+  if [ -n "$CLOUDFLARE_API_TOKEN" ] && site_exists && site_of_another; then
+    error "サイト名「$(bash tools/site_name.sh)」は、同じ Cloudflare アカウントの別のリポジトリが使っています。上書きしないよう止めました。このリポジトリの名前を変えてください(記号だけが違う名前は、同じサイト名になります)" \
+      "The site name \"$(bash tools/site_name.sh)\" is used by another repository in the same Cloudflare account. Stopped so as not to overwrite it. Rename this repository (names that differ only in symbols give the same site name)"
+    return 1
+  fi
   if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
     echo "::warning::$(t 'Cloudflare の Secrets がそろっていないので、サイトは作りません' 'The Cloudflare secrets are not all set, so the site is not published')"
     return 0
@@ -202,16 +219,18 @@ update_map() {
   group '地図を作る' 'Make the map'
   need_python
   local live=""
-  bash tools/vault.sh get live-data live
+  bash tools/vault.sh get live-data live || { endgroup; return 1; }
   [ -f live/live.json ] && live=live/live.json
   mkdir -p "$dir"
   python3 tools/render_map.py --world world.mcworld --site "$dir" --snapshot "$(date +%F)" --live "$live" || { endgroup; return 1; }
   cp fingerprint.txt "$dir/world.sha256"
   python3 tools/worlds.py record data members.json
   endgroup
+  # Published first, saved after: if publishing fails, the map is not saved as done either, so the next run draws and
+  # publishes it again (saved first, the next run would find "no change" and never publish it).
+  publish_site || return 1
   # map-data keeps a single commit so the repository does not grow with every hourly update.
   bash tools/vault.sh put data map-data || return 1
-  publish_site
 }
 
 # GitHub turns off the timers of a public repository after 60 days without changes, and a copy of Chizuya may never
@@ -229,7 +248,7 @@ sign_in() {
   # timer and setup news are that repository's), so the setup page can follow along through it; the map comes after.
   if [ -n "$CLOUDFLARE_API_TOKEN" ] && { ! site_exists || ! site_is_ours; }; then
     say '先にサイトを用意します(地図は、ログインの後に作ります)' 'Putting the site up first (the map is made after signing in)'
-    publish_site || true
+    publish_site || { site_of_another && return 1; true; }  # another repository's site: never sign in onto it
     get_key --required || return 1   # the site's address, now that there is a site
   fi
   bash tools/setup_status.sh starting

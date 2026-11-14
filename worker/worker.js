@@ -18,7 +18,10 @@ const MAX_FAILS = 10;
 const FAIL_WINDOW_MS = 3600 * 1000;
 const SESSION = 'bms';          // signed in with Microsoft
 const COOKIE_DAYS = 400;
-const USED_EVERY_MS = 3600 * 1000;  // how often "last seen" is brought up to date
+const USED_EVERY_MS = 10 * 60 * 1000;  // how often "last seen" is brought up to date (while the member's page is open)
+// The map pictures (/d/) need a session that passed the full member check within this long: someone taken off the
+// Realm stops getting new pictures soon after, without the full check (heavy) on every picture.
+const PICTURES_FOR_MS = 30 * 60 * 1000;
 
 export default {
   // The timer (wrangler.template.toml): starts the repository's live check, which also redraws the map hourly.
@@ -83,6 +86,22 @@ export default {
         await put('setup', JSON.stringify({ state: 'picked', pick: name, at, r: cur.r, log: cur.log }));
         return json({ ok: true }, 200, open);
       }
+      // The map pictures and data: members only, not just whoever knows the folder's name (a link saved by someone who
+      // has since left the Realm, or passed on). The items folder is never served directly (only through /api/world).
+      if (url.pathname.startsWith('/x/')) return new Response('Not found', { status: 404 });
+      if (url.pathname.startsWith('/d/')) {
+        const token = cookies(req)[SESSION];
+        const row = token && /^[0-9a-f]{64}$/.test(token)
+          ? await env.DB.prepare('SELECT seen FROM sessions WHERE token = ?').bind(await sha(token)).first() : null;
+        if (!row || !(Date.now() - (row.seen || 0) < PICTURES_FOR_MS)) return new Response('Sign in first', { status: 401, headers: { 'Cache-Control': 'no-store' } });
+        const res = await env.ASSETS.fetch(req);
+        const out = new Response(res.body, res);
+        // Kept by this browser only (never by a shared cache on the way).
+        const cc = out.headers.get('Cache-Control');
+        if (cc && !/private/.test(cc)) out.headers.set('Cache-Control', cc.replace(/\bpublic\b,?\s*/, '').replace(/^/, 'private, ').replace(/,\s*$/, ''));
+        else if (!cc) out.headers.set('Cache-Control', 'private, no-cache');
+        return out;
+      }
       const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
       // The live check's latest data (who the members are, where players are): read once per request at most.
       let liveP = null;
@@ -121,11 +140,14 @@ export default {
       if (req.method === 'GET' && path === '/me') return json({ name: me.name, role: me.role, via: me.via });
 
       if (req.method === 'GET' && path === '/items') {
-        const since = Number(url.searchParams.get('since')) || 0;
-        const { results } = await env.DB.prepare('SELECT id, data, deleted, rev FROM items WHERE rev > ? ORDER BY rev LIMIT 5000')
-          .bind(since).all();
+        // In pages of 5000, in (rev, id) order: "after" is the last id of the page before, at its rev.
+        const since = Number(url.searchParams.get('since')) || 0, after = url.searchParams.get('after') || '';
+        const PAGE = 5000;
+        const { results } = await env.DB.prepare('SELECT id, data, deleted, rev FROM items WHERE rev > ?1 OR (rev = ?1 AND id > ?2) ORDER BY rev, id LIMIT ?3')
+          .bind(since, after, PAGE).all();
         const items = results.map((r) => ({ id: r.id, data: JSON.parse(r.data), deleted: !!r.deleted, rev: r.rev }));
-        return json({ items, rev: items.length ? items[items.length - 1].rev : since, now: Date.now() });
+        const last = items[items.length - 1];
+        return json({ items, rev: last ? last.rev : since, after: last ? last.id : after, more: items.length === PAGE, now: Date.now() });
       }
 
       // What is in the world's chests, its villagers, signs and pets (items.json), less what the owner hides (from everyone,

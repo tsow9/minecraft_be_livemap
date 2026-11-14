@@ -20,7 +20,7 @@ live_pass=$(python3 tools/site_keys.py --live-pass)
 [ -n "$live_pass" ] && echo "::add-mask::$live_pass"
 [ -n "$site_url" ] || echo "::warning::$(t 'Cloudflare のサイトの住所がわからないので、位置はサイトに送りません' 'The Cloudflare site address is unknown, so positions are not sent to the site')"
 
-bash tools/vault.sh get live-data live
+bash tools/vault.sh get live-data live || exit 1  # never carry on (and save) from an empty copy
 
 publish() {
   # The site reads this copy every few seconds.

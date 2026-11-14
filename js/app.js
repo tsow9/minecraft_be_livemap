@@ -561,14 +561,22 @@ async function pushChanges() {
 
 // Brings in what others changed. A full pull (page open) also drops things the server no longer has.
 async function pullChanges(full = false) {
-  let data;
+  // Every page first (the server sends 5000 at a time); only with all of them is anything dropped as gone.
+  const data = { items: [], rev: 0 };
   try {
-    const since = full ? 0 : Math.max(0, share.rev - 10000 * 1000);
-    const res = await fetch(`${share.url}/items?since=${since}`, { cache: 'no-store' });
-    if (!res.ok) return;
-    data = await res.json();
+    let since = full ? 0 : Math.max(0, share.rev - 10000 * 1000), after = '';
+    for (let page = 0; page < 20; page++) {
+      const res = await fetch(`${share.url}/items?since=${since}&after=${encodeURIComponent(after)}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (!Array.isArray(d?.items)) return;
+      data.items.push(...d.items);
+      data.rev = d.rev;
+      if (!d.more) break;
+      if (page === 19) return;  // more than expected: change nothing rather than drop what was not read
+      since = d.rev; after = d.after || '';
+    }
   } catch { return; }
-  if (!Array.isArray(data?.items)) return;
   let changed = false;
   const seen = new Set();
   const removeLocal = (id) => {

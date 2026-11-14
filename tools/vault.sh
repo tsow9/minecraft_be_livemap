@@ -19,7 +19,16 @@ case "${1:-}" in
   get)
     branch=$2 dir=$3
     mkdir -p "$dir"
-    git fetch -q --depth 1 origin "$branch" 2>/dev/null || { echo "$(t "$branch はまだありません" "No $branch branch yet")"; exit 0; }
+    # A branch that is not there yet is a fresh start; one that is there but could not be fetched (a network hiccup) is
+    # an error, never an empty start: its map would be drawn without the history and saved over it.
+    fetched=false
+    for try in 1 2 3; do
+      if git fetch -q --depth 1 origin "$branch" 2>/dev/null; then fetched=true; break; fi
+      set +e; git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; rc=$?; set -e
+      if [ "$rc" = 2 ]; then echo "$(t "$branch はまだありません" "No $branch branch yet")"; exit 0; fi
+      sleep $((try * 5))
+    done
+    $fetched || { echo "::error::$(t "$branch ブランチを取得できませんでした(通信の不具合)。データを守るため、今回は止めます" "Could not fetch the $branch branch (a network problem). Stopping this time, to keep its data safe")"; exit 1; }
     tmp=$(mktemp -d)
     git archive FETCH_HEAD | tar -x -C "$tmp"
     if compgen -G "$tmp/data.enc.*" >/dev/null; then
