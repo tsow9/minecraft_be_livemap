@@ -35,10 +35,10 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(33, 26, 22, .16); color: var(--accent); font-size: 14px; flex: none; }
 .step ol { padding-left: 1.3em; margin: 6px 0; }
 .step ol li { margin: 6px 0; }
-/* Buttons: the app icon's beige paper with the logo's ink (案 D). */
-.btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 10px; background: #eee4d3; color: var(--fg); font-weight: 700;
-  text-decoration: none; font-size: 13px; border: 1px solid #c9bba2; }
-.btn:not(.ghost):hover { background: #e5d8c1; }
+/* Buttons: a soft ink, a little lighter than the logo's (案 4). */
+.btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 10px; background: #4a4542; color: #fff; font-weight: 700;
+  text-decoration: none; font-size: 13px; border: 1px solid #4a4542; }
+.btn:not(.ghost):hover { background: #3a3532; }
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
 .btn.ghost:hover { background: rgba(0, 0, 0, .06); }
 .btn.off { opacity: .4; pointer-events: none; }
