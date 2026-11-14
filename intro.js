@@ -9,12 +9,25 @@
     if (t?.dataset[l]) document.title = t.dataset[l];
     for (const a of document.querySelectorAll('article')) a.hidden = a.lang !== l;
   };
-  for (const b of document.querySelectorAll('button.lang')) {
-    b.addEventListener('click', () => {
-      lang = lang === 'ja' ? 'en' : 'ja';
+  // The globe button opens a list of the two languages (as on the setup page).
+  const close = () => { for (const m of document.querySelectorAll('.lang-menu')) { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); } };
+  for (const btn of document.querySelectorAll('.lang-btn')) {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const m = btn.nextElementSibling, open = m.hidden;
+      close();
+      m.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+      for (const o of m.querySelectorAll('button')) o.classList.toggle('on', o.dataset.lang === lang);
+    });
+  }
+  for (const o of document.querySelectorAll('.lang-menu button')) {
+    o.addEventListener('click', () => {
+      lang = o.dataset.lang;
       try { localStorage.setItem('blockmap.lang', lang); } catch { /* private mode */ }
+      close();
       show(lang);
     });
   }
+  document.addEventListener('click', close);
   show(lang);
 })();

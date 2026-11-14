@@ -78,3 +78,15 @@ input:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
   footer .w { flex-direction: column; gap: 12px; }
   footer .w > span:last-child { gap: 4px 20px; }
 }
+
+/* Language: a globe with the current language and a list, as on the setup page. */
+header .lang { position: relative; }
+.lang-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border-radius: 3px; border: 1px solid var(--line);
+  background: transparent; color: var(--ink); font: inherit; font-size: inherit; cursor: pointer; }
+.lang-btn .ic { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.caret { width: 6px; height: 6px; border: solid var(--muted, #6a625a); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); }
+.lang-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; display: grid; min-width: 140px; padding: 6px; border-radius: 3px; background: #fff; border: 1px solid var(--line); }
+.lang-menu[hidden] { display: none; }
+.lang-menu button { padding: 7px 10px; border: 0; border-radius: 3px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.lang-menu button:hover { background: rgba(0, 0, 0, .06); }
+.lang-menu button.on { font-weight: 700; }
