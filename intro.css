@@ -113,7 +113,7 @@ details p { margin: 0; padding: 0 40px 24px 0; color: var(--muted); font-size: .
 .find { max-width: 960px; min-height: 65vh; padding-top: 72px; padding-bottom: 32px; }
 .find section { margin: 0; }
 .find h1 { margin: 0 0 20px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.4; letter-spacing: -.035em; }
-.find .more { max-width: 40em; margin: 0 0 36px; font-size: .9375rem; line-height: 1.9; }
+.find .more { max-width: none; margin: 0 0 36px; font-size: .9375rem; line-height: 1.9; }
 .find-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
 .find-form label { grid-column: 1 / -1; font-size: .875rem; font-weight: 600; }
 .find-form input { width: 100%; min-width: 0; font: 1rem 'JetBrains Mono', monospace; padding: 14px 16px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); color: inherit; }
@@ -125,6 +125,7 @@ details p { margin: 0; padding: 0 40px 24px 0; color: var(--muted); font-size: .
 .find-out td { overflow-wrap: anywhere; }
 .find-out td:first-child { width: 25%; }
 .find-out td:nth-child(2) { width: 50%; font-size: .8125rem; }
+@media (min-width: 640px) { .find-out td:nth-child(2) { overflow-wrap: normal; white-space: nowrap; } }
 .find-out .acts { text-align: right; }
 .find-out .acts a, .find-out .acts button { display: inline-flex; align-items: center; min-height: 44px; font: inherit; font-size: .8125rem; color: var(--ink); background: none; border: 0; padding: 4px 0; margin-left: 16px; text-decoration: underline; cursor: pointer; }
 @media (max-width: 600px) { .find { padding-top: 40px; } }
