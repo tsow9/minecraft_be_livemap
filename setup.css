@@ -1,50 +1,42 @@
 :root { color-scheme: light; --bg: #f6f5f1; --card: #ffffff; --line: #dcd8d0; --fg: #211a16; --sub: #6a625a; --accent: #211a16; --ok: #3f6b4e; --bad: #a33a2e; }
 * { box-sizing: border-box; }
-body { margin: 0; padding: 28px 16px 64px; background: var(--bg); color: var(--fg); line-height: 1.75; font-size: 14px;
-  font-family: "M PLUS Rounded 1c", system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
-header, .intro, .steps, footer { max-width: 680px; margin-left: auto; margin-right: auto; }
+body { padding: 0; }
 /* Japanese breaks between phrases, not inside words (Chrome and Edge; others break as usual). */
 /* As Japanese pages usually do: running text fills each line and may break between any two characters (never before
    。、 and the like); only headings and short labels break between phrases, so they never split a word. */
 p, li, td { line-break: strict; }
-h1, h2, summary, label, .btn, .status b { word-break: auto-phrase; text-wrap: balance; }
 code { word-break: normal; overflow-wrap: anywhere; }
 .intro p { margin: 6px 0; }
 .intro .sub { color: var(--sub); font-size: 13px; }
-header { display: flex; align-items: center; gap: 12px; }
-h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 12px; font-weight: 700; }
-h1 img { height: 34px; width: auto; display: block; }
-h1 .home { display: block; }
-h1 span { color: var(--sub); padding-left: 12px; border-left: 1px solid var(--line); }
 /* Language: a globe with the current language; the list names each language in itself. */
 .lang { position: relative; margin-left: auto; }
-#lang { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+#lang { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 3px; border: 1px solid var(--line); background: var(--card);
   color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; }
 #lang .ic { width: 15px; height: 15px; }
 .caret { width: 6px; height: 6px; border: solid var(--sub); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); }
-#lang-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; display: grid; min-width: 140px; padding: 6px; border-radius: 12px;
-  background: #fff; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+#lang-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; display: grid; min-width: 140px; padding: 6px; border-radius: 3px;
+  background: #fff; border: 1px solid var(--line);  }
 #lang-menu[hidden] { display: none; }
-#lang-menu button { padding: 7px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+#lang-menu button { padding: 7px 10px; border: 0; border-radius: 3px; background: transparent; color: var(--fg); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 #lang-menu button:hover { background: rgba(0, 0, 0, .06); }
 #lang-menu button.on { color: var(--accent); font-weight: 700; }
 .ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 a { color: var(--accent); text-underline-offset: 2px; }
 .steps { list-style: none; padding: 0; margin-top: 20px; display: grid; gap: 14px; }
-.step { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; transition: opacity .2s; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 18px 20px; transition: opacity .2s; }
 .step h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 16px; }
 .num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(33, 26, 22, .16); color: var(--accent); font-size: 14px; flex: none; }
 .step ol { padding-left: 1.3em; margin: 6px 0; }
 .step ol li { margin: 6px 0; }
 /* Buttons: a soft ink, a little lighter than the logo's (案 4). */
-.btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 10px; background: #4a4542; color: #fff; font-weight: 700;
+.btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 3px; background: #4a4542; color: #fff; font-weight: 700;
   text-decoration: none; font-size: 13px; border: 1px solid #4a4542; }
 .btn:not(.ghost):hover { background: #3a3532; }
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
 .btn.ghost:hover { background: rgba(0, 0, 0, .06); }
 .btn.off { opacity: .4; pointer-events: none; }
 .field { display: grid; gap: 6px; margin: 12px 0 4px; font-size: 13px; color: var(--sub); }
-.field input { height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, .05); color: var(--fg);
+.field input { height: 38px; padding: 0 12px; border-radius: 3px; border: 1px solid var(--line); background: rgba(0, 0, 0, .05); color: var(--fg);
   font: inherit; font-size: 15px; }
 .field input:focus { outline: none; border-color: var(--accent); }
 .field.inline { display: flex; align-items: center; gap: 6px; }
@@ -57,28 +49,27 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .kv td:first-child { width: 46%; }
 code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; }
 .secret { color: var(--accent); }
-.copy { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 10px; border-radius: 999px; border: 1px solid var(--line);
+.copy { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 10px; border-radius: 3px; border: 1px solid var(--line);
   background: transparent; color: var(--sub); font: inherit; font-size: 12px; cursor: pointer; vertical-align: middle; white-space: nowrap; line-height: 1.5; }
 .copy .ic { width: 13px; height: 13px; }
 .extra { margin: 18px 0 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--sub); }
 .copy:hover { color: var(--fg); background: rgba(0, 0, 0, .06); }
-footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: center; }
-#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; padding: 8px 16px; border-radius: 999px;
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; padding: 8px 16px; border-radius: 3px;
   background: var(--accent); color: #fff; border: 1px solid var(--accent); font-size: 13px; transition: .2s; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
 .small { color: var(--sub); font-size: 12px; }
 .info { display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0 2px 0 4px; padding: 0; border-radius: 50%;
   border: 1px solid var(--sub); background: transparent; color: var(--sub); font: italic 700 11px/1 Georgia, serif; cursor: pointer; vertical-align: 1px; }
 .info:hover { color: var(--fg); border-color: var(--fg); }
-.info-box { margin: 8px 0 12px; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, .04); border: 1px solid var(--line);
+.info-box { margin: 8px 0 12px; padding: 10px 14px; border-radius: 3px; background: rgba(0, 0, 0, .04); border: 1px solid var(--line);
   font-size: 13px; color: var(--sub); }
 .info-box p { margin: 4px 0; }
-.expect { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, .03); border: 1px solid var(--line); font-size: 13px; }
+.expect { margin-top: 12px; padding: 10px 14px; border-radius: 3px; background: rgba(0, 0, 0, .03); border: 1px solid var(--line); font-size: 13px; }
 .expect p { margin: 0 0 4px; color: var(--sub); }
 .expect ul { margin: 4px 0; padding-left: 1.2em; }
 .expect li { margin: 3px 0; }
 .kv th { text-align: left; font-weight: 500; color: var(--sub); padding: 4px 6px; font-size: 12px; }
-.status { margin: 12px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .04); font-size: 14px; }
+.status { margin: 12px 0; padding: 12px 14px; border-radius: 3px; border: 1px solid var(--line); background: rgba(0, 0, 0, .04); font-size: 14px; }
 .status.code, .status.making { border-color: rgba(33, 26, 22, .5); }
 .status.done { border-color: var(--accent); background: rgba(33, 26, 22, .08); }
 .status .good { color: var(--ok); }
@@ -96,7 +87,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 /* Troubleshooting: one question per line; open the one that applies. */
 .trouble { max-width: 680px; margin: 28px auto 0; }
 .trouble h2 { font-size: 16px; margin: 0 0 8px; }
-.trouble details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; margin: 8px 0; font-size: 13px; }
+.trouble details { background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 10px 16px; margin: 8px 0; font-size: 13px; }
 .trouble summary { cursor: pointer; font-weight: 500; }
 .trouble ul { margin: 8px 0 4px; padding-left: 1.2em; color: var(--sub); }
 .trouble li { margin: 4px 0; }
@@ -117,7 +108,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--sub); text-align: cente
 .progress li small { display: block; color: var(--sub); font-weight: 400; font-size: 12px; }
 /* Picking which Realm to map. */
 .status .realms { display: grid; gap: 8px; margin: 12px 0 8px; }
-.status .realm { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, .05); color: var(--fg);
+.status .realm { padding: 10px 14px; border-radius: 3px; border: 1px solid var(--line); background: rgba(0, 0, 0, .05); color: var(--fg);
   font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
 .status .realm:hover { border-color: var(--accent); }
 .status .realm.on { border-color: var(--accent); background: rgba(33, 26, 22, .12); color: var(--accent); }
@@ -146,3 +137,43 @@ button.btn:disabled { opacity: .5; cursor: default; }
 .status .row { display: flex; flex-wrap: wrap; gap: 8px; }
 .auto-steps { margin: 8px 0; padding-left: 20px; }
 #token-box .small { display: block; margin-top: 4px; }
+
+/* Match the introduction's type, column rhythm and quiet rules. */
+.setup-main { max-width: 960px; padding-top: 72px; }
+.intro { max-width: 44em; }
+.intro h1 { margin: 0 0 20px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.4; letter-spacing: -.035em; }
+.intro > p:first-of-type { margin-bottom: 24px; font-size: .9375rem; color: var(--sub); }
+.intro .sub { font-size: .875rem; margin-top: 12px; }
+.steps { margin: 48px 0 0; gap: 0; }
+.step { position: relative; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; padding: 32px 0 36px 56px; transition: none; scroll-margin-top: 24px; }
+.step h2 { margin-bottom: 20px; font-size: 1.25rem; line-height: 1.6; }
+.num { position: absolute; left: 0; top: 35px; width: 28px; height: auto; background: none; border-radius: 0; color: var(--sub); font: .875rem/1.8 'JetBrains Mono', monospace; }
+.step p, .step ol { font-size: .9375rem; }
+.step .hint, .step .small { font-size: .8125rem; }
+.btn { min-height: 48px; padding: 12px 20px; font-size: .875rem; font-weight: 600; justify-content: center; }
+button.btn { font-size: .875rem; }
+.field { font-size: .875rem; margin-top: 24px; }
+.field input { width: 100%; min-height: 48px; background: var(--card); font-family: 'JetBrains Mono', monospace; font-size: .875rem; }
+.field input:focus { outline: 2px solid var(--fg); outline-offset: 3px; }
+#lang { min-height: 40px; padding: 8px 12px; background: transparent; font-size: inherit; }
+.lang { margin-left: 0; }
+#lang-menu { border-radius: 3px; }
+.trouble { max-width: none; margin-top: 48px; }
+.trouble h2 { font-size: 1.25rem; margin-bottom: 24px; }
+.trouble details { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; margin: 0; padding: 20px 0; font-size: .875rem; }
+.trouble details:last-child { border-bottom: 1px solid var(--line); }
+.trouble summary { min-height: 24px; }
+.status { background: var(--card); }
+@media (max-width: 600px) {
+  .setup-main { padding-top: 40px; }
+  .step { padding: 28px 0 28px 40px; }
+  .num { top: 30px; }
+  .step h2 { font-size: 1.125rem; }
+  .status { padding: 12px; }
+  .status .code { flex-wrap: wrap; }
+  .status .code span { overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin, .dots i, .progress li.now::before { animation: none; }
+  #toast { transition: none; }
+}
