@@ -2,6 +2,6 @@
   "private": true,
   "description": "The map site on Cloudflare: site files, map data behind an invite, shared pins (Worker + D1)",
   "devDependencies": {
-    "wrangler": "4.146.0"
+    "wrangler": "4.162.0"
   }
 }
