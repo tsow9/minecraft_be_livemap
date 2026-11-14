@@ -95,7 +95,10 @@
       a.classList.toggle('off', !repo);
       if (repo) a.href = `https://github.com/${repo}${a.dataset.path}`; else a.removeAttribute('href');
     }
-    $('#repo-hint').innerHTML = repo
+    $('#repo-hint').innerHTML = repo && missing === repo
+      ? T(`<code>${esc(repo)}</code> が見つかりません。リンクが合っているか、公開範囲が <b>Public</b> になっているか確かめてください(Private だと動きません)。`,
+        `<code>${esc(repo)}</code> cannot be found. Check the link, and that the repository is <b>Public</b> (Chizuya does not work with Private).`)
+      : repo
       ? T(`<code>${repo}</code> を使います。手順 3〜5 のボタンが、このリポジトリを開きます。`, `Using <code>${repo}</code>. The buttons in steps 3–5 open it.`)
       : T('入れると、手順 3〜5 のボタンがそのリポジトリを直接開きます。', 'Once filled in, the buttons in steps 3–5 open it directly.');
     // Only the exact address: from the site itself, or from what publishing it wrote (site-info branch).
@@ -171,18 +174,24 @@
   // The repository's id (and its owner's), from GitHub's public API once per visit: a repository made again under an
   // old name is another one (its old site may still answer), and the app's install page can preselect it.
   let info = null;
+  // A repository GitHub says is not there (mistyped, deleted or Private): nothing about it is shown as found, not even
+  // what this browser remembers of one that had the name before, nor a site that answers at the address it would get.
+  let missing = '';
   async function repoInfo(repo) {
     if (info?.repo === repo) return info;
     try {
       const r = await getJSON(`https://api.github.com/repos/${repo}`);
       if (!r?.id) return null;
       info = { repo, id: String(r.id), owner: String(r.owner?.id || '') };
+      if (missing === repo) { missing = ''; refresh(); }
     } catch (e) {
       if (e.reset) limited = e.reset;
-      // Not there for anyone: a mistyped link, or a repository made Private (the setup page and Chizuya need it Public).
-      if (e.message === '404' && saved.repo === repo) {
-        $('#repo-hint').innerHTML = T(`<code>${esc(repo)}</code> が見つかりません。リンクが合っているか、公開範囲が <b>Public</b> になっているか確かめてください(Private だと動きません)。`,
-          `<code>${esc(repo)}</code> cannot be found. Check the link, and that the repository is <b>Public</b> (Chizuya does not work with Private).`);
+      // Not there for anyone: a mistyped link, a deleted repository, or one made Private (Chizuya needs it Public).
+      if (e.message === '404') {
+        if (saved.repo === repo && (saved.id || saved.done || saved.site)) { saved = { repo }; save(); }
+        siteUrl = '';
+        if (missing !== repo) { missing = repo; refresh(); }
+        return null;
       }
       // GitHub's hourly limit: the id this browser learned before (a repository made again under the same name since
       // then is told apart once GitHub answers again).
@@ -249,6 +258,7 @@
     if (!repo) { state = null; return; }
     // This repository's id (GitHub's public API) tells it apart from an older one of its name; "done" is trusted only with it.
     const known = await repoInfo(repo);
+    if (missing === repo) { state = { kind: 'missing' }; fromSite = false; return; }
     // What this browser remembers is only where to ask (the site's address); what is shown always comes from the site
     // or the repository as they are now.
     if (known && saved.done && saved.site && !siteUrl) siteUrl = saved.site;
@@ -329,7 +339,7 @@
   function renderStatus() {
     const box = $('#status');
     const pick = (v) => (typeof v === 'function' ? v() : v);
-    if (!state) { box.hidden = true; return; }
+    if (!state || state.kind === 'missing') { box.hidden = true; lastBox = ''; secretHint(); renderAuto(); return; }
     box.hidden = false;
     const site = saved.repo ? siteOf(saved.repo) : '';
     const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
@@ -521,7 +531,7 @@
     if (document.visibilityState !== 'visible') return;  // looks again when the page is shown
     // Every 5 seconds while the code is shown, 10 while the site is made, 15 while waiting; slower near GitHub's limit.
     const moving = state && ['code', 'building', 'making'].includes(state.kind);
-    let wait = fromSite ? 2000 : state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
+    let wait = state?.kind === 'missing' ? 30000 : fromSite ? 2000 : state?.kind === 'code' ? 5000 : moving ? 10000 : 15000;
     if (fromSite) { /* no limit */ } else if (limited > Date.now()) wait = Math.max(30000, Math.min(limited - Date.now() + 2000, 5 * 60000));
     else if (budget.left < 25 && budget.reset > Date.now()) wait = Math.max(wait, (budget.reset - Date.now()) / Math.max(1, budget.left - 3));
     // Once everything is done, looked at less often (it still follows any change at the site).
