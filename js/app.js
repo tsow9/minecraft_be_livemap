@@ -2515,24 +2515,27 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null,
   const coat = faces[`${kind}:${variant}`];
   const plainWolf = kind === 'wolf' && (!coat || JSON.stringify(coat) === JSON.stringify(faces[kind]));
   const [face, pal] = own || (plainWolf ? WOLF_FACE : coat || faces[kind] || PLAIN_FACE);
+  // The wolf's face is drawn at twice the detail (k drawing pixels per game pixel): its collar and tag are made as
+  // thick, and it is sized as if it were the plain one, so it comes out as big as every other animal.
+  const k = kind === 'wolf' && face[0].length >= 12 ? 2 : 1;
   const w = face[0].length + 2;
   const grid = [Array(w).fill('.'), ...face.map((r) => ['.', ...r, '.'])];
-  // The collar: two rows as wide as the bottom of the head.
+  // The collar: two rows (game pixels) as wide as the bottom of the head.
   const last = grid[grid.length - 1];
   const from = last.findIndex((ch) => ch !== '.'), to = last.length - 1 - [...last].reverse().findIndex((ch) => ch !== '.');
-  if (collar) for (let i = 0; i < 2; i++) grid.push(last.map((_, x) => (x >= from && x <= to ? 'c' : '.')));
+  if (collar) for (let i = 0; i < 2 * k; i++) grid.push(last.map((_, x) => (x >= from && x <= to ? 'c' : '.')));
   if (named) {
     const mid = Math.floor((from + to) / 2);
-    for (let i = 0; i < 2; i++) grid.push(grid[0].map((_, x) => (x === mid || x === mid + 1 ? 't' : '.')));
+    for (let i = 0; i < 2 * k; i++) grid.push(grid[0].map((_, x) => (x >= mid + 1 - k && x <= mid + k ? 't' : '.')));
   }
   grid.push(Array(w).fill('.'));
   // Heads differ in size (a cat's is small, a cow's wide): scale them to about the same size on the map.
-  const scale = Math.min(2.2, 14 / w, 17 / grid.length);
-  // Screen pixels per drawing pixel. The wolf is drawn at twice the detail, so whole screen pixels would make it
-  // either too small or too big; a quarter step (its pixels a hair uneven, which does not show) keeps it the size of
-  // the other animals on any screen.
-  const fine = kind === 'wolf';
-  const dots = (fine ? Math.max(1, Math.round(size * scale * SCREEN * 4) / 4) : Math.max(1, Math.round(size * scale * SCREEN))) + (big ? 1 : 0);
+  // In game pixels. A wolf's head is narrow (6 wide, 8 tall with its ears): it is scaled as if 8 wide, like a fox's or
+  // a pig's, so it stands as tall as theirs instead of being blown up to their width.
+  const gw = Math.max(face[0].length / k, kind === 'wolf' ? 8 : 0) + 2, gh = face.length / k + 2 + (collar ? 2 : 0) + (named ? 2 : 0);
+  const scale = Math.min(2.2, 14 / gw, 17 / gh);
+  // Screen pixels per game pixel, rounded like every animal's; the finer wolf splits each into k drawing pixels.
+  const dots = (Math.max(1, Math.round(size * scale * SCREEN)) + (big ? 1 : 0)) / k;
   // A dark outline round the whole shape, so it stands out on any ground. It is the same thickness on screen for
   // every animal (as thin as on the widest heads), not one drawing pixel, which would be thicker on the small heads.
   const e = Math.max(1, Math.round(size * SCREEN)) / dots;
@@ -2554,8 +2557,8 @@ function animalSvg(kind, collar, named, big = false, size = 1.6, variant = null,
     }
   });
   const unit = dots / SCREEN, h = grid.length;
-  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + 1}" width="${w * unit}" height="${(h + 1) * unit}" shape-rendering="crispEdges">`
-    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h - 0.2}" rx="${w / 2 - 1.5}" ry="0.9"/>`
+  return `<svg class="gm-svg" viewBox="0 0 ${w} ${h + k}" width="${w * unit}" height="${(h + k) * unit}" shape-rendering="crispEdges">`
+    + `<ellipse class="gm-shadow" cx="${w / 2}" cy="${h - 0.2 * k}" rx="${w / 2 - 1.5 * k}" ry="${0.9 * k}"/>`
     + `<g class="gm-body"><g fill="${OUTLINE}">${edge}</g>${body}</g></svg>`;
 }
 
