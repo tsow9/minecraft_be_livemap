@@ -680,7 +680,7 @@ function gatePage(env) {
   // The privacy policy and terms sit next to the sign-in relay page.
   const legal = String(env.MS_RELAY || '').replace(/login\.html$/, '');
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="format-detection" content="telephone=no,email=no,address=no">
-<meta name="robots" content="noindex"><title>Chizuya</title><link rel="icon" href="/favicon.svg?v=10">
+<meta name="robots" content="noindex"><title>Chizuya - マップ</title><link rel="icon" href="/favicon.svg?v=10">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <style>
 :root{color-scheme:light}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f5f1;color:#211a16;
@@ -702,6 +702,7 @@ let saved = null;
 try { saved = localStorage.getItem('blockmap.lang'); } catch { /* private mode */ }
 const ja = saved ? saved === 'ja' : /^ja(-|$)/i.test(navigator.language || '');
 document.documentElement.lang = ja ? 'ja' : 'en';
+document.title = ja ? 'Chizuya - マップ' : 'Chizuya - Map';
 const T = ja ? {
   intro: 'Realm のメンバーだけが見られる地図です。マイクラで使っている Microsoft アカウントでログインしてください。',
   button: 'Microsoft でログイン', cantStart: 'ログインを始められませんでした。もう一度ためしてください',

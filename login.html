@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="format-detection" content="telephone=no,email=no,address=no">
 <meta name="robots" content="noindex">
-<title>Chizuya ログイン</title>
+<title>Chizuya - ログイン</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap">
 <!--
   The Microsoft sign-in comes back here (one address registered for every Chizuya site), and this page hands the
@@ -35,6 +35,7 @@
   // Japanese or English by the browser's language (this page is on another site, so the map's choice is not known here).
   const ja = /^ja\b/i.test(navigator.language || '');
   document.documentElement.lang = ja ? 'ja' : 'en';
+  document.title = ja ? 'Chizuya - ログイン' : 'Chizuya - Sign in';
   const T = ja ? {
     checking: '確認しています…', open: 'このページは、Chizuya の「Microsoft でログイン」から開いてください。',
     failed: 'ログインできませんでした。もう一度ためしてください。', back: 'サイトに戻る', ok: 'ログインできました。この地図サイトに戻ります:',

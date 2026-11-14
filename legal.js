@@ -6,6 +6,8 @@
   const btn = document.getElementById('lang');
   const show = (l) => {
     document.documentElement.lang = l;
+    const t = document.querySelector('title');
+    if (t?.dataset[l]) document.title = t.dataset[l];
     for (const a of document.querySelectorAll('article')) a.hidden = a.lang !== l;
     btn.textContent = l === 'ja' ? 'English' : '日本語';
   };
