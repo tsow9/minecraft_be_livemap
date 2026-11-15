@@ -10,6 +10,7 @@
 - 変更は main に直接 push する(プルリクエストは作らない)。
 - ワークフロー(.github/workflows)を変えたら、push 前に YAML を読み込み、値が空(null)の項目(例:中身のない `env:`)がないか確かめる。GitHub はファイルごと拒否し、実行が1件も始まらなくなる(2026-11-01 に約17時間、地図の更新が止まった)。push 後は Actions の実行名が「Map site」になっているか(ファイル名のままなら拒否されている)を見る。
 - トークン・合言葉をチャットに貼らない。公開データには HMAC でハッシュ化した ID だけ。ログに名前や ID を出さない。
+- デザイン・印象・マーケティング・アナリティクスなどの調査資料や、候補画像・決定の記録は、非公開リポジトリ tsow9/app-research の apps/github.com/tsow9/minecraft_be_livemap/ に `YYYY-MM-DD-<テーマ>/` で保存し、そこの README の一覧に足す(書き方は app-research の README・AGENTS.md と、そのフォルダの README の保存方針に従う)。デザインを考えるときは先にそこを見る。このリポジトリ(公開)には調査資料を置かない
 
 ## 構成
 - `js/app.js`(Leaflet。地図・検索・マーク)、`css/style.css`、`index.html`
