@@ -67,7 +67,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           mkdir _site
-          cp login.html privacy.html terms.html legal.css legal.js setup.html setup.css setup.js site.css find.html find.js faq.html intro.css intro.js favicon.svg logo.png apple-touch-icon.png _site/
+          cp login.html privacy.html terms.html sitemap.xml legal.css legal.js setup.html setup.css setup.js site.css find.html find.js faq.html intro.css intro.js favicon.svg logo.png apple-touch-icon.png _site/
           # The top page is the introduction; the old "moved" notice stays at moved.html.
           cp intro.html _site/index.html
           mkdir -p _site/docs && cp docs/screenshot-ja.webp docs/screenshot-en.webp _site/docs/
