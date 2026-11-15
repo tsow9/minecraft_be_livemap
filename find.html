@@ -58,5 +58,7 @@
 <!-- Anonymous page counts (GoatCounter: no cookies, nothing personal; see privacy.html#setup). Only the page's path is sent, never what follows "?" or "#". -->
 <script>window.goatcounter = { path: function () { return location.pathname; } };</script>
 <script data-goatcounter="https://blockmap.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<!-- People per day for Chizuya's own statistics: only which page was opened; nothing is stored in the browser (privacy.html#setup). -->
+<script>try{navigator.sendBeacon('https://chizuya-insights.tsow9.workers.dev/hit',new Blob([JSON.stringify({p:location.pathname})],{type:'text/plain'}))}catch(e){}</script>
 </body>
 </html>
