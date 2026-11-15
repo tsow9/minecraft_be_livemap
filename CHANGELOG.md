@@ -19,3 +19,10 @@
 - 日本語と英語に対応しています。言語とタイムゾーンは、人ごとに「設定」で選べます。
 - セットアップページの案内に沿って、約15分でサイトを作れます。地図のデータはご自身の Cloudflare アカウントに保存され、開発者には渡りません。
 - 新しいバージョンが出ると管理者にお知らせが出て、ボタン1つで更新できます。
+
+### リンク
+- 紹介ページ:https://tsow9.github.io/minecraft_be_livemap/
+- セットアップ:https://tsow9.github.io/minecraft_be_livemap/setup.html
+- よくある質問:https://tsow9.github.io/minecraft_be_livemap/faq.html
+- 不具合の報告・要望:https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform
+- 応援する(Ko-fi):https://ko-fi.com/chizuya_map
