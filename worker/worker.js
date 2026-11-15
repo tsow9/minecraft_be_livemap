@@ -52,7 +52,9 @@ export default {
       // them can set it). Plain text bodies, so the setup page needs no preflight.
       if (/^\/api\/setup\/timer\/(connect|poll|retry)$/.test(url.pathname) && req.method === 'POST') {
         const open = { 'Access-Control-Allow-Origin': '*' };
-        if (timerWorks(env, await kvGet(env, 'timer'))) return json({ error: 'set' }, 409, open);
+        // Also while a Realm is to be picked: connecting again is how the owner shows it is them (setupKey below).
+        const picking = (await kvGet(env, 'setup'))?.state === 'pick-realm';
+        if (timerWorks(env, await kvGet(env, 'timer')) && !picking) return json({ error: 'set' }, 409, open);
         if (url.pathname.endsWith('/connect')) return json(...(await timerConnect(env)), open);
         if (url.pathname.endsWith('/retry')) return json(await timerRetry(env), 200, open);
         let handle = '';
@@ -77,8 +79,12 @@ export default {
         const open = { 'Access-Control-Allow-Origin': '*' };
         const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind('setup').first();
         const cur = row ? JSON.parse(row.v) : {};
-        let name = '';
-        try { name = String(JSON.parse(await req.text())?.name || ''); } catch { /* not JSON */ }
+        let name = '', key = '';
+        try { const b = JSON.parse(await req.text()); name = String(b?.name || ''); key = String(b?.key || ''); } catch { /* not JSON */ }
+        // Only the browser that connected GitHub for this repository (someone who may run its workflows) may pick:
+        // a stranger who knows the site's address cannot.
+        const kept = await kvGet(env, 'setup_key');
+        if (!kept?.h || !/^[0-9a-f]{64}$/.test(key) || !(await same(await sha(key), kept.h))) return json({ error: 'key' }, 403, open);
         if (cur.state !== 'pick-realm' || !Array.isArray(cur.realms) || !cur.realms.includes(name)) return json({ error: 'bad' }, 400, open);
         const at = Date.now();
         const put = (k, v) => env.DB.prepare('INSERT INTO kv (k, v, at) VALUES (?1, ?2, ?3) ON CONFLICT(k) DO UPDATE SET v = ?2, at = ?3').bind(k, v, at).run();
@@ -329,8 +335,10 @@ export default {
           const { results } = await env.DB.prepare(`SELECT id, data FROM items WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
           for (const r of results) before.set(r.id, JSON.parse(r.data).by);
         }
-        const count = (await env.DB.prepare('SELECT COUNT(*) AS n FROM items').first()).n;
         const now = Date.now();
+        // Deleted pins past their keeping time are cleared first, so they never count against the limit.
+        await env.DB.prepare('DELETE FROM items WHERE deleted = 1 AND rev < ?').bind((now - KEEP_DELETED_MS) * 1000).run();
+        const count = (await env.DB.prepare('SELECT COUNT(*) AS n FROM items').first()).n;
         const stmts = [];
         let added = 0;
         for (const [i, it] of list.entries()) {
@@ -344,7 +352,6 @@ export default {
           ).bind(it.id, data, it.deleted ? 1 : 0, now * 1000 + i));
         }
         if (count + added > MAX_ITEMS) return json({ error: 'full' }, 507);
-        stmts.push(env.DB.prepare('DELETE FROM items WHERE deleted = 1 AND rev < ?').bind((now - KEEP_DELETED_MS) * 1000));
         await env.DB.batch(stmts);
         return json({ ok: true, rev: now * 1000 + list.length - 1 });
       }
@@ -498,7 +505,10 @@ async function useTimer(env, t) {
   if (status === 204) {
     await kvPut(env, 'timer', { ...t, ok: true, status, last: Date.now(), rid: env.GH_REPO_ID || null });
     await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('timer_pending').run();
-    return { ok: true };
+    // A key for the browser that did this (it may run this repository's workflows): it may then pick the Realm.
+    const key = randomHex(32);
+    await kvPut(env, 'setup_key', { h: await sha(key), at: Date.now() });
+    return { ok: true, key };
   }
   if (status === 404 || status === 403) {
     await kvPut(env, 'timer_pending', { ...t, until: Date.now() + 30 * 60000 });

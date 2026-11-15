@@ -231,6 +231,7 @@
     let hit;
     try { hit = await Promise.any(candidates(repo).map((b) => askOne(b.replace(/\/$/, ''), tag))); } catch { return null; }
     const [base, s] = hit;
+    if (saved.repo !== repo) return null;  // the link was changed while asking: this answer is another repository's
     if (siteUrl !== base) { siteUrl = base; refresh(); }  // it answered about this repository: the address is sure
     if (!prefsSent) sendPrefs(base);
     return s;
@@ -249,20 +250,26 @@
   async function lookForSite(repo) {
     if (siteUrl || Date.now() - lastSiteLook < 20000) return;
     lastSiteLook = Date.now();
-    try { siteUrl = ((await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || '').replace(/\/$/, ''); } catch { /* not yet */ }
-    if (siteUrl) refresh();
+    let url = '';
+    try { url = ((await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || '').replace(/\/$/, ''); } catch { /* not yet */ }
+    if (url && saved.repo === repo) { siteUrl = url; refresh(); }
   }
   const STEPS = ['signed-in', 'downloading', 'drawing', 'publishing'];
+  // The link typed in may change while an answer is on its way: an answer about the one before is dropped.
+  const STALE = new Error('stale');
   async function check() {
     const repo = saved.repo;
     if (!repo) { state = null; return; }
+    const still = () => { if (saved.repo !== repo) throw STALE; };
     // This repository's id (GitHub's public API) tells it apart from an older one of its name; "done" is trusted only with it.
     const known = await repoInfo(repo);
+    still();
     if (missing === repo) { state = { kind: 'missing' }; fromSite = false; return; }
     // What this browser remembers is only where to ask (the site's address); what is shown always comes from the site
     // or the repository as they are now.
     if (known && saved.done && saved.site && !siteUrl) siteUrl = saved.site;
     const s = await askSite(repo);
+    still();
     fromSite = !!s;
     // The timer (a must): known from the site; sites from before it existed say nothing, and are not held up.
     if (s) {
@@ -291,6 +298,7 @@
       await lookForSite(repo);
       try {
         const info = await codeInfo(repo);
+        still();
         limited = 0;
         if (info?.state === 'signed-in') { state = { kind: 'building', url: state.url }; return; }
         if (info?.state === 'code' && info.code === state.code) return;
@@ -303,10 +311,12 @@
     try {
       data = await getJSON(`https://api.github.com/repos/${repo}/actions/workflows/map.yml/runs?per_page=10`);
     } catch (e) {
+      if (saved.repo !== repo) throw STALE;
       if (e.reset) limited = e.reset;
       if (!state) state = { kind: 'waiting' };
       return;
     }
+    still();
     limited = 0;
     // A run cancelled before it started (Run workflow pressed twice: GitHub drops the twin) counts for nothing.
     const runs = (data.workflow_runs || []).filter((r) => r.conclusion !== 'cancelled');
@@ -317,6 +327,7 @@
       // The code to enter, put by the sign-in on the "login-code" branch (tools/login_code.sh); then "signed in".
       let info = null;
       try { info = await codeInfo(repo); } catch { /* not there yet */ }
+      still();
       if (info?.state === 'signed-in') { state = { kind: 'building', url: login.html_url }; return; }
       state = { kind: 'code', url: login.html_url, code: info?.state === 'code' && info.expires > Date.now() ? info.code : '', uri: info?.uri };
       return;
@@ -329,7 +340,10 @@
     if (map.conclusion !== 'success') { state = { kind: 'map-failed', url: map.html_url }; return; }
     // The site's exact address, put by the publishing step on the "site-info" branch.
     if (!siteUrl) {
-      try { siteUrl = (await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || ''; } catch { /* not yet */ }
+      let url = '';
+      try { url = (await getJSON(`https://api.github.com/repos/${repo}/contents/site.json?ref=site-info`, 'application/vnd.github.raw')).url || ''; } catch { /* not yet */ }
+      still();
+      siteUrl = url;
     }
     state = { kind: 'done', url: map.html_url };
     if (siteUrl) { saved.done = '1'; saved.site = siteUrl; save(); }
@@ -370,7 +384,8 @@
       making: `<b>${T('サイトを作っています', 'Building your site')}<span class="dots"><i></i><i></i><i></i></span></b>${T('数分かかります。このページは開いたままで大丈夫です。', 'This takes a few minutes; you can leave this page open.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       'map-failed': `<b class="bad">${T('地図を作れませんでした', 'The map could not be made')}</b> ${T('記録のメッセージを見て、<a href="#trouble">トラブルシューティング</a>を確認してください。', 'Check the message in the log, then see <a href="#trouble">Troubleshooting</a>.')}<br>${link(state?.url, T('記録を見る', 'See the log'))}`,
       pick: `<b>${T('どの Realm の地図を作りますか?', 'Which Realm should this site map?')}</b>${T('あなたの Realm が 2 つ以上見つかりました。地図にする Realm を選んでください(15 分以内)。', 'You own two or more Realms. Pick the one to map (within 15 minutes).')}
-        <div class="realms">${(state?.realms || []).map((n) => `<button type="button" class="realm" data-realm="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+        ${needKey() ? `<span class="bad">${T('選ぶ前に、下の「GitHub と連携する」を済ませてください(あなたがこのリポジトリの持ち主か確かめるためです)。', 'Before picking, finish “Connect GitHub” below (it shows that you own this repository).')}</span>` : ''}
+        <div class="realms">${(state?.realms || []).map((n) => `<button type="button" class="realm" data-realm="${esc(n)}"${needKey() ? ' disabled' : ''}>${esc(n)}</button>`).join('')}</div>
         <span class="small">${T('ほかの Realm の地図は、別の名前でもう 1 つリポジトリを作ると作れます。', 'To map another Realm too, make one more repository with another name.')}</span>`,
       done: () => (timerOk ? `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('手順 5 に進みます。', 'Go on to step 5.')}`
         : `<b class="good">${T('サイトができました', 'Your site is ready')}</b> ${T('あと 1 つ、下の自動更新を設定してください。', 'One more thing: set up automatic updates below.')}`),
@@ -387,15 +402,22 @@
   // ---- automatic updates (a must): the Chizuya Connect GitHub App, connected with a code while the site is made ----
   // GitHub's own timer runs hours late; with this the site starts the live check every minute. The site keeps the
   // token (only if it really can start this repository's runs); this page only sees the code to enter.
+  // The key the site gives the browser that connected GitHub (so may run this repository's workflows): only with it
+  // can a Realm be picked, so a stranger who knows the site's address cannot pick for the owner.
+  const KEY_KEY = 'blockmap.setup.key';
+  const keepKey = (key) => { try { if (key) localStorage.setItem(KEY_KEY, JSON.stringify({ repo: saved.repo, key })); } catch { /* private mode */ } };
+  const pickKey = () => { try { const d = JSON.parse(localStorage.getItem(KEY_KEY) || 'null'); return d && d.repo === saved.repo ? d.key : ''; } catch { return ''; } };
+  const needKey = () => state?.kind === 'pick' && !pickKey();
   function renderAuto() {
     const box = $('#auto-box');
     // Shown once the site has said whether automatic updates work (older sites do not say): ✓, or how to set them up.
-    const show = ['building', 'making', 'done'].includes(state?.kind) && fromSite && !!siteUrl && timerSeen;
+    // While a Realm is to be picked, connecting GitHub comes first (it shows the site that this is the owner).
+    const show = (['building', 'making', 'done'].includes(state?.kind) || state?.kind === 'pick') && fromSite && !!siteUrl && timerSeen;
     box.hidden = !show;
     if (!show) return;
     resumeAuto();
     let html;
-    if (timerOk) html = `<b class="good">${T('✓ 自動更新を設定しました', '✓ Automatic updates are set up')}</b>`;
+    if (timerOk && !needKey()) html = `<b class="good">${T('✓ 自動更新を設定しました', '✓ Automatic updates are set up')}</b>`;
     else if (auto.phase === 'code') {
       html = `<b>${T('GitHub でこのコードを入れて「Authorize」を押します', 'Enter this code on GitHub, then press “Authorize”')}</b>
         <div class="code"><span>${esc(auto.code)}</span><button class="copy" type="button" data-text="${esc(auto.code)}"><svg class="ic"><use href="#i-copy"/></svg>${T('コピー', 'Copy')}</button></div>
@@ -419,7 +441,7 @@
             : T('うまくいきませんでした。もう一度押してください。', 'That did not work. Please press it again.')}</span>` : '');
     }
     if (html !== lastAuto) { box.innerHTML = html; lastAuto = html; }
-    box.className = `status ${timerOk ? 'done' : 'code'}`;
+    box.className = `status ${timerOk && !needKey() ? 'done' : 'code'}`;
   }
   const autoDone = () => { timerOk = true; auto = { phase: 'ok' }; forgetCode(); saved.timer = '1'; save(); refresh(); renderStatus(); poll(); };
   // Text bodies, so no preflight.
@@ -432,7 +454,7 @@
   // After a reload: the code still shown, or an approval the site keeps while the app is added (sitePending, from /api/setup).
   let sitePending = false;
   function resumeAuto() {
-    if (timerOk || !['idle', 'error'].includes(auto.phase)) return;
+    if ((timerOk && !needKey()) || !['idle', 'error'].includes(auto.phase)) return;
     const d = keptCode();
     if (d) { auto = { phase: 'code', code: d.code, uri: d.uri }; watchCode(d); return; }
     if (sitePending) { auto = { phase: 'install' }; waitInstall(); }
@@ -443,7 +465,7 @@
       if (auto.phase !== 'install') return;
       let p = null;
       try { p = await askTimer('retry'); } catch { /* try again */ }
-      if (p?.ok || p?.error === 'set') { autoDone(); return; }
+      if (p?.ok || p?.error === 'set') { keepKey(p?.key); autoDone(); return; }
       if (p?.error === 'expired') { sitePending = false; auto = { phase: 'error', err: 'expired' }; renderAuto(); return; }
       setTimeout(look, 5000);
     };
@@ -459,7 +481,7 @@
       try { p = await askTimer('poll', { handle: d.handle }); } catch { /* try again */ }
       if (!p || p.pending) { if (p?.interval) wait = p.interval * 1000; setTimeout(look, wait); return; }
       forgetCode();
-      if (p.ok || p.error === 'set') { autoDone(); return; }
+      if (p.ok || p.error === 'set') { keepKey(p.key); autoDone(); return; }
       // Approved, and Chizuya Connect is not on the repository yet: that comes next.
       if (p.error === 'not-installed') { auto = { phase: 'install' }; renderAuto(); waitInstall(); return; }
       auto = { phase: 'error', err: p.error };
@@ -512,7 +534,7 @@
     for (const x of document.querySelectorAll('.realm')) x.disabled = true;
     b.classList.add('on');
     try {
-      const res = await fetch(`${(siteUrl || siteOf(saved.repo)).replace(/\/$/, '')}/api/setup/pick`, { method: 'POST', body: JSON.stringify({ name: b.dataset.realm }) });
+      const res = await fetch(`${(siteUrl || siteOf(saved.repo)).replace(/\/$/, '')}/api/setup/pick`, { method: 'POST', body: JSON.stringify({ name: b.dataset.realm, key: pickKey() }) });
       if (!res.ok) throw new Error(String(res.status));
       count('realm-picked');
       poll();
@@ -526,7 +548,10 @@
   async function poll(now = false) {
     clearTimeout(timer);
     if (now) { state = saved.repo ? { kind: 'waiting' } : null; limited = 0; renderStatus(); timer = setTimeout(() => poll(), 1500); return; }
-    try { await check(); lastLook = Date.now(); } catch { /* offline: try again shortly */ }
+    try { await check(); lastLook = Date.now(); } catch (e) {
+      if (e === STALE) return;  // the link changed meanwhile: the look for the new one is already on its way
+      /* offline: try again shortly */
+    }
     renderStatus();
     if (document.visibilityState !== 'visible') return;  // looks again when the page is shown
     // Every 5 seconds while the code is shown, 10 while the site is made, 15 while waiting; slower near GitHub's limit.

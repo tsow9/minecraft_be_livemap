@@ -54,6 +54,26 @@ query() {  # SQL, then its parameters as a JSON array
     -d "$(python3 -c 'import json,sys; print(json.dumps({"sql": sys.argv[1], "params": json.loads(sys.argv[2])}))' "$1" "${2:-[]}")"
 }
 query 'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, at INTEGER NOT NULL)' >/dev/null
+# Whose database this is (kv 'repo_id', the repository's id): two repositories whose names give the same site name
+# ("realm_one" and "realm-one") in one Cloudflare account must never use, or clear, each other's data. Claimed by the
+# first repository that runs; taken over only when that repository is gone (deleted, or made again under the name).
+# When GitHub cannot say, nothing goes on (before anything in the database is changed).
+me=${GITHUB_REPOSITORY_ID:-}
+if [ -n "$me" ]; then
+  query "INSERT OR IGNORE INTO kv (k, v, at) VALUES ('repo_id', ?1, ?2)" "[\"$me\", $(date +%s)000]" >/dev/null
+  owner=$(query "SELECT v FROM kv WHERE k = 'repo_id'" | json 'print(d["result"][0]["results"][0]["v"])' || true)
+  if [ -n "$owner" ] && [ "$owner" != "$me" ]; then
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} \
+      "https://api.github.com/repositories/$owner" 2>/dev/null || true)
+    if [ "$code" = 404 ]; then
+      query "UPDATE kv SET v = ?1, at = ?2 WHERE k = 'repo_id'" "[\"$me\", $(date +%s)000]" >/dev/null
+      echo "$(t 'このサイトの前の持ち主(同じ名前の前のリポジトリ)はもうないので、このリポジトリが引き継ぎます' 'The repository that had this site before (one of this name) is gone, so this repository takes it over')"
+    else
+      echo "::error::$(t "サイト名「$DB」は、同じ Cloudflare アカウントの別のリポジトリが使っています。データを守るため止めました。このリポジトリの名前を変えてください(記号だけが違う名前は、同じサイト名になります)" "The site name \"$DB\" is used by another repository in the same Cloudflare account. Stopped to keep its data safe. Rename this repository (names that differ only in symbols give the same site name)")"
+      exit 1
+    fi
+  fi
+fi
 if ! $have_key; then
   # Made only if there is none yet; then whatever is stored is read back (two runs at once agree on one key).
   fresh=$(python3 -c 'import secrets; print(secrets.token_urlsafe(36))')

@@ -11,13 +11,19 @@
       .match(/^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([A-Za-z0-9-]{1,39})(?:\/([\w.-]{1,100}))?\/?$/);
     return m ? [m[1], m[2] || ''] : null;
   };
+  // The site's address; '' when the repository has none (not a Chizuya copy, or no site yet); null when GitHub could not
+  // be asked (a network or server problem), tried twice.
   const siteOf = async (owner, repo) => {
-    try {
-      const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/site-info/site.json`, { cache: 'no-store' });
-      if (!res.ok) return '';
-      const url = String((await res.json())?.url || '').replace(/\/$/, '');
-      return SITE.test(url) ? url : '';
-    } catch { return ''; }
+    for (let i = 0; i < 2; i++) {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/site-info/site.json`, { cache: 'no-store' });
+        if (res.status === 404) return '';
+        if (!res.ok) continue;
+        const url = String((await res.json())?.url || '').replace(/\/$/, '');
+        return SITE.test(url) ? url : '';
+      } catch { /* try once more */ }
+    }
+    return null;
   };
   async function repos(owner) {
     const out = [];
@@ -44,16 +50,18 @@
       const button = form.querySelector('button');
       button.disabled = true;
       msg.textContent = T('探しています…', 'Looking…');
-      let found = [];
+      let found = [], failed = 0;
       try {
         const names = one ? [one] : await repos(owner);
         // A few at a time.
         for (let i = 0; i < names.length; i += 8) {
           const part = names.slice(i, i + 8);
           const urls = await Promise.all(part.map((n) => siteOf(owner, n)));
-          part.forEach((n, j) => { if (urls[j]) found.push([n, urls[j]]); });
+          part.forEach((n, j) => { if (urls[j]) found.push([n, urls[j]]); else if (urls[j] === null) failed += 1; });
         }
-        msg.textContent = found.length ? T(`${found.length} 件見つかりました`, `Found ${found.length}`)
+        const partly = failed ? T(` ただし ${failed} 件は GitHub に問い合わせられませんでした。少ししてからもう一度ためしてください`, ` But ${failed} could not be checked at GitHub. Please try again shortly`) : '';
+        msg.textContent = found.length ? T(`${found.length} 件見つかりました。`, `Found ${found.length}.`) + partly
+          : failed ? T('GitHub に問い合わせられませんでした。少ししてからもう一度ためしてください', 'Could not reach GitHub. Please try again shortly')
           : T('Chizuya の地図サイトは見つかりませんでした。名前が合っているか確かめてください', 'No Chizuya map site was found. Check the name');
       } catch (err) {
         msg.textContent = err.message === 'user' ? T('そのユーザーは GitHub に見つかりませんでした', 'No such user on GitHub')

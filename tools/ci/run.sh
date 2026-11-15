@@ -132,7 +132,11 @@ site_of_another() {
   [ -n "$url" ] || return 1
   rid=$(curl -sS --max-time 15 "$url/api/setup" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("rid") or "")' 2>/dev/null)
   [[ "$rid" =~ ^[0-9]+$ ]] && [ "$rid" != "${GITHUB_REPOSITORY_ID:-}" ] || return 1
-  gh api "repositories/$rid" --jq .id >/dev/null 2>&1
+  # Gone (404): not another's any more. Anything else, including GitHub not answering, counts as another's (stop).
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} \
+    "https://api.github.com/repositories/$rid" 2>/dev/null || true)
+  [ "$code" != 404 ]
 }
 
 publish_site() {
@@ -329,7 +333,7 @@ case "${1:-}" in
     case "$GITHUB_EVENT_NAME" in
       push) [ "$GITHUB_REPOSITORY" = "$UPSTREAM" ] || bash tools/setup_wait.sh ;;
       workflow_dispatch)
-        [ -n "$CLOUDFLARE_API_TOKEN" ] && { get_key; auth_get; bash tools/auto_signin.sh; }
+        [ -n "$CLOUDFLARE_API_TOKEN" ] && get_key && { auth_get; bash tools/auto_signin.sh; }
         [ "$GITHUB_REPOSITORY" = "$UPSTREAM" ] || bash tools/setup_wait.sh --next ;;
     esac
     exit 0
