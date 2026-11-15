@@ -17,16 +17,15 @@
 <header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="メインナビゲーション"><a href="./">ホーム</a><a href="setup.html">セットアップ</a><a href="find.html">地図を探す</a><a href="faq.html" aria-current="page">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><div class="lang"><button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><span>日本語</span><span class="caret"></span></button><div class="lang-menu" hidden><button type="button" data-lang="ja">日本語</button><button type="button" data-lang="en">English</button></div></div></nav></div></header>
 <main class="w find">
 <section id="faq-ja"><h1>よくある質問</h1>
-<div class="faq-list"><details open><summary>Q. 料金はかかりますか?</summary><p>かかりません。GitHub と Cloudflare の無料プランの範囲で動きます。</p></details>
-<details><summary>Q. Java 版でも使えますか?</summary><p>使えません。統合版の Realm 専用です。</p></details>
-<details><summary>Q. 地図のデータはどこに保存されますか?</summary><p>ご自身の Cloudflare アカウントです。作る途中のデータは、暗号化してご自身の GitHub に置かれます。開発者のサーバーには保存されません。</p></details>
-<details><summary>Q. Realm のオーナーでなくても使えますか?</summary><p>使えません。ワールドを取り出せるのはオーナーだけのため、オーナーのアカウントが必要です。</p></details>
-<details><summary>Q. 地図サイトを消すには?</summary><p>次の3つを消すと、地図サイトとデータがすべてなくなります。</p><ol>
-<li>Cloudflare のダッシュボードの「Workers &amp; Pages」で、地図サイト(住所の最初の部分と同じ名前)を開き、「Settings」のいちばん下から削除します。</li>
-<li>同じく Cloudflare の「D1」で、「(サイト名)-share」というデータベースを削除します。</li>
-<li>GitHub でリポジトリを開き、「Settings」のいちばん下の「Delete this repository」で削除します。自動の更新も止まり、失敗のメールも届かなくなります。</li>
-</ol><p>使わなくなった Cloudflare のトークン(My Profile の「API Tokens」)と、GitHub のアプリ「Chizuya Connect」(Settings の「Applications」)も消してかまいません。</p></details>
-
+<div class="faq-list"><details open><summary>Q. 料金はかかりますか?</summary><p>無料です。GitHub と Cloudflare の無料プランの範囲で利用できます。</p></details>
+<details><summary>Q. Java 版でも使えますか?</summary><p>使えません。マインクラフト統合版の Realm 専用です。</p></details>
+<details><summary>Q. 地図のデータはどこに保存されますか?</summary><p>ご自身の Cloudflare アカウントに保存されます。作成途中のデータは、暗号化したうえでご自身の GitHub リポジトリに保存されます。開発者のサーバーには保存されません。</p></details>
+<details><summary>Q. Realm のオーナーでなくても使えますか?</summary><p>使えません。ワールドを取得できるのはオーナーのアカウントだけのため、オーナーご本人による設定が必要です。</p></details>
+<details><summary>Q. 地図サイトを削除するには?</summary><p>地図サイトとデータを削除するには、次の手順を行ってください。</p><ol>
+<li>Cloudflare のダッシュボードで「Workers &amp; Pages」を開き、地図サイト(アドレスの先頭と同じ名前)を選択します。「Settings」の最下部から削除してください。</li>
+<li>Cloudflare のダッシュボードで「D1」を開き、「(サイト名)-share」という名前のデータベースを削除してください。</li>
+<li>GitHub でリポジトリを開き、「Settings」の最下部にある「Delete this repository」から削除してください。自動更新が停止し、エラー通知のメールも届かなくなります。</li>
+</ol><p>不要になった Cloudflare の API トークン(「My Profile」→「API Tokens」)と、GitHub アプリ「Chizuya Connect」(「Settings」→「Applications」)も削除できます。</p></details>
 </div></section>
 </main>
 <footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">プライバシーポリシー</a><a href="terms.html">利用規約</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">不具合の報告</a><a href="https://ko-fi.com/chizuya_map">応援する(Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
@@ -35,16 +34,15 @@
 <header><div class="w"><a href="./" class="home" aria-label="Chizuya"><img src="logo.png" alt="Chizuya"></a><nav aria-label="Page navigation"><a href="./">Home</a><a href="setup.html">Setup</a><a href="find.html">Find a map</a><a href="faq.html" aria-current="page">FAQ</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a><div class="lang"><button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><span>English</span><span class="caret"></span></button><div class="lang-menu" hidden><button type="button" data-lang="ja">日本語</button><button type="button" data-lang="en">English</button></div></div></nav></div></header>
 <main class="w find">
 <section id="faq-en"><h1>FAQ</h1>
-<div class="faq-list"><details open><summary>Q. Does it cost anything?</summary><p>No. It runs within GitHub’s and Cloudflare’s free plans.</p></details>
-<details><summary>Q. Does it work with Java Edition?</summary><p>No. It is for Bedrock Edition Realms only.</p></details>
-<details><summary>Q. Where is the map kept?</summary><p>In your own Cloudflare account. While it is being made, the data sits encrypted in your own GitHub. Nothing is kept on the developer’s servers.</p></details>
-<details><summary>Q. Can I use it if I don’t own the Realm?</summary><p>No. Only the owner can download the world, so the owner’s account is needed.</p></details>
-<details><summary>Q. How do I delete a map site?</summary><p>Delete these three, and the map site and all its data are gone.</p><ol>
-<li>In Cloudflare’s dashboard, under “Workers &amp; Pages”, open the map site (named like the first part of its address) and delete it at the bottom of “Settings”.</li>
-<li>Also in Cloudflare, under “D1”, delete the database named “(site name)-share”.</li>
-<li>On GitHub, open the repository and delete it with “Delete this repository” at the bottom of “Settings”. Its automatic updates stop too, and no more failure emails arrive.</li>
-</ol><p>You can also delete the Cloudflare token you no longer use (My Profile → “API Tokens”) and the GitHub app “Chizuya Connect” (Settings → “Applications”).</p></details>
-
+<div class="faq-list"><details open><summary>Q. Does it cost anything?</summary><p>No. It is free and runs within the free plans of GitHub and Cloudflare.</p></details>
+<details><summary>Q. Does it work with Java Edition?</summary><p>No. It supports Minecraft Bedrock Edition Realms only.</p></details>
+<details><summary>Q. Where is the map data stored?</summary><p>In your own Cloudflare account. Data in progress is encrypted and stored in your own GitHub repository. Nothing is stored on the developer’s servers.</p></details>
+<details><summary>Q. Can I use it if I am not the Realm owner?</summary><p>No. Only the owner’s account can download the world, so the owner must set it up.</p></details>
+<details><summary>Q. How do I delete a map site?</summary><p>To delete a map site and its data, follow these steps.</p><ol>
+<li>In the Cloudflare dashboard, open “Workers &amp; Pages” and select the map site (named like the start of its address). Delete it from the bottom of “Settings”.</li>
+<li>In the Cloudflare dashboard, open “D1” and delete the database named “(site name)-share”.</li>
+<li>On GitHub, open the repository and delete it with “Delete this repository” at the bottom of “Settings”. Automatic updates stop, and error notification emails will no longer be sent.</li>
+</ol><p>You can also delete the Cloudflare API token you no longer need (“My Profile” → “API Tokens”) and the GitHub app “Chizuya Connect” (“Settings” → “Applications”).</p></details>
 </div></section>
 </main>
 <footer><div class="w"><span>© 2026 Chizuya</span><span><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Use</a><a href="https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform">Report a problem</a><a href="https://ko-fi.com/chizuya_map">Support (Ko-fi)</a><a href="https://github.com/tsow9/minecraft_be_livemap">GitHub</a></span></div></footer>
