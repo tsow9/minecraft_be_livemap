@@ -3416,8 +3416,8 @@ const TRAIL_HOURS = 24;
 // A player's bed from above: the white pillow and the blanket in the player's colour (a darker fold where it meets the
 // pillow), outlined like the other icons.
 const darker = (hex, f = 0.78) => `#${[1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * f).toString(16).padStart(2, '0')).join('')}`;
-const BED_SVG = (c) => pixSvg(['KKKKKKKKKK', 'KWWWWWWWWK', 'KWWWWWWWWK', 'KccccccccK', 'KCCCCCCCCK', 'KCCCCCCCCK', 'KCCCCCCCCK',
-  'KCCCCCCCCK', 'KCCCCCCCCK', 'KCCCCCCCCK', 'KKKKKKKKKK'], { K: OUTLINE, W: '#f4f1ea', C: c, c: /^#[0-9a-f]{6}$/i.test(c) ? darker(c) : c }, 1.6);
+const BED_SVG = (c) => pixSvg(['KKKKKKKKK', 'KWWWWWWWK', 'KWWWWWWWK', 'KcccccccK', 'KCCCCCCCK', 'KCCCCCCCK', 'KCCCCCCCK',
+  'KCCCCCCCK', 'KCCCCCCCK', 'KCCCCCCCK', 'KKKKKKKKK'], { K: OUTLINE, W: '#f4f1ea', C: c, c: /^#[0-9a-f]{6}$/i.test(c) ? darker(c) : c }, 1.6);
 
 function renderPlayers() {
   playerGroup.clearLayers();
