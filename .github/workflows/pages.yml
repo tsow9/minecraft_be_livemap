@@ -41,9 +41,13 @@ jobs:
               gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/v$v" -f sha="$GITHUB_SHA" >/dev/null
               echo "Tagged v$v" ;;
             *)
-              if gh release view "v$v" >/dev/null 2>&1; then echo "v$v is out already"; exit 0; fi
               # The notes: this version's part of CHANGELOG.md (a plain list of what changed); GitHub's own list if there is none.
               awk -v v="$v" '/^## /{on = ($2 == v); next} on' CHANGELOG.md > notes.md
+              # Out already: only its notes follow CHANGELOG.md (a wording fixed after the release).
+              if gh release view "v$v" >/dev/null 2>&1; then
+                if [ -s notes.md ]; then gh release edit "v$v" --notes-file notes.md >/dev/null && echo "v$v is out already; notes brought up to date"; fi
+                exit 0
+              fi
               if [ -s notes.md ]; then gh release create "v$v" --target "$GITHUB_SHA" --title "Chizuya $v" --notes-file notes.md
               else gh release create "v$v" --target "$GITHUB_SHA" --title "Chizuya $v" --generate-notes; fi
               echo "Released v$v" ;;
