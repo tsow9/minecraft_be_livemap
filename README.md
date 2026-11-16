@@ -1,8 +1,8 @@
-<p align="center"><img src="logo.png" alt="Chizuya" height="80"></p>
+<p align="center"><img src="docs/readme-logo.png" alt="Chizuya" width="320"></p>
 
 # Chizuya
 
-[English](README.en.md)
+[English](README.en.md) ・ [紹介ページ](https://tsow9.github.io/minecraft_be_livemap/) ・ [セットアップ](https://tsow9.github.io/minecraft_be_livemap/setup.html) ・ [よくある質問](https://tsow9.github.io/minecraft_be_livemap/faq.html) ・ [地図を探す](https://tsow9.github.io/minecraft_be_livemap/find.html)
 
 Minecraft 統合版の Realm を、ブラウザで見られる地図にするツールです。地図はクラウドで自動更新され、PC を起動しておく必要はありません。
 
@@ -21,7 +21,7 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 - **書き込み**:ピン・テキスト・線・多角形・四角・円・楕円。ブロック単位でスナップし、メンバーと共有されます。
 - **過去の地図**:保存された日の地図に戻れます。再生ボタンで変化を順に表示します。
 - **ワールドの切り替え**:Realm の中でワールド(スロット)を切り替えて遊んでいる場合は、ワールドごとに地図を残し、右下の日付から切り替えられます。ピンや図形もワールドごとです。
-- **重ねて表示**:等高線、スライムチャンク、チャンク線、ネザー座標の換算、開拓した人(推定)、ネザーゲートのリンク先。
+- **重ねて表示**:等高線、スライムチャンク、チャンク線、ネザー座標の換算、開拓した人、ネザーゲートのリンク先。
 - **Realms 情報**:サーバーの状態、参加人数、難易度、ゲームルール、次の支払日。
 - **言語**:日本語・英語(ゲーム内の用語は公式の訳を使用)。
 
@@ -45,7 +45,10 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 ### 2. Cloudflare を準備する
 
 1. Cloudflare のダッシュボードで **My Profile** → **API Tokens** → **Create Token** を開きます。
-2. **Edit Cloudflare Workers** テンプレートを選び、権限に **Account / D1 / Edit** を追加して作成します。表示されたトークンを控えます(一度しか表示されません)。
+2. いちばん下の **Custom token** の **Get started** を押し、権限(Permissions)を次の 3 つだけにして作成します。表示されたトークンを控えます(一度しか表示されません)。
+   - Account・**Workers Scripts**・Edit
+   - Account・**D1**・Edit
+   - Account・**Account Settings**・Read
 
 サイトのアドレスは `https://<リポジトリの名前>.<サブドメイン>.workers.dev` です。サブドメインは **Workers & Pages** の画面で決められます。決めていなければ、GitHub のユーザー名をもとに自動で決まります(実行結果に表示されます)。
 
@@ -74,8 +77,9 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 2. 最初はサイトを先に用意するので、2〜3 分待ちます。[セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)にコードが出ます(Actions の実行中の **login** ジョブにも、枠で囲まれて出ます)。
 3. コードを https://www.microsoft.com/link に入力します。
 4. Realm のオーナーのアカウントでログインします(15 分以内)。ログイン後に「Minecraft for Nintendo Switch」と表示されますが、正常です([理由](#セキュリティとプライバシー))。
-5. ログインが終わると、自動で地図の作成が始まります。数分後、実行結果の Summary に「サイト: https://chizuya.….workers.dev」と表示されます。
-6. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
+5. ログインが終わると、自動で地図の作成が始まります。
+6. 地図を作っているあいだに、セットアップページの **「GitHub と連携する」** で自動更新のタイマーを設定します(GitHub アプリ「Chizuya Connect」を、このリポジトリにだけ入れます)。GitHub の定期実行は数時間遅れることがあるため、サイトが自分で更新を起動するのに使います。これが終わるとサイトのアドレスが出ます。
+7. そのアドレスを開き、Microsoft アカウントでログインします。セットアップした人が管理者になります。
 
 [セットアップページ](https://tsow9.github.io/minecraft_be_livemap/setup.html)では、コードの場所と地図の進み具合が自動で表示されます。
 
@@ -84,11 +88,11 @@ Minecraft 統合版の Realm を、ブラウザで見られる地図にするツ
 | 内容 | 間隔 |
 |---|---|
 | 地図 | 1 時間ごと(プレイ中はワールドが保存されるたび) |
-| 参加中の人・プレイヤーの位置 | 10 分ごと(プレイ中は 20 秒ごと) |
+| 参加中の人・プレイヤーの位置 | 1〜2 分ごと(プレイ中は 20 秒ごと) |
 
 ## 公開リポジトリにする理由
 
-**公開が必要な理由**:地図の更新と位置の確認は GitHub Actions で動きます。Actions は公開リポジトリなら無料で使い放題ですが、非公開リポジトリは月 2,000 分までです。Chizuya は 10 分ごとの確認だけで月 4,000 分ほど使うため、非公開では月の途中で更新が止まります。
+**公開が必要な理由**:地図の更新と位置の確認は GitHub Actions で動きます。Actions は公開リポジトリなら無料で使い放題ですが、非公開リポジトリは月 2,000 分までです。Chizuya は数分ごとの確認だけで月に数万分を使うため、非公開では月の初めのうちに更新が止まります。
 
 **公開しても問題ない理由**:公開されるのはプログラムと、暗号化したデータだけです。
 
@@ -112,9 +116,9 @@ Realm ごとに、別の名前でリポジトリを作ります(手順 1)。ど�
 1. 右側の **管理者メニュー**(盾のアイコン)で **サイトのURLをコピー** を押し、メンバーに送ります。
 2. メンバーはアドレスを開き、マイクラで使っている Microsoft アカウントでログインします。
 
-### 自動更新のタイマー(おすすめ)
+### 自動更新のタイマー
 
-GitHub の 10 分おき・1 時間おきの自動実行は、数時間遅れることがあります。管理者メニューの「自動更新のタイマー」で、このリポジトリの自動処理を起動する権限だけの GitHub のトークン(fine-grained、Actions: Read and write)を登録すると、サイトが 10 分ごとに位置確認を起動します(地図は位置確認が 1 時間ごとに更新します)。
+GitHub の定期実行は数時間遅れることがあるため、サイトが毎分ようすを見て、位置確認を起動します(地図は位置確認が 1 時間ごとに更新します)。タイマーはセットアップの手順 4(「GitHub と連携する」)で設定します。止まったときは、管理者にだけ地図サイトに帯が出て、管理者メニューの「自動更新のタイマー」から連携し直せます(予備として、Actions: Read and write だけの fine-grained トークンを貼る方法もあります)。
 
 ### 新しいバージョンへの更新
 
@@ -177,6 +181,16 @@ Live players(.github/workflows/live.yml)
 - [NumPy](https://numpy.org/)、[Pillow](https://python-pillow.org/)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c)(Google Fonts)
 - ペットの顔、アイテム・ブロックの名前は、地図の更新時に公式の [bedrock-samples](https://github.com/Mojang/bedrock-samples) から生成します。公式の画像やテキストはこのリポジトリに含めていません。
+
+## サイトを削除するには
+
+[よくある質問](https://tsow9.github.io/minecraft_be_livemap/faq.html)の「地図サイトを削除するには?」の手順(Cloudflare の Workers と D1、リポジトリ、トークンと Chizuya Connect)を見てください。
+
+## 不具合の報告・寄付
+
+- 不具合の報告:[Google フォーム](https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform)(ログイン不要。メールアドレスは集めません)
+- 寄付:[Ko-fi](https://ko-fi.com/chizuya_map)(寄付した人だけの特典はありません)
+- 変更履歴:[CHANGELOG.md](CHANGELOG.md) ・ [リリース](https://github.com/tsow9/minecraft_be_livemap/releases)
 
 ## プライバシーポリシーと利用規約
 

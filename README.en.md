@@ -1,8 +1,8 @@
-<p align="center"><img src="logo.png" alt="Chizuya" height="80"></p>
+<p align="center"><img src="docs/readme-logo.png" alt="Chizuya" width="320"></p>
 
 # Chizuya
 
-[日本語](README.md)
+[日本語](README.md) · [Home](https://tsow9.github.io/minecraft_be_livemap/) · [Setup](https://tsow9.github.io/minecraft_be_livemap/setup.html) · [FAQ](https://tsow9.github.io/minecraft_be_livemap/faq.html) · [Find a map](https://tsow9.github.io/minecraft_be_livemap/find.html)
 
 A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in the cloud; no PC needs to stay on.
 
@@ -21,7 +21,7 @@ A map of your Minecraft Bedrock Realm, in the browser. The map updates itself in
 - **Drawing**: pins, text, lines, polygons, rectangles, circles and ellipses, snapped to blocks and shared with members.
 - **Past maps**: go back to any saved day, or play the changes in order.
 - **Worlds**: if the Realm switches between worlds (slots), each keeps its own map; switch from the date in the corner. Pins and drawings belong to their world.
-- **Overlays**: contours, slime chunks, chunk lines, Nether coordinate converter, who explored where (estimated), Nether Portal links.
+- **Overlays**: contours, slime chunks, chunk lines, Nether coordinate converter, who explored where, Nether Portal links.
 - **Realms info**: server status, players online, difficulty, game rules and the next payment day.
 - **Languages**: Japanese and English (game terms use the official translations).
 
@@ -45,7 +45,10 @@ Takes about 15 minutes. The [setup page](https://tsow9.github.io/minecraft_be_li
 ### 2. Prepare Cloudflare
 
 1. In the Cloudflare dashboard, go to **My Profile** → **API Tokens** → **Create Token**.
-2. Choose the **Edit Cloudflare Workers** template, add the permission **Account / D1 / Edit**, and create the token. Copy it (it is shown only once).
+2. At the bottom, **Custom token** → **Get started**, give it only these three permissions and create it. Copy the token (it is shown only once).
+   - Account · **Workers Scripts** · Edit
+   - Account · **D1** · Edit
+   - Account · **Account Settings** · Read
 
 The site will be at `https://<repository name>.<subdomain>.workers.dev`. You can choose the subdomain on the **Workers & Pages** page; if you have not, one is chosen from your GitHub username (shown in the run's log).
 
@@ -74,8 +77,9 @@ Only if needed, also add these (`CLOUDFLARE_ACCOUNT_ID` under **Secrets**, the r
 2. Wait 2–3 minutes (the site is put up first): the [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows the code (so does the running **login** job in Actions, in a box).
 3. Enter the code at https://www.microsoft.com/link.
 4. Sign in with the Realm owner's account (within 15 minutes). Afterwards Microsoft says "Minecraft for Nintendo Switch"; that is expected ([why](#security-and-privacy)).
-5. Once signed in, making the map starts by itself. A few minutes later the run's Summary shows "Site: https://chizuya.….workers.dev".
-6. Open that address and sign in with Microsoft. The person who set it up is the admin.
+5. Once signed in, making the map starts by itself.
+6. While the map is being made, set up the update timer with **Connect GitHub** on the setup page (it installs the GitHub app "Chizuya Connect" on this repository only). GitHub's scheduled runs can be hours late, so the site starts the updates itself. After that the site's address is shown.
+7. Open that address and sign in with Microsoft. The person who set it up is the admin.
 
 The [setup page](https://tsow9.github.io/minecraft_be_livemap/setup.html) shows where the code is and how the map is getting on.
 
@@ -84,11 +88,11 @@ From then on it updates automatically.
 | What | How often |
 |---|---|
 | Map | Every hour (each time the world is saved while someone plays) |
-| Players online and positions | Every 10 minutes (every 20 seconds while someone plays) |
+| Players online and positions | Every 1–2 minutes (every 20 seconds while someone plays) |
 
 ## Why a public repository
 
-**Why it must be public**: the map updates and the player checks run on GitHub Actions, which is free without limit for public repositories but limited to 2,000 minutes a month for private ones. Chizuya uses about 4,000 minutes a month on its 10-minute checks alone, so a private repository would stop updating partway through the month.
+**Why it must be public**: the map updates and the player checks run on GitHub Actions, which is free without limit for public repositories but limited to 2,000 minutes a month for private ones. Chizuya's checks every few minutes alone use tens of thousands of minutes a month, so a private repository would stop updating early in the month.
 
 **Why that is safe**: only the program and encrypted data are public.
 
@@ -112,9 +116,9 @@ Make one repository for each Realm, with different names (step 1). Which Realm e
 1. In the **Admin menu** (the shield icon on the right), select **Copy site URL** and send it to your members.
 2. Members open the address and sign in with the Microsoft account they play Minecraft with.
 
-### Update timer (recommended)
+### Update timer
 
-GitHub's 10-minute and hourly runs can be hours late. Under **Update timer** in the admin menu, add a GitHub token that may only start this repository's runs (fine-grained, Actions: Read and write), and the site starts the live check every 10 minutes itself (the live check updates the map hourly).
+GitHub's scheduled runs can be hours late, so the site looks every minute and starts the live check itself (the live check updates the map hourly). The timer is set up in step 4 of setup (**Connect GitHub**). If it stops, the admin sees a bar on the map site and can connect again under **Update timer** in the admin menu (or, as a fallback, paste a fine-grained token with only Actions: Read and write).
 
 ### Updating to a new version
 
@@ -177,6 +181,16 @@ Live players (.github/workflows/live.yml)
 - [NumPy](https://numpy.org/), [Pillow](https://python-pillow.org/)
 - [M PLUS Rounded 1c](https://fonts.google.com/specimen/M+PLUS+Rounded+1c) (Google Fonts)
 - Pet faces and item/block names are generated from the official [bedrock-samples](https://github.com/Mojang/bedrock-samples) at each map update. No official images or text are included in this repository.
+
+## Deleting a site
+
+See "How do I delete a map site?" in the [FAQ](https://tsow9.github.io/minecraft_be_livemap/faq.html) (Cloudflare's Workers and D1, the repository, the token and Chizuya Connect).
+
+## Bug reports and support
+
+- Report a problem: [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSfYzoAHu-PHbRUTYcqEOsYM92UWCitNTTPvtybbPk3UYskVJg/viewform) (no sign-in; no e-mail collected)
+- Support: [Ko-fi](https://ko-fi.com/chizuya_map) (no perks for supporters)
+- Changes: [CHANGELOG.md](CHANGELOG.md) (Japanese) · [Releases](https://github.com/tsow9/minecraft_be_livemap/releases)
 
 ## Privacy and terms
 
