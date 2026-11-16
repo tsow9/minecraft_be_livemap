@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/readme-logo.png" alt="Chizuya" width="320"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/readme-logo-dark.png"><img src="logo.png" alt="Chizuya" height="80"></picture></p>
 
 # Chizuya
 

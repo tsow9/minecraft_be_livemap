@@ -2,7 +2,7 @@
 
 - 名前:画面・説明書・規約に出る名前は Chizuya(日本発を表す「地図屋」。同じ分野に BlockMap という既存ツールがあるため 2026-11-08 に変更)。内部の名前(localStorage の blockmap.*、meta blockmap-*、BLOCKMAP_* の環境変数、Worker blockmap・D1 blockmap-share、GoatCounter の blockmap.goatcounter.com、凍結した map.yml の「Update Blockmap」)は、動いているサイトを壊さないようそのまま
 
-- ロゴ:持ち主が仕上げた SVG(tools/brand/logo.svg=星と「Chizuya」、app-icon.svg=ベージュ #eee4d3 の地に星、mark.svg=星だけ。黒い手裏剣のような星に中心ほど薄くなる格子、真ん中に十字の穴)をそのまま使う。node tools/brand/make.js が logo.png(高さ440・透過)・favicon.svg(app-icon の角を丸めたもの)・icons/*.png・apple-touch-icon.png を作る(Playwright)。形や色を変えるときは持ち主の SVG を差し替えて make.js を動かす。暗い地用のロゴは作らない(暗い背景は使わない方針)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、ボタンはやわらかい墨 #4a4542・白い文字。セットアップページ・紹介ページ・移転のお知らせのボタンも同じ)で、見出しは logo.png。セットアップページ・規約・移転のお知らせの見出しにも logo.png。色はロゴに合わせる:地 #f6f5f1、箱 #fff、線 #dcd8d0、文字とリンクはロゴの墨 #211a16、補足 #6a625a、完了だけ落ち着いた緑 #3f6b4e、問題は #a33a2e(地図サイトの中の画面は暗いまま)
+- ロゴ:持ち主が仕上げた SVG(tools/brand/logo.svg=星と「Chizuya」、app-icon.svg=ベージュ #eee4d3 の地に星、mark.svg=星だけ。黒い手裏剣のような星に中心ほど薄くなる格子、真ん中に十字の穴)をそのまま使う。node tools/brand/make.js が logo.png(高さ440・透過)・favicon.svg(app-icon の角を丸めたもの)・icons/*.png・apple-touch-icon.png を作る(Playwright)。形や色を変えるときは持ち主の SVG を差し替えて make.js を動かす。暗い地用のロゴは作らない(暗い背景は使わない方針)。例外は README だけ:GitHub のダークモードでは docs/readme-logo-dark.png(インクを明るく反転。node tools/brand/make.js readme)を <picture> で出す(持ち主が選んだ、2026-11-16)。login.html・サイトの入口(worker の gatePage)は明るい地(#f6f5f1、白い箱、ボタンはやわらかい墨 #4a4542・白い文字。セットアップページ・紹介ページ・移転のお知らせのボタンも同じ)で、見出しは logo.png。セットアップページ・規約・移転のお知らせの見出しにも logo.png。色はロゴに合わせる:地 #f6f5f1、箱 #fff、線 #dcd8d0、文字とリンクはロゴの墨 #211a16、補足 #6a625a、完了だけ落ち着いた緑 #3f6b4e、問題は #a33a2e(地図サイトの中の画面は暗いまま)
 
 ## 進め方
 - 持ち主は専門家ではない。説明は日本語で、かみ砕いて。一つずつ進める。
