@@ -47,6 +47,7 @@
   const counted = new Set();
   function count(what) {
     if (counted.has(what)) return;
+    try { if (localStorage.getItem('chizuya.nocount') === '1') return; } catch { /* private mode: count as usual */ }
     counted.add(what);
     const send = () => window.goatcounter?.count?.({ path: `setup/${what}`, title: what, event: true });
     if (window.goatcounter?.count) send(); else setTimeout(send, 3000);  // the counter loads after this script

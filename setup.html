@@ -192,9 +192,11 @@
 <div id="toast" role="status"></div>
 <script src="setup.js"></script>
 <!-- Anonymous counts of how far people get (GoatCounter: no cookies, nothing personal; see privacy.html). -->
+<!-- "Don't count me": open any page once with ?nocount=1 (undo with ?nocount=0). Only this switch is kept in the browser. -->
+<script>(function(){try{var q=new URLSearchParams(location.search).get('nocount');if(q==='1'){localStorage.setItem('chizuya.nocount','1');localStorage.setItem('skipgc','t');alert(document.documentElement.lang==='en'?'This browser will no longer be counted.':'このブラウザは数えないようにしました。');}if(q==='0'){localStorage.removeItem('chizuya.nocount');localStorage.removeItem('skipgc');alert(document.documentElement.lang==='en'?'This browser will be counted again.':'このブラウザをまた数えるようにしました。');}}catch(e){}})();</script>
 <script>window.goatcounter = { path: function () { return location.pathname; } };</script>
 <script data-goatcounter="https://blockmap.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <!-- People per day for Chizuya's own statistics: only which page was opened; nothing is stored in the browser (privacy.html#setup). -->
-<script>try{navigator.sendBeacon('https://chizuya-insights.tsow9.workers.dev/hit',new Blob([JSON.stringify({p:location.pathname})],{type:'text/plain'}))}catch(e){}</script>
+<script>try{if(localStorage.getItem('chizuya.nocount')!=='1')navigator.sendBeacon('https://chizuya-insights.tsow9.workers.dev/hit',new Blob([JSON.stringify({p:location.pathname})],{type:'text/plain'}))}catch(e){}</script>
 </body>
 </html>
